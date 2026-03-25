@@ -61,8 +61,10 @@ class RevisableServiceProvider extends BaseServiceProvider
     {
         $revisionModel = config('revisable.revision_model') ?? Revision::class;
 
-        if (! is_a($revisionModel, Revision::class, true)
-            || ! is_a($revisionModel, Model::class, true)) {
+        if (
+            ! is_a($revisionModel, Revision::class, true)
+            || ! is_a($revisionModel, Model::class, true)
+        ) {
             throw InvalidConfiguration::invalidRevisionModel($revisionModel);
         }
 

@@ -273,7 +273,12 @@ class Revisioner
             }
 
             foreach ($pivot->getRawOriginal() as $field => $value) {
-                $data = $this->withPivotForeignKeys($data, $pivot->getKeyName(), $pivot->getForeignKey(), $pivot->getRelatedKey());
+                $data = $this->withPivotForeignKeys(
+                    $data,
+                    $pivot->getKeyName(),
+                    $pivot->getForeignKey(),
+                    $pivot->getRelatedKey()
+                );
                 $data = $this->withPivotAttributeValue($data, $pivot->getAttributes(), $index, $field, $value);
             }
         }
@@ -313,8 +318,12 @@ class Revisioner
         return $data;
     }
 
-    protected function withPivotForeignKeys(array $data, string $primaryKey, string $foreignKey, string $relatedKey): array
-    {
+    protected function withPivotForeignKeys(
+        array $data,
+        string $primaryKey,
+        string $foreignKey,
+        string $relatedKey
+    ): array {
         if (! ($data['pivots']['primary_key'] && $data['pivots']['foreign_key'] && $data['pivots']['related_key'])) {
             $data['pivots']['primary_key'] = $primaryKey;
             $data['pivots']['foreign_key'] = $foreignKey;
@@ -327,8 +336,13 @@ class Revisioner
     /**
      * @param  string|int|null  $value
      */
-    protected function withAttributeValue(array $data, array $attributes, int $index, string $field, $value = null): array
-    {
+    protected function withAttributeValue(
+        array $data,
+        array $attributes,
+        int $index,
+        string $field,
+        $value = null
+    ): array {
         if (array_key_exists($field, $attributes)) {
             $data['records']['items'][$index][$field] = $value;
         }
@@ -339,8 +353,13 @@ class Revisioner
     /**
      * @param  string|int|null  $value
      */
-    protected function withPivotAttributeValue(array $data, array $attributes, int $index, string $field, $value = null): array
-    {
+    protected function withPivotAttributeValue(
+        array $data,
+        array $attributes,
+        int $index,
+        string $field,
+        $value = null
+    ): array {
         if (array_key_exists($field, $attributes)) {
             $data['pivots']['items'][$index][$field] = $value;
         }

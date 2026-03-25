@@ -11,7 +11,12 @@ class InvalidConfiguration extends Exception
 {
     public static function invalidRevisionModel(string $className): self
     {
-        return new static("The given model class `{$className}` does not implement `" . Revision::class . '` or it does not extend `' . Model::class . '`');
+        return new static(
+            "The given model class `{$className}` does not implement `"
+            . Revision::class
+            . '` or it does not extend `'
+            . Model::class . '`'
+        );
     }
 
     public static function invalidUserModel(string $className): self
@@ -21,6 +26,9 @@ class InvalidConfiguration extends Exception
 
     public static function invalidNameGenerator(string $className): self
     {
-        return new static("The given class `{$className}` does not exist or does not implement `" . NameGenerator::class . '`');
+        return new static(
+            "The given class `{$className}` does not exist or does not implement `"
+            . NameGenerator::class . '`'
+        );
     }
 }
