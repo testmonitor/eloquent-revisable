@@ -1,0 +1,209 @@
+<?php
+
+namespace TestMonitor\Revisable\Tests;
+
+use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\Test;
+use TestMonitor\Revisable\Models\Revision;
+use TestMonitor\Revisable\RevisableOptions;
+use TestMonitor\Revisable\Tests\Models\Post;
+
+class CreatingRevisionsTest extends TestCase
+{
+    #[Test]
+    public function it_automatically_creates_a_revision_when_the_record_changes()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_the_record_is_first_created()
+    {
+        // Given
+        $post = new Post;
+
+        // When
+        $this->createPost($post);
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
+    public function it_creates_a_revision_on_record_creation_when_enabled()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        // When
+        $this->createPost($post);
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_can_manually_save_a_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $post->saveAsRevision();
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_stores_the_original_attribute_values_in_the_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertEquals('Post name', $revision->metadata['name']);
+        $this->assertEquals('post-slug', $revision->metadata['slug']);
+        $this->assertEquals('Post content', $revision->metadata['content']);
+        $this->assertEquals(10, $revision->metadata['votes']);
+        $this->assertEquals(100, $revision->metadata['views']);
+    }
+
+    #[Test]
+    public function it_accumulates_multiple_revisions_across_successive_updates()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Yet another post name', 'slug' => 'yet-another-post-slug', 'content' => 'Yet another post content', 'votes' => 30, 'views' => 300]);
+
+        // Then
+        $this->assertEquals(2, Revision::count());
+    }
+
+    #[Test]
+    public function it_can_delete_all_revisions_for_a_record()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Yet another post name', 'slug' => 'yet-another-post-slug', 'content' => 'Yet another post content', 'votes' => 30, 'views' => 300]);
+        $this->assertEquals(2, Revision::count());
+
+        // When
+        $post->deleteAllRevisions();
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
+    public function it_deletes_all_revisions_when_the_model_is_deleted()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        // When
+        $post->delete();
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
+    public function it_clears_excess_revisions_when_manually_pruned()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->limitRevisionsTo(2);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        DB::table('revisions')->insert([
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $this->assertEquals(3, $post->revisions()->count());
+
+        // When
+        $post->clearOldRevisions();
+
+        // Then
+        $this->assertEquals(2, $post->revisions()->count());
+    }
+
+    #[Test]
+    public function it_stores_properties_when_manually_saving_a_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $revision = $post->saveAsRevision('Before refactor', ['reason' => 'major rewrite', 'ticket' => 'PROJ-42']);
+
+        // Then
+        $this->assertEquals(['reason' => 'major rewrite', 'ticket' => 'PROJ-42'], $revision->properties);
+    }
+
+    #[Test]
+    public function it_stores_no_properties_when_none_are_provided()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $revision = $post->saveAsRevision();
+
+        // Then
+        $this->assertNull($revision->properties);
+    }
+
+    #[Test]
+    public function it_can_rollback_to_a_past_revision()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        $this->assertEquals('Another post name', $post->name);
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals('Post name', $post->name);
+        $this->assertEquals('post-slug', $post->slug);
+        $this->assertEquals('Post content', $post->content);
+        $this->assertEquals(10, $post->votes);
+        $this->assertEquals(100, $post->views);
+    }
+}

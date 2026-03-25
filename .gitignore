@@ -1,0 +1,23 @@
+# Build artifacts
+build/
+
+# Composer
+/vendor
+composer.lock
+
+# Tests and related files
+coverage/
+logs/
+.phpunit.cache
+.phpunit.result.cache
+
+# IDE
+/.idea
+/.vscode
+
+# Code Styling / Linting
+.php_cs.cache
+.php-cs-fixer.cache
+
+# OS
+.DS_Store
