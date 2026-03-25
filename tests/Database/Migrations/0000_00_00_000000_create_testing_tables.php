@@ -4,14 +4,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateTestingTables extends Migration
+return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+    public function up(): void
     {
         Schema::create('authors', function (Blueprint $table) {
             $table->increments('id');
@@ -83,12 +78,7 @@ class CreateTestingTables extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('revisions');
         Schema::dropIfExists('post_tag');
@@ -98,4 +88,4 @@ class CreateTestingTables extends Migration
         Schema::dropIfExists('posts');
         Schema::dropIfExists('authors');
     }
-}
+};
