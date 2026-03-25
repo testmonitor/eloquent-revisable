@@ -5,6 +5,7 @@ namespace TestMonitor\Revisable\Tests;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Orchestra\Testbench\TestCase as Orchestra;
+use TestMonitor\Revisable\RevisableServiceProvider;
 use TestMonitor\Revisable\Tests\Models\Author;
 use TestMonitor\Revisable\Tests\Models\Post;
 use TestMonitor\Revisable\Tests\Models\Tag;
@@ -14,7 +15,7 @@ abstract class TestCase extends Orchestra
     protected function getPackageProviders($app): array
     {
         return [
-            \TestMonitor\Revisable\RevisableServiceProvider::class,
+            RevisableServiceProvider::class,
         ];
     }
 
