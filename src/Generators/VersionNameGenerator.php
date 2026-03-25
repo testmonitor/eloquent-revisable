@@ -9,6 +9,6 @@ class VersionNameGenerator implements NameGenerator
 {
     public function generate(Model $model): string
     {
-        return 'v'.($model->revisions()->count() + 1);
+        return 'v' . ($model->revisions()->count() + 1);
     }
 }

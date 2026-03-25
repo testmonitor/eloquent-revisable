@@ -31,7 +31,7 @@ class RevisableServiceProvider extends BaseServiceProvider
     protected function publishConfigs(): void
     {
         $this->publishes([
-            __DIR__.'/../config/revisionable.php' => config_path('revisable.php'),
+            __DIR__ . '/../config/revisionable.php' => config_path('revisable.php'),
         ], 'config');
     }
 
@@ -42,7 +42,7 @@ class RevisableServiceProvider extends BaseServiceProvider
             $migration = database_path("migrations/{$timestamp}_create_revisions_table.php");
 
             $this->publishes([
-                __DIR__.'/../database/migrations/create_revisions_table.php.stub' => $migration,
+                __DIR__ . '/../database/migrations/create_revisions_table.php.stub' => $migration,
             ], 'migrations');
         }
     }

@@ -248,8 +248,8 @@ class RevisionRelationsTest extends TestCase
         // When
         for ($i = 1; $i <= 3; $i++) {
             $post->comments()->limit(1)->offset($i - 1)->firstOrFail()->update([
-                'title' => 'Comment title '.$i.' updated',
-                'content' => 'Comment content '.$i.' updated',
+                'title' => 'Comment title ' . $i . ' updated',
+                'content' => 'Comment content ' . $i . ' updated',
                 'active' => false,
             ]);
         }
@@ -258,8 +258,8 @@ class RevisionRelationsTest extends TestCase
         $revision = $post->revisions()->firstOrFail();
 
         for ($i = 1; $i <= 3; $i++) {
-            $this->assertEquals('Comment title '.$i, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['title']);
-            $this->assertEquals('Comment content '.$i, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['content']);
+            $this->assertEquals('Comment title ' . $i, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['title']);
+            $this->assertEquals('Comment content ' . $i, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['content']);
             $this->assertEquals(1, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['active']);
         }
     }
@@ -282,8 +282,8 @@ class RevisionRelationsTest extends TestCase
 
         for ($i = 1; $i <= 3; $i++) {
             $post->comments()->limit(1)->offset($i - 1)->firstOrFail()->update([
-                'title' => 'Comment title '.$i.' updated',
-                'content' => 'Comment content '.$i.' updated',
+                'title' => 'Comment title ' . $i . ' updated',
+                'content' => 'Comment content ' . $i . ' updated',
                 'active' => false,
             ]);
         }
@@ -295,8 +295,8 @@ class RevisionRelationsTest extends TestCase
         for ($i = 1; $i <= 3; $i++) {
             $comment = $post->fresh()->comments()->limit(1)->offset($i - 1)->firstOrFail();
 
-            $this->assertEquals('Comment title '.$i, $comment->title);
-            $this->assertEquals('Comment content '.$i, $comment->content);
+            $this->assertEquals('Comment title ' . $i, $comment->title);
+            $this->assertEquals('Comment content ' . $i, $comment->content);
             $this->assertEquals(1, $comment->active);
         }
     }

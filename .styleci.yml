@@ -1,1 +1,4 @@
 preset: laravel
+
+overrides:
+  concat_with_spaces: true

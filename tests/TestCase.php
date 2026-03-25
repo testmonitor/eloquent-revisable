@@ -26,7 +26,7 @@ abstract class TestCase extends Orchestra
 
     protected function defineDatabaseMigrations(): void
     {
-        $this->loadMigrationsFrom(__DIR__.'/Database/Migrations');
+        $this->loadMigrationsFrom(__DIR__ . '/Database/Migrations');
     }
 
     protected function createAuthor(): Author
@@ -44,7 +44,7 @@ abstract class TestCase extends Orchestra
     protected function createTags(int $count = 3)
     {
         for ($i = 1; $i <= $count; $i++) {
-            Tag::create(['name' => 'Tag name '.$i]);
+            Tag::create(['name' => 'Tag name ' . $i]);
         }
 
         return Tag::all();
@@ -65,8 +65,8 @@ abstract class TestCase extends Orchestra
             $post->comments()->create([
                 'id' => $i,
                 'post_id' => $post->id,
-                'title' => 'Comment title '.$i,
-                'content' => 'Comment content '.$i,
+                'title' => 'Comment title ' . $i,
+                'content' => 'Comment content ' . $i,
                 'date' => Carbon::now(),
                 'active' => true,
             ]);
