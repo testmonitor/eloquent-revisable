@@ -79,8 +79,7 @@ trait HasRevisions
      */
     public function latestRevision(): MorphOne
     {
-        return $this->morphOne(RevisableServiceProvider::determineRevisionModel(), 'revisionable')
-            ->latestOfMany();
+        return $this->revisions()->latestOfMany();
     }
 
     /**
