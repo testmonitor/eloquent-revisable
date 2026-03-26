@@ -79,7 +79,8 @@ trait HasRevisions
      */
     public function latestRevision(): MorphOne
     {
-        return $this->revisions()->latestOfMany();
+        return $this->morphOne(RevisableServiceProvider::determineRevisionModel(), 'revisionable')
+            ->latestOfMany();
     }
 
     /**
@@ -195,6 +196,10 @@ trait HasRevisions
             ->withRelations($options->relations)
             ->limit($options->limit)
             ->rollback($revision);
+
+        if ($options->revisionOnRollback) {
+            $this->saveAsRevision();
+        }
 
         $this->fireModelEvent('rolledBack', false);
 

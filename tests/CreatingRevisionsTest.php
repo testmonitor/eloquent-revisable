@@ -250,4 +250,42 @@ class CreatingRevisionsTest extends TestCase
         // Then
         $this->assertFalse($result);
     }
+
+    #[Test]
+    public function it_creates_a_revision_after_rolling_back_by_default()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals(2, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_after_rolling_back_when_disabled()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->disableRevisionOnRollback();
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
 }

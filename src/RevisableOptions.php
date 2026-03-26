@@ -14,6 +14,12 @@ class RevisableOptions
     public bool $onCreate = false;
 
     /**
+     * Flag whether to create a revision after rolling back.
+     * Enabled by default so every rollback is itself captured as a revision.
+     */
+    public bool $revisionOnRollback = true;
+
+    /**
      * The limit of revisions to be created for a model instance.
      * If the limit is reached, oldest revisions will start getting deleted to make room for new ones.
      */
@@ -58,6 +64,13 @@ class RevisableOptions
     public function enableRevisionOnCreate(): self
     {
         $this->onCreate = true;
+
+        return $this;
+    }
+
+    public function disableRevisionOnRollback(): self
+    {
+        $this->revisionOnRollback = false;
 
         return $this;
     }

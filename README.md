@@ -182,6 +182,16 @@ $article->rollback();
 
 Returns `false` if no revisions exist.
 
+By default, every rollback automatically creates a new revision capturing the restored state, so the history always reflects what happened. You can disable this per model:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->disableRevisionOnRollback();
+}
+```
+
 ### Suppressing revisioning
 
 Run operations without creating a revision:
