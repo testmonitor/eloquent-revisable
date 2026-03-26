@@ -2,7 +2,7 @@
 
 [![Latest Stable Version](https://poser.pugx.org/testmonitor/eloquent-revisable/v/stable)](https://packagist.org/packages/testmonitor/eloquent-revisable)
 [![CircleCI](https://img.shields.io/circleci/project/github/testmonitor/eloquent-revisable.svg)](https://circleci.com/gh/testmonitor/eloquent-revisable)
-[![StyleCI](https://styleci.io/repos/eloquent-revisable/shield)](https://styleci.io/repos/eloquent-revisable)
+[![StyleCI](https://styleci.io/repos/1192066315/shield)](https://styleci.io/repos/1192066315)
 [![codecov](https://codecov.io/gh/testmonitor/eloquent-revisable/graph/badge.svg)](https://codecov.io/gh/testmonitor/eloquent-revisable)
 [![License](https://poser.pugx.org/testmonitor/eloquent-revisable/license)](https://packagist.org/packages/testmonitor/eloquent-revisable)
 
