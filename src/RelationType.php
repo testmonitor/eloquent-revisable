@@ -36,16 +36,27 @@ class RelationType
 
     public static function isDirect(string $relation): bool
     {
-        return in_array($relation, static::$directRelations);
+        return static::isInstanceOf($relation, static::$directRelations);
     }
 
     public static function isPivoted(string $relation): bool
     {
-        return in_array($relation, static::$pivotedRelations);
+        return static::isInstanceOf($relation, static::$pivotedRelations);
     }
 
     public static function isChild(string $relation): bool
     {
-        return in_array($relation, static::$childRelations);
+        return static::isInstanceOf($relation, static::$childRelations);
+    }
+
+    protected static function isInstanceOf(string $relation, array $types): bool
+    {
+        foreach ($types as $type) {
+            if (is_a($relation, $type, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
