@@ -221,4 +221,33 @@ class CreatingRevisionsTest extends TestCase
         $this->assertEquals(10, $post->votes);
         $this->assertEquals(100, $post->views);
     }
+
+    #[Test]
+    public function it_can_rollback_to_the_latest_revision()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        $this->assertEquals('Another post name', $post->name);
+
+        // When
+        $post->rollback();
+
+        // Then
+        $this->assertEquals('Post name', $post->fresh()->name);
+    }
+
+    #[Test]
+    public function it_returns_false_when_rolling_back_without_any_revisions()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $result = $post->rollback();
+
+        // Then
+        $this->assertFalse($result);
+    }
 }

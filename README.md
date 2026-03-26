@@ -174,6 +174,14 @@ $revision = $article->revisions()->oldest()->first();
 $article->rollbackToRevision($revision);
 ```
 
+To roll back to the most recent revision in one call:
+
+```php
+$article->rollback();
+```
+
+Returns `false` if no revisions exist.
+
 ### Suppressing revisioning
 
 Run operations without creating a revision:

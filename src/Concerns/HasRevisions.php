@@ -165,6 +165,20 @@ trait HasRevisions
     }
 
     /**
+     * Rollback the model instance to its latest revision.
+     */
+    public function rollback(): bool
+    {
+        $revision = $this->latestRevision;
+
+        if ($revision === null) {
+            return false;
+        }
+
+        return $this->rollbackToRevision($revision);
+    }
+
+    /**
      * Rollback the model instance to the given revision instance.
      */
     public function rollbackToRevision(RevisionContract $revision): bool
