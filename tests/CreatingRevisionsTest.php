@@ -7,6 +7,7 @@ use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
+use TestMonitor\Revisable\UserResolver;
 
 class CreatingRevisionsTest extends TestCase
 {
@@ -66,6 +67,20 @@ class CreatingRevisionsTest extends TestCase
 
         // Then
         $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_stores_the_user_id_using_a_custom_resolver()
+    {
+        // Given
+        app(UserResolver::class)->resolveUsing(fn () => 42);
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertEquals(42, $post->revisions()->firstOrFail()->user_id);
     }
 
     #[Test]
