@@ -46,6 +46,7 @@ return new class extends Migration
             $table->boolean('active')->default(false);
             $table->foreign('post_id')->references('id')->on('posts')->onDelete('cascade')->onUpdate('cascade');
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('tags', function (Blueprint $table) {

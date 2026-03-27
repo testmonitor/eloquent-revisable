@@ -407,7 +407,7 @@ class Revisioner
         foreach ($relatedRecords as $item) {
             $related = $this->model->{$relation}();
 
-            if (array_key_exists(SoftDeletes::class, class_uses($this->model->{$relation}))) {
+            if (array_key_exists(SoftDeletes::class, class_uses($this->model->{$relation}()->getRelated()))) {
                 $related = $related->withTrashed();
             }
 
@@ -438,10 +438,7 @@ class Revisioner
             $relatedModel = $related->findOrNew($item[$attributes['records']['primary_key']] ?? null);
 
             if ($relatedModel->exists === false) {
-                foreach ($item as $field => $value) {
-                    $relatedModel->attributes[$field] = $value;
-                }
-
+                $relatedModel->setRawAttributes($item);
                 $relatedModel->save();
             }
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Comment;
@@ -194,6 +195,33 @@ class RevisionRelationsTest extends TestCase
         $this->assertEquals(3, $post->tags()->count());
     }
 
+    #[Test]
+    public function it_recreates_a_hard_deleted_tag_when_rolling_back_to_a_revision()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('tags');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $this->modifyPost($post);
+
+        $tagId = $post->tags()->firstOrFail()->id;
+        DB::table('tags')->where('id', $tagId)->delete();
+        $this->assertEquals(2, $post->tags()->count());
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals(3, $post->tags()->count());
+    }
+
     // HasMany
 
     #[Test]
@@ -331,6 +359,33 @@ class RevisionRelationsTest extends TestCase
 
         // Then
         $this->assertEquals($commentCountAtRevision, $post->comments()->count());
+    }
+
+    #[Test]
+    public function it_restores_a_soft_deleted_comment_when_rolling_back_to_a_revision()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('comments');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $this->modifyPost($post);
+
+        $comment = $post->comments()->firstOrFail();
+        $comment->delete();
+        $this->assertEquals(2, $post->comments()->count());
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals(3, $post->comments()->count());
     }
 
     // HasOne
