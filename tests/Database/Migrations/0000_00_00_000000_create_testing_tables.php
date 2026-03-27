@@ -66,6 +66,13 @@ return new class extends Migration
             $table->primary(['post_id', 'tag_id']);
         });
 
+        Schema::create('taggables', function (Blueprint $table) {
+            $table->integer('tag_id')->unsigned();
+            $table->morphs('taggable');
+            $table->primary(['tag_id', 'taggable_id', 'taggable_type']);
+            $table->foreign('tag_id')->references('id')->on('tags')->onDelete('cascade');
+        });
+
         Schema::create('revisions', function (Blueprint $table) {
             $table->increments('id');
 
@@ -84,6 +91,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('revisions');
+        Schema::dropIfExists('taggables');
         Schema::dropIfExists('post_tag');
         Schema::dropIfExists('tags');
         Schema::dropIfExists('comments');

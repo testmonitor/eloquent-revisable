@@ -2,11 +2,13 @@
 
 namespace TestMonitor\Revisable\Tests;
 
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
+use TestMonitor\Revisable\Tests\Models\Tag;
 
 class RevisionPivotsTest extends TestCase
 {
@@ -229,6 +231,35 @@ class RevisionPivotsTest extends TestCase
 
         // When
         $post->tags()->updateExistingPivot($tags->first()->id, ['position' => 1]);
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_creates_a_revision_when_syncing_a_tracked_morph_to_many_relation()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use HasRevisionablePivots;
+
+            public function labels(): MorphToMany
+            {
+                return $this->morphToMany(Tag::class, 'taggable');
+            }
+
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('labels');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $tags = $this->createTags();
+
+        // When
+        $post->labels()->sync($tags->pluck('id')->toArray());
 
         // Then
         $this->assertEquals(1, Revision::count());
