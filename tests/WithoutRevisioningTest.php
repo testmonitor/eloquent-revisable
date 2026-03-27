@@ -4,9 +4,53 @@ namespace TestMonitor\Revisable\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Models\Revision;
+use TestMonitor\Revisable\RevisableOptions;
+use TestMonitor\Revisable\Tests\Models\Post;
 
 class WithoutRevisioningTest extends TestCase
 {
+    #[Test]
+    public function it_does_not_create_a_revision_when_disabled_via_boolean()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enabledWhen(false);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_disabled_via_callable()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enabledWhen(fn () => false);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
     #[Test]
     public function it_suppresses_revision_creation_inside_a_callback()
     {

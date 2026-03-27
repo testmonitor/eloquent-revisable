@@ -9,6 +9,15 @@ use TestMonitor\Revisable\Generators\NameGeneratorFactory;
 class RevisableOptions
 {
     /**
+     * Controls whether revisioning is active for this model.
+     * Accepts a boolean or a callable returning a boolean, allowing
+     * dynamic evaluation via feature flags or other conditions.
+     *
+     * @var bool|callable
+     */
+    public mixed $enabled = true;
+
+    /**
      * Flag whether to make a revision on model creation.
      */
     public bool $onCreate = false;
@@ -59,6 +68,21 @@ class RevisableOptions
         $options->nameGenerator = NameGeneratorFactory::create();
 
         return $options;
+    }
+
+    /**
+     * Control whether revisioning is active using a boolean or a callable.
+     */
+    public function enabledWhen(mixed $enabled): self
+    {
+        $this->enabled = $enabled;
+
+        return $this;
+    }
+
+    public function isEnabled(): bool
+    {
+        return is_callable($this->enabled) ? (bool) ($this->enabled)() : (bool) $this->enabled;
     }
 
     public function enableRevisionOnCreate(): self

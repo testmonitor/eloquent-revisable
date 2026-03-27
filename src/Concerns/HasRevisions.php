@@ -117,7 +117,7 @@ trait HasRevisions
      */
     protected function shouldCreateRevision(RevisableOptions $options): bool
     {
-        if (! $this->revisioningEnabled) {
+        if (! $options->isEnabled() || ! $this->revisioningEnabled) {
             return false;
         }
 

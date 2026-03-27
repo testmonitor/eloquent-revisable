@@ -133,6 +133,30 @@ A revision is only created when the relation is explicitly listed in `withRelati
 
 > **Alternative:** If you prefer not to use the built-in trait, [laravel-pivot-events](https://github.com/mikebronner/laravel-pivot-events) is a dedicated package that fires `pivotAttached`, `pivotDetached`, and `pivotUpdated` events on the parent model. You can hook into those events and call `$model->saveAsRevision()` directly.
 
+#### Enabling and disabling revisioning
+
+Revisioning can be conditionally enabled or disabled per model using a boolean or a callable:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->enabledWhen(false);
+}
+```
+
+A callable is evaluated at revision time, making it suitable for feature flags or any other runtime condition:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->enabledWhen(fn () => Feature::active('revision-tracking'));
+}
+```
+
+> **Note:** `enabledWhen` controls whether revisions are created at all for a model. To suppress revisioning temporarily for a specific operation, use `withoutRevisioning()` instead — see [Suppressing revisioning](#suppressing-revisioning).
+
 #### Creating a revision on model creation
 
 By default, revisions are only created on updates. Enable revision on create as well:
