@@ -49,23 +49,6 @@ trait PivotEventsTrait
         return $changes;
     }
 
-    public function syncWithoutDetaching($ids): array
-    {
-        $this->isBulkPivotOperation = true;
-
-        try {
-            $changes = parent::syncWithoutDetaching($ids);
-        } finally {
-            $this->isBulkPivotOperation = false;
-        }
-
-        if ($this->hasPivotChanges($changes)) {
-            $this->touchParentRevision();
-        }
-
-        return $changes;
-    }
-
     public function toggle($ids, $touch = true): array
     {
         $this->isBulkPivotOperation = true;

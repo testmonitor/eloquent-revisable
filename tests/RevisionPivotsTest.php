@@ -135,6 +135,56 @@ class RevisionPivotsTest extends TestCase
     }
 
     #[Test]
+    public function it_creates_a_revision_when_syncing_without_detaching_a_tracked_relation()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use HasRevisionablePivots;
+
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('tags');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $tags = $this->createTags();
+
+        // When
+        $post->tags()->syncWithoutDetaching($tags->pluck('id')->toArray());
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_sync_without_detaching_results_in_no_changes()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use HasRevisionablePivots;
+
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('tags');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $tags = $this->createTags();
+
+        $post->withoutRevisioning(fn () => $post->tags()->syncWithoutDetaching($tags->pluck('id')->toArray()));
+
+        // When
+        $post->tags()->syncWithoutDetaching($tags->pluck('id')->toArray());
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
     public function it_creates_a_revision_when_toggling_a_tracked_relation()
     {
         // Given
