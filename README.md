@@ -61,7 +61,9 @@ By default, a new revision is created every time the model is updated. The `Revi
 
 ## Examples
 
-### Tracking specific fields
+### Configuration
+
+#### Tracking specific fields
 
 Only create a revision when certain fields change:
 
@@ -83,9 +85,9 @@ public function getRevisionOptions(): RevisableOptions
 }
 ```
 
-### Tracking relation snapshots
+#### Tracking relation snapshots
 
-Capture the IDs (and pivot data) of `BelongsToMany` relations alongside field values:
+Capture the state of related models alongside field values:
 
 ```php
 public function getRevisionOptions(): RevisableOptions
@@ -97,7 +99,36 @@ public function getRevisionOptions(): RevisableOptions
 
 > **Note:** Rolling back a revision that includes relations is a potentially destructive operation. Related records that were created *after* the snapshot was taken will be deleted (or soft-deleted, if the related model uses `SoftDeletes`). Only opt in to relation snapshots when you are prepared to handle this.
 
-### Creating a revision on model creation
+#### Tracking many-to-many changes (optional)
+
+Laravel does not fire model events when a `BelongsToMany` or `MorphToMany` relation is mutated via `attach`, `detach`, `sync`, `toggle`, or `updateExistingPivot`. This means the package cannot automatically detect these changes and create a revision.
+
+If you want pivot mutations on tracked relations to trigger revisions, add the optional `HasRevisionablePivots` trait to your model alongside `HasRevisions`:
+
+```php
+use TestMonitor\Revisable\Concerns\HasRevisions;
+use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
+use TestMonitor\Revisable\RevisableOptions;
+
+class Article extends Model
+{
+    use HasRevisions, HasRevisionablePivots;
+
+    public function getRevisionOptions(): RevisableOptions
+    {
+        return RevisableOptions::defaults()
+            ->withRelations('tags');
+    }
+}
+```
+
+With this trait in place, calling `$article->tags()->sync([1, 2, 3])` will automatically create a revision — no other changes required. The `withoutRevisioning()` helper and the `revisioning` event continue to work as expected.
+
+A revision is only created when the relation is explicitly listed in `withRelations()` and the pivot operation results in an actual change. No revision is created when, for example, `sync` is called with the same IDs that are already attached.
+
+> **Alternative:** If you prefer not to use the built-in trait, [laravel-pivot-events](https://github.com/mikebronner/laravel-pivot-events) is a dedicated package that fires `pivotAttached`, `pivotDetached`, and `pivotUpdated` events on the parent model. You can hook into those events and call `$model->saveAsRevision()` directly.
+
+#### Creating a revision on model creation
 
 By default, revisions are only created on updates. Enable revision on create as well:
 
@@ -109,7 +140,7 @@ public function getRevisionOptions(): RevisableOptions
 }
 ```
 
-### Limiting the number of stored revisions
+#### Limiting the number of stored revisions
 
 Keep only the most recent revisions and automatically prune the oldest ones:
 
@@ -121,7 +152,39 @@ public function getRevisionOptions(): RevisableOptions
 }
 ```
 
-### Accessing revisions
+#### Custom revision naming
+
+The default `VersionNameGenerator` names revisions sequentially (v1, v2, …). You can provide your own generator by implementing the `NameGenerator` contract and registering it in the options:
+
+```php
+use TestMonitor\Revisable\Contracts\NameGenerator;
+
+class TimestampNameGenerator implements NameGenerator
+{
+    public function generate(Model $model): string
+    {
+        return now()->toDateTimeString();
+    }
+}
+```
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->nameRevisionUsing(new TimestampNameGenerator);
+}
+```
+
+Pass `null` to disable automatic naming entirely:
+
+```php
+return RevisableOptions::defaults()->nameRevisionUsing(null);
+```
+
+### Reading revisions
+
+#### Accessing revisions
 
 All revisions are available via the `revisions` relationship:
 
@@ -143,7 +206,9 @@ $revisions = Revision::forUser($user)->get();
 $revisions = Revision::forModel($article->id, Article::class)->get();
 ```
 
-### Manually saving a revision
+### Saving revisions
+
+#### Manually saving a revision
 
 Save a named snapshot at any point without waiting for a model update:
 
@@ -166,7 +231,9 @@ The properties are stored as JSON and available on the revision instance:
 $revision->properties['ticket']; // 'PROJ-42'
 ```
 
-### Rolling back to a previous revision
+### Rolling back
+
+#### Rolling back to a previous revision
 
 Restore a model to the state captured in an earlier revision:
 
@@ -194,7 +261,9 @@ public function getRevisionOptions(): RevisableOptions
 }
 ```
 
-### Suppressing revisioning
+### Events & control
+
+#### Suppressing revisioning
 
 Run operations without creating a revision:
 
@@ -204,7 +273,7 @@ $article->withoutRevisioning(function () use ($article) {
 });
 ```
 
-### Listening to events
+#### Listening to events
 
 The package fires four model events you can hook into directly on your model or via an observer.
 
@@ -241,36 +310,6 @@ class PostObserver
 
 // In a service provider:
 Post::observe(PostObserver::class);
-```
-
-### Custom revision naming
-
-The default `VersionNameGenerator` names revisions sequentially (v1, v2, …). You can provide your own generator by implementing the `NameGenerator` contract and registering it in the options:
-
-```php
-use TestMonitor\Revisable\Contracts\NameGenerator;
-
-class TimestampNameGenerator implements NameGenerator
-{
-    public function generate(Model $model): string
-    {
-        return now()->toDateTimeString();
-    }
-}
-```
-
-```php
-public function getRevisionOptions(): RevisableOptions
-{
-    return RevisableOptions::defaults()
-        ->nameRevisionUsing(new TimestampNameGenerator);
-}
-```
-
-Pass `null` to disable automatic naming entirely:
-
-```php
-return RevisableOptions::defaults()->nameRevisionUsing(null);
 ```
 
 ## Tests
