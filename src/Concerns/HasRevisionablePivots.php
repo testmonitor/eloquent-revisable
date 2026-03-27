@@ -60,9 +60,13 @@ trait HasRevisionablePivots
         $relationName = null
     ): BelongsToMany {
         return new BelongsToMany(
-            $query, $parent, $table,
-            $foreignPivotKey, $relatedPivotKey,
-            $parentKey, $relatedKey,
+            $query,
+            $parent,
+            $table,
+            $foreignPivotKey,
+            $relatedPivotKey,
+            $parentKey,
+            $relatedKey,
             $relationName
         );
     }
@@ -80,10 +84,16 @@ trait HasRevisionablePivots
         $inverse = false
     ): MorphToMany {
         return new MorphToMany(
-            $query, $parent, $name, $table,
-            $foreignPivotKey, $relatedPivotKey,
-            $parentKey, $relatedKey,
-            $relationName, $inverse
+            $query,
+            $parent,
+            $name,
+            $table,
+            $foreignPivotKey,
+            $relatedPivotKey,
+            $parentKey,
+            $relatedKey,
+            $relationName,
+            $inverse
         );
     }
 }
