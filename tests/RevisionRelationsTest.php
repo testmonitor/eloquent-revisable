@@ -43,6 +43,8 @@ class RevisionRelationsTest extends TestCase
         $this->assertEquals($post->author->title, $revision->metadata['relations']['author']['records']['items'][0]['title']);
         $this->assertEquals($post->author->name, $revision->metadata['relations']['author']['records']['items'][0]['name']);
         $this->assertEquals($post->author->age, $revision->metadata['relations']['author']['records']['items'][0]['age']);
+        $this->assertArrayNotHasKey('created_at', $revision->metadata['relations']['author']['records']['items'][0]);
+        $this->assertArrayNotHasKey('updated_at', $revision->metadata['relations']['author']['records']['items'][0]);
     }
 
     #[Test]
@@ -141,6 +143,8 @@ class RevisionRelationsTest extends TestCase
             $this->assertEquals($tag->name, $revision->metadata['relations']['tags']['records']['items'][$i - 1]['name']);
             $this->assertEquals($post->id, $revision->metadata['relations']['tags']['pivots']['items'][$i - 1]['post_id']);
             $this->assertEquals($tag->id, $revision->metadata['relations']['tags']['pivots']['items'][$i - 1]['tag_id']);
+            $this->assertArrayNotHasKey('created_at', $revision->metadata['relations']['tags']['records']['items'][$i - 1]);
+            $this->assertArrayNotHasKey('updated_at', $revision->metadata['relations']['tags']['records']['items'][$i - 1]);
         }
     }
 

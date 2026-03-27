@@ -235,6 +235,10 @@ class Revisioner
             $data = $this->withForeignKeys($data, $model->getKeyName(), $this->model->getForeignKey());
 
             foreach ($model->getRawOriginal() as $field => $value) {
+                if ($model->usesTimestamps() && in_array($field, [$model->getCreatedAtColumn(), $model->getUpdatedAtColumn()])) {
+                    continue;
+                }
+
                 $data = $this->withAttributeValue($data, $model->getAttributes(), $index, $field, $value);
             }
         }
@@ -268,6 +272,10 @@ class Revisioner
             $pivot = $model->{$accessor};
 
             foreach ($model->getRawOriginal() as $field => $value) {
+                if ($model->usesTimestamps() && in_array($field, [$model->getCreatedAtColumn(), $model->getUpdatedAtColumn()])) {
+                    continue;
+                }
+
                 $data = $this->withForeignKeys($data, $model->getKeyName(), $this->model->getForeignKey());
                 $data = $this->withAttributeValue($data, $model->getAttributes(), $index, $field, $value);
             }
