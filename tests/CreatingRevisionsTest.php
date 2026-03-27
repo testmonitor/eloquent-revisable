@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Tests;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Models\Revision;
@@ -19,6 +20,26 @@ class CreatingRevisionsTest extends TestCase
 
         // When
         $this->modifyPost($post);
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_the_model_is_soft_deleted()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use SoftDeletes;
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        // When
+        $post->delete();
 
         // Then
         $this->assertEquals(1, Revision::count());

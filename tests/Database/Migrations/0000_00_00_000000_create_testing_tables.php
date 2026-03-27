@@ -26,6 +26,7 @@ return new class extends Migration
             $table->integer('views')->default(0);
             $table->foreign('author_id')->references('id')->on('authors')->onDelete('cascade')->onUpdate('cascade');
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('replies', function (Blueprint $table) {
