@@ -95,6 +95,8 @@ public function getRevisionOptions(): RevisableOptions
 }
 ```
 
+> **Note:** Rolling back a revision that includes relations is a potentially destructive operation. Related records that were created *after* the snapshot was taken will be deleted (or soft-deleted, if the related model uses `SoftDeletes`). Only opt in to relation snapshots when you are prepared to handle this.
+
 ### Creating a revision on model creation
 
 By default, revisions are only created on updates. Enable revision on create as well:

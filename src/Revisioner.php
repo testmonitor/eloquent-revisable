@@ -411,15 +411,15 @@ class Revisioner
                 $related = $related->withTrashed();
             }
 
-            $rel = $related->findOrNew($item[$relatedPrimaryKey] ?? null);
+            $relatedModel = $related->findOrNew($item[$relatedPrimaryKey] ?? null);
 
-            $rel->setRawAttributes($item);
+            $relatedModel->setRawAttributes($item);
 
-            if (array_key_exists(SoftDeletes::class, class_uses($rel))) {
-                $rel->{$rel->getDeletedAtColumn()} = null;
+            if (array_key_exists(SoftDeletes::class, class_uses($relatedModel))) {
+                $relatedModel->{$relatedModel->getDeletedAtColumn()} = null;
             }
 
-            $rel->save();
+            $relatedModel->save();
         }
     }
 
@@ -435,19 +435,19 @@ class Revisioner
                 $related = $related->withTrashed();
             }
 
-            $rel = $related->findOrNew($item[$attributes['records']['primary_key']] ?? null);
+            $relatedModel = $related->findOrNew($item[$attributes['records']['primary_key']] ?? null);
 
-            if ($rel->exists === false) {
+            if ($relatedModel->exists === false) {
                 foreach ($item as $field => $value) {
-                    $rel->attributes[$field] = $value;
+                    $relatedModel->attributes[$field] = $value;
                 }
 
-                $rel->save();
+                $relatedModel->save();
             }
 
-            if (array_key_exists(SoftDeletes::class, class_uses($rel))) {
-                $rel->{$rel->getDeletedAtColumn()} = null;
-                $rel->save();
+            if (array_key_exists(SoftDeletes::class, class_uses($relatedModel))) {
+                $relatedModel->{$relatedModel->getDeletedAtColumn()} = null;
+                $relatedModel->save();
             }
         }
 
