@@ -68,6 +68,44 @@ By default, a new revision is created every time the model is updated. The `Revi
 
 ### Configuration
 
+Each model can be configured individually through `getRevisionOptions()`, independently of the global settings in `config/revisable.php`.
+
+#### Creating a revision on model creation
+
+By default, revisions are only created on updates. Enable revision on create as well:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->enableRevisionOnCreate();
+}
+```
+
+#### Enabling and disabling revisioning
+
+Revisioning can be conditionally enabled or disabled per model using a boolean or a callable:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->enabledWhen(false);
+}
+```
+
+A callable is evaluated at revision time, making it suitable for feature flags or any other runtime condition:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->enabledWhen(fn () => Feature::active('revision-tracking'));
+}
+```
+
+> **Note:** `enabledWhen` controls whether revisions are created at all for a model. To suppress revisioning temporarily for a specific operation, use `withoutRevisioning()` instead — see [Suppressing revisioning](#suppressing-revisioning).
+
 #### Tracking specific fields
 
 Only create a revision when certain fields change:
@@ -133,42 +171,6 @@ A revision is only created when the relation is explicitly listed in `withRelati
 
 > **Alternative:** If you prefer not to use the built-in trait, [laravel-pivot-events](https://github.com/mikebronner/laravel-pivot-events) is a dedicated package that fires `pivotAttached`, `pivotDetached`, and `pivotUpdated` events on the parent model. You can hook into those events and call `$model->saveAsRevision()` directly.
 
-#### Enabling and disabling revisioning
-
-Revisioning can be conditionally enabled or disabled per model using a boolean or a callable:
-
-```php
-public function getRevisionOptions(): RevisableOptions
-{
-    return RevisableOptions::defaults()
-        ->enabledWhen(false);
-}
-```
-
-A callable is evaluated at revision time, making it suitable for feature flags or any other runtime condition:
-
-```php
-public function getRevisionOptions(): RevisableOptions
-{
-    return RevisableOptions::defaults()
-        ->enabledWhen(fn () => Feature::active('revision-tracking'));
-}
-```
-
-> **Note:** `enabledWhen` controls whether revisions are created at all for a model. To suppress revisioning temporarily for a specific operation, use `withoutRevisioning()` instead — see [Suppressing revisioning](#suppressing-revisioning).
-
-#### Creating a revision on model creation
-
-By default, revisions are only created on updates. Enable revision on create as well:
-
-```php
-public function getRevisionOptions(): RevisableOptions
-{
-    return RevisableOptions::defaults()
-        ->enableRevisionOnCreate();
-}
-```
-
 #### Limiting the number of stored revisions
 
 Keep only the most recent revisions and automatically prune the oldest ones:
@@ -213,6 +215,8 @@ return RevisableOptions::defaults()->nameRevisionUsing(null);
 
 ### Reading revisions
 
+Revisions are standard Eloquent models and can be queried directly on any revisionable model, or across all models using the built-in scopes.
+
 #### Accessing revisions
 
 All revisions are available via the `revisions` relationship:
@@ -225,6 +229,8 @@ foreach ($article->revisions as $revision) {
 }
 ```
 
+#### Querying revisions
+
 Filter revisions by user or model using the built-in scopes:
 
 ```php
@@ -236,6 +242,8 @@ $revisions = Revision::forModel($article->id, Article::class)->get();
 ```
 
 ### Saving revisions
+
+Revisions are created automatically on every save. Use `saveAsRevision()` when you need a named snapshot or want to attach additional context.
 
 #### Manually saving a revision
 
@@ -262,9 +270,21 @@ $revision->properties['ticket']; // 'PROJ-42'
 
 ### Rolling back
 
-#### Rolling back to a previous revision
+Any revision can be used to restore a model — and its tracked relations — to an earlier state.
 
-Restore a model to the state captured in an earlier revision:
+#### Rolling back to the latest revision
+
+To roll back a model to its most recent revision:
+
+```php
+$article->rollback();
+```
+
+Returns `false` if no revisions exist.
+
+#### Rolling back to a specific revision
+
+To restore a model to any earlier revision, pass the revision instance directly:
 
 ```php
 $revision = $article->revisions()->oldest()->first();
@@ -272,13 +292,7 @@ $revision = $article->revisions()->oldest()->first();
 $article->rollbackToRevision($revision);
 ```
 
-To roll back to the most recent revision in one call:
-
-```php
-$article->rollback();
-```
-
-Returns `false` if no revisions exist.
+#### Disabling revision creation on rollback
 
 By default, every rollback automatically creates a new revision capturing the restored state, so the history always reflects what happened. You can disable this per model:
 
@@ -292,15 +306,7 @@ public function getRevisionOptions(): RevisableOptions
 
 ### Events & control
 
-#### Suppressing revisioning
-
-Run operations without creating a revision:
-
-```php
-$article->withoutRevisioning(function () use ($article) {
-    $article->update(['views' => $article->views + 1]);
-});
-```
+The package fires events before and after revisioning and rollback. These can be used to add behaviour, abort operations, or integrate with other systems. Individual saves can also be excluded from revision tracking.
 
 #### Listening to events
 
@@ -339,6 +345,16 @@ class PostObserver
 
 // In a service provider:
 Post::observe(PostObserver::class);
+```
+
+#### Suppressing revisioning
+
+Run operations without creating a revision:
+
+```php
+$article->withoutRevisioning(function () use ($article) {
+    $article->update(['views' => $article->views + 1]);
+});
 ```
 
 ## Tests
