@@ -16,13 +16,22 @@ use TestMonitor\Revisable\Revisioner;
 
 trait HasRevisions
 {
+    /**
+     * Whether revisioning is currently active for this model instance.
+     */
     protected bool $revisioningEnabled = true;
 
+    /**
+     * Register the custom model events fired during revisioning and rollback.
+     */
     public function initializeHasRevisions(): void
     {
         $this->addObservableEvents(['revisioning', 'revisioned', 'rollingBack', 'rolledBack']);
     }
 
+    /**
+     * Hook into model lifecycle events to trigger revision creation and cleanup.
+     */
     public static function bootHasRevisions(): void
     {
         static::created(function (Model $model) {
@@ -40,26 +49,43 @@ trait HasRevisions
         });
     }
 
+    /**
+     * Register a listener for the revisioning event, which fires before a revision is created.
+     * Return false from the callback to abort revision creation.
+     */
     public static function revisioning(Closure $callback): void
     {
         static::registerModelEvent('revisioning', $callback);
     }
 
+    /**
+     * Register a listener for the revisioned event, which fires after a revision is created.
+     */
     public static function revisioned(Closure $callback): void
     {
         static::registerModelEvent('revisioned', $callback);
     }
 
+    /**
+     * Register a listener for the rollingBack event, which fires before a rollback is performed.
+     * Return false from the callback to abort the rollback.
+     */
     public static function rollingBack(Closure $callback): void
     {
         static::registerModelEvent('rollingBack', $callback);
     }
 
+    /**
+     * Register a listener for the rolledBack event, which fires after a rollback is performed.
+     */
     public static function rolledBack(Closure $callback): void
     {
         static::registerModelEvent('rolledBack', $callback);
     }
 
+    /**
+     * Return the revision options for this model.
+     */
     abstract public function getRevisionOptions(): RevisableOptions;
 
     /**
@@ -145,8 +171,6 @@ trait HasRevisions
 
     /**
      * Manually save a new revision for a model instance.
-     *
-     * This method should be called manually only where and if needed.
      */
     public function saveAsRevision(?string $name = null, array $properties = []): Revision
     {

@@ -30,6 +30,8 @@ class Revision extends Model implements RevisionContract
     ];
 
     /**
+     * Get the model that this revision belongs to.
+     *
      * @return MorphTo<Model, $this>
      */
     public function revisionable(): MorphTo
@@ -38,6 +40,8 @@ class Revision extends Model implements RevisionContract
     }
 
     /**
+     * Get the user that created this revision.
+     *
      * @return BelongsTo<Model, $this>
      */
     public function user(): BelongsTo
@@ -45,12 +49,18 @@ class Revision extends Model implements RevisionContract
         return $this->belongsTo(RevisableServiceProvider::determineUserModel(), 'user_id');
     }
 
+    /**
+     * Scope revisions to those created by the given user.
+     */
     #[Scope]
     public function forUser(Builder $query, Authenticatable $user): void
     {
         $query->where('user_id', $user->id);
     }
 
+    /**
+     * Scope revisions to those belonging to a specific model instance.
+     */
     #[Scope]
     public function forModel(Builder $query, int $id, string $type): void
     {

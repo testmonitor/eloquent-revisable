@@ -163,8 +163,6 @@ class Revisioner
 
     /**
      * Build the full revision data array, including relations.
-     *
-     * @throws \ReflectionException
      */
     protected function buildData(): array
     {

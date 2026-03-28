@@ -80,11 +80,17 @@ class RevisableOptions
         return $this;
     }
 
+    /**
+     * Resolve the enabled state, evaluating the callable if one was provided.
+     */
     public function isEnabled(): bool
     {
         return is_callable($this->enabled) ? (bool) ($this->enabled)() : (bool) $this->enabled;
     }
 
+    /**
+     * Create a revision when the model is first created, in addition to updates.
+     */
     public function enableRevisionOnCreate(): self
     {
         $this->onCreate = true;
@@ -92,6 +98,9 @@ class RevisableOptions
         return $this;
     }
 
+    /**
+     * Do not create a revision after rolling back to a previous revision.
+     */
     public function disableRevisionOnRollback(): self
     {
         $this->revisionOnRollback = false;
@@ -99,6 +108,9 @@ class RevisableOptions
         return $this;
     }
 
+    /**
+     * Keep only the most recent revisions up to the given limit, pruning older ones automatically.
+     */
     public function limitRevisionsTo(int $limit): self
     {
         $this->limit = (int) $limit;
