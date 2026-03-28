@@ -110,4 +110,24 @@ class RevisionFieldsTest extends TestCase
         // Then
         $this->assertEquals(0, Revision::count());
     }
+
+    #[Test]
+    public function it_can_reconstruct_the_model_from_a_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+        $model = $revision->toModel();
+
+        $this->assertInstanceOf(Post::class, $model);
+        $this->assertTrue($model->exists);
+        $this->assertEquals($post->id, $model->id);
+        $this->assertEquals('Post name', $model->name);
+        $this->assertEquals('post-slug', $model->slug);
+    }
 }

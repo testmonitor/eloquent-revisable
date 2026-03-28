@@ -241,6 +241,17 @@ $revisions = Revision::forUser($user)->get();
 $revisions = Revision::forModel($article->id, Article::class)->get();
 ```
 
+#### Reconstructing a model from a revision
+
+Any revision can be reconstructed as a model instance reflecting the state at the time it was captured:
+
+```php
+$revision = $article->revisions()->oldest()->first();
+
+$snapshot = $revision->toModel(); // an Article instance, not a live record
+echo $snapshot->title;
+```
+
 ### Saving revisions
 
 Revisions are created automatically on every save. Use `saveAsRevision()` when you need a named snapshot or want to attach additional context.

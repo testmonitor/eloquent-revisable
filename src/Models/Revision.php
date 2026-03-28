@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\RevisableServiceProvider;
 
@@ -68,5 +70,24 @@ class Revision extends Model implements RevisionContract
             'revisionable_id' => $id,
             'revisionable_type' => $type,
         ]);
+    }
+
+    /**
+     * Reconstruct the revisionable model as it existed at the time of this revision.
+     */
+    public function toModel(): Model
+    {
+        $class = Relation::getMorphedModel($this->revisionable_type) ?? $this->revisionable_type;
+
+        /** @var Model $model */
+        $model = new $class;
+
+        $attributes = Arr::except($this->metadata, ['relations']);
+        $attributes[$model->getKeyName()] = $this->revisionable_id;
+
+        $model->setRawAttributes($attributes);
+        $model->exists = true;
+
+        return $model;
     }
 }
