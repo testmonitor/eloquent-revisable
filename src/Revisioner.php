@@ -88,17 +88,29 @@ class Revisioner
     }
 
     /**
+     * Build a new revision record for the model, using the configured options.
+     */
+    public function build(): Revision
+    {
+        $revision = new Revision;
+
+        $revision->user_id = $this->userResolver->resolve();
+        $revision->name = $this->resolveName();
+        $revision->metadata = $this->buildData();
+        $revision->properties = $this->properties ?: null;
+
+        return $revision;
+    }
+
+    /**
      * Persist a new revision record for the model and prune old ones if a limit is set.
      */
     public function save(): Revision
     {
         return DB::transaction(function () {
-            $revision = $this->model->revisions()->create([
-                'user_id' => $this->userResolver->resolve(),
-                'name' => $this->resolveName(),
-                'metadata' => $this->buildData(),
-                'properties' => $this->properties ?: null,
-            ]);
+            $revision = $this->build();
+
+            $this->model->revisions()->save($revision);
 
             $this->prune();
 

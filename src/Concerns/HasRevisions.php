@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
+use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\RevisableServiceProvider;
@@ -107,6 +108,29 @@ trait HasRevisions
     {
         return $this->morphOne(RevisableServiceProvider::determineRevisionModel(), 'revisionable')
             ->latestOfMany();
+    }
+
+    /**
+     * Compare the current model state against the latest revision or a specific revision.
+     */
+    public function diff(?RevisionContract $revision = null): Diff
+    {
+        $revision ??= $this->latestRevision;
+
+        if (! $revision) {
+            return Diff::empty();
+        }
+
+        $options = $this->getRevisionOptions();
+
+        $current = app(Revisioner::class)
+            ->for($this)
+            ->onlyFields($options->fields)
+            ->exceptFields($options->exceptFields)
+            ->withRelations($options->relations)
+            ->build();
+
+        return new Diff($revision, $current);
     }
 
     /**

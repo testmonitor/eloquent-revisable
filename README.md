@@ -238,7 +238,7 @@ Filter revisions by user or model using the built-in scopes:
 $revisions = Revision::forUser($user)->get();
 
 // All revisions for a specific model instance
-$revisions = Revision::forModel($article->id, Article::class)->get();
+$revisions = Revision::forModel($article)->get();
 ```
 
 #### Reconstructing a model from a revision
@@ -250,6 +250,38 @@ $revision = $article->revisions()->oldest()->first();
 
 $snapshot = $revision->toModel(); // an Article instance, not a live record
 echo $snapshot->title;
+```
+
+#### Comparing revisions
+
+Use `diff()` to compare two states and inspect what changed. It returns a `Diff` object with `changes()` (only differing fields and relations) and `all()` (everything, including unchanged).
+
+```php
+// What changed between two revisions
+$diff = $revision->diff();              // vs its predecessor
+$diff = $revision->diff($other);        // vs a specific revision
+
+// What changed between the current model and a revision
+$diff = $article->diff();               // vs the latest revision
+$diff = $article->diff($revision);      // vs a specific revision
+```
+
+The output of `changes()` contains field entries and relation entries in one flat array:
+
+```php
+$changes = $diff->changes();
+
+// Field: ['old' => mixed, 'new' => mixed]
+$changes['title'];    // ['old' => 'Draft', 'new' => 'Published']
+
+// Relation: ['added' => [...ids], 'removed' => [...ids], 'changed' => [...]]
+$changes['tags'];     // ['added' => [4], 'removed' => [1], 'changed' => []]
+```
+
+Use `all()` to include fields and relations that did not change:
+
+```php
+$all = $diff->all();
 ```
 
 ### Saving revisions

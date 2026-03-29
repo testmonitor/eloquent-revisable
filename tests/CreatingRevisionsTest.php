@@ -26,6 +26,61 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_can_access_the_revisionable_model_from_a_revision()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        // When
+        $revision = $post->revisions()->firstOrFail();
+
+        // Then
+        $this->assertTrue($post->is($revision->revisionable));
+    }
+
+    #[Test]
+    public function it_can_scope_revisions_by_model()
+    {
+        // Given
+        $postA = $this->createPost();
+        $postB = Post::create(['author_id' => $postA->author_id, 'name' => 'Post name', 'slug' => 'post-b-slug', 'content' => 'Post content', 'votes' => 10, 'views' => 100]);
+
+        $this->modifyPost($postA);
+        $this->modifyPost($postB, ['slug' => 'post-b-modified-slug']);
+        $this->modifyPost($postB, ['name' => 'Third', 'slug' => 'post-b-third-slug']);
+
+        // When
+        $revisions = Revision::query()->forModel($postA)->get();
+
+        // Then
+        $this->assertCount(1, $revisions);
+        $this->assertEquals($postA->id, $revisions->first()->revisionable_id);
+    }
+
+    #[Test]
+    public function it_can_scope_revisions_by_user()
+    {
+        // Given
+        $post = $this->createPost();
+        $author = $post->author;
+
+        app(UserResolver::class)->resolveUsing(fn () => $author->id);
+        $this->modifyPost($post);
+
+        $otherAuthor = $this->createAuthor();
+        app(UserResolver::class)->resolveUsing(fn () => $otherAuthor->id);
+        $this->modifyPost($post, ['name' => 'Another name']);
+
+        // When
+        $revisions = Revision::query()->forUser($author)->get();
+
+        // Then
+        $this->assertCount(1, $revisions);
+        $this->assertEquals($author->id, $revisions->first()->user_id);
+    }
+
+    #[Test]
     public function it_does_not_create_a_revision_when_the_model_is_soft_deleted()
     {
         // Given

@@ -2,7 +2,6 @@
 
 namespace TestMonitor\Revisable\Models;
 
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
+use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\RevisableServiceProvider;
 
 class Revision extends Model implements RevisionContract
@@ -55,7 +55,7 @@ class Revision extends Model implements RevisionContract
      * Scope revisions to those created by the given user.
      */
     #[Scope]
-    public function forUser(Builder $query, Authenticatable $user): void
+    protected function forUser(Builder $query, Model $user): void
     {
         $query->where('user_id', $user->id);
     }
@@ -64,12 +64,45 @@ class Revision extends Model implements RevisionContract
      * Scope revisions to those belonging to a specific model instance.
      */
     #[Scope]
-    public function forModel(Builder $query, int $id, string $type): void
+    protected function forModel(Builder $query, Model $model): void
     {
         $query->where([
-            'revisionable_id' => $id,
-            'revisionable_type' => $type,
+            'revisionable_id' => $model->getKey(),
+            'revisionable_type' => get_class($model),
         ]);
+    }
+
+    /**
+     * Return the revision that directly precedes this one for the same model.
+     */
+    public function previous(): ?static
+    {
+        return static::query()
+            ->where([
+                ['revisionable_type', $this->revisionable_type],
+                ['revisionable_id', $this->revisionable_id],
+                [$this->getKeyName(), '<', $this->getKey()],
+            ])
+            ->latest($this->getKeyName())
+            ->first();
+    }
+
+    /**
+     * Compare this revision against another revision or its predecessor.
+     */
+    public function diff(?RevisionContract $target = null): Diff
+    {
+        if ($target instanceof RevisionContract) {
+            return new Diff($this, $target);
+        }
+
+        $previous = $this->previous();
+
+        if ($previous === null) {
+            return Diff::empty();
+        }
+
+        return new Diff($previous, $this);
     }
 
     /**
