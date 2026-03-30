@@ -98,6 +98,8 @@ public function getRevisionOptions(): RevisableOptions
 
 #### Tracking specific fields
 
+By default all fields are tracked. Use `onlyFields` to include a specific set, or `exceptFields` to exclude certain fields and track everything else:
+
 ```php
 // Include only these fields
 return RevisableOptions::defaults()
@@ -215,7 +217,7 @@ Revisions are standard Eloquent models and can be queried directly on any revisi
 
 #### Accessing revisions
 
-All revisions are available via the `revisions` relationship:
+All revisions are available via the `revisions` relationship, and the most recent one via `latestRevision`:
 
 ```php
 $article = Article::find(1);
@@ -223,6 +225,9 @@ $article = Article::find(1);
 foreach ($article->revisions as $revision) {
     echo $revision->name . ' — ' . $revision->created_at . PHP_EOL;
 }
+
+// Most recent revision
+$revision = $article->latestRevision;
 ```
 
 #### Querying revisions
