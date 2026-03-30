@@ -72,7 +72,7 @@ Each model can be configured individually through `getRevisionOptions()`, indepe
 
 #### Creating a revision on model creation
 
-By default, revisions are only created on updates. Enable revision on create as well:
+By default, revisions are only created on updates:
 
 ```php
 public function getRevisionOptions(): RevisableOptions
@@ -84,17 +84,7 @@ public function getRevisionOptions(): RevisableOptions
 
 #### Enabling and disabling revisioning
 
-Revisioning can be conditionally enabled or disabled per model using a boolean or a callable:
-
-```php
-public function getRevisionOptions(): RevisableOptions
-{
-    return RevisableOptions::defaults()
-        ->enabledWhen(false);
-}
-```
-
-A callable is evaluated at revision time, making it suitable for feature flags or any other runtime condition:
+Accepts a boolean or a callable, evaluated at revision time — suitable for feature flags or any other runtime condition:
 
 ```php
 public function getRevisionOptions(): RevisableOptions
@@ -104,28 +94,18 @@ public function getRevisionOptions(): RevisableOptions
 }
 ```
 
-> **Note:** `enabledWhen` controls whether revisions are created at all for a model. To suppress revisioning temporarily for a specific operation, use `withoutRevisioning()` instead — see [Suppressing revisioning](#suppressing-revisioning).
+`enabledWhen` controls whether revisions are created at all for a model. To suppress revisioning temporarily for a specific operation, use `withoutRevisioning()` instead — see [Suppressing revisioning](#suppressing-revisioning).
 
 #### Tracking specific fields
 
-Only create a revision when certain fields change:
-
 ```php
-public function getRevisionOptions(): RevisableOptions
-{
-    return RevisableOptions::defaults()
-        ->onlyFields('title', 'body', 'status');
-}
-```
+// Include only these fields
+return RevisableOptions::defaults()
+    ->onlyFields('title', 'body', 'status');
 
-Alternatively, exclude specific fields and track everything else:
-
-```php
-public function getRevisionOptions(): RevisableOptions
-{
-    return RevisableOptions::defaults()
-        ->exceptFields('views', 'cached_at');
-}
+// Or exclude specific fields and track everything else
+return RevisableOptions::defaults()
+    ->exceptFields('views', 'cached_at');
 ```
 
 #### Tracking relation snapshots
@@ -140,13 +120,11 @@ public function getRevisionOptions(): RevisableOptions
 }
 ```
 
-> **Note:** Rolling back a revision that includes relations is a potentially destructive operation. Related records that were created *after* the snapshot was taken will be deleted (or soft-deleted, if the related model uses `SoftDeletes`). Only opt in to relation snapshots when you are prepared to handle this.
+> **Warning:** Rolling back a revision that includes relations will delete related records created after the snapshot was taken (or soft-delete them if the model uses `SoftDeletes`). Only opt in when you are prepared to handle this.
 
 #### Tracking many-to-many changes (optional)
 
-Laravel does not fire model events when a `BelongsToMany` or `MorphToMany` relation is mutated via `attach`, `detach`, `sync`, `toggle`, or `updateExistingPivot`. This means the package cannot automatically detect these changes and create a revision.
-
-If you want pivot mutations on tracked relations to trigger revisions, add the optional `HasRevisionablePivots` trait to your model alongside `HasRevisions`:
+Laravel does not fire model events for `BelongsToMany` or `MorphToMany` mutations (`attach`, `detach`, `sync`, `toggle`, `updateExistingPivot`), so the package cannot detect them automatically. Add the optional `HasRevisionablePivots` trait to make pivot changes trigger revisions:
 
 ```php
 use TestMonitor\Revisable\Concerns\HasRevisions;
@@ -165,15 +143,13 @@ class Article extends Model
 }
 ```
 
-With this trait in place, calling `$article->tags()->sync([1, 2, 3])` will automatically create a revision — no other changes required. The `withoutRevisioning()` helper and the `revisioning` event continue to work as expected.
+A revision is only triggered when the relation is listed in `withRelations()` and the operation results in an actual change. The `withoutRevisioning()` helper and the `revisioning` event continue to work as expected.
 
-A revision is only created when the relation is explicitly listed in `withRelations()` and the pivot operation results in an actual change. No revision is created when, for example, `sync` is called with the same IDs that are already attached.
-
-> **Alternative:** If you prefer not to use the built-in trait, [laravel-pivot-events](https://github.com/mikebronner/laravel-pivot-events) is a dedicated package that fires `pivotAttached`, `pivotDetached`, and `pivotUpdated` events on the parent model. You can hook into those events and call `$model->saveAsRevision()` directly.
+If you prefer not to use the built-in trait, [laravel-pivot-events](https://github.com/mikebronner/laravel-pivot-events) fires `pivotAttached`, `pivotDetached`, and `pivotUpdated` events on the parent model — hook into those and call `$model->saveAsRevision()` directly.
 
 #### Limiting the number of stored revisions
 
-Keep only the most recent revisions and automatically prune the oldest ones:
+Automatically prune the oldest revisions once the limit is reached:
 
 ```php
 public function getRevisionOptions(): RevisableOptions
@@ -201,7 +177,7 @@ When the condition is true the latest revision is updated in place; its identity
 
 If no revision exists yet the first save always creates one, regardless of the condition.
 
-> **Note:** The living snapshot captures the pre-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state before the most recent save, which serves as the rollback point.
+The living snapshot captures the pre-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state before the most recent save, which serves as the rollback point.
 
 #### Custom revision naming
 
@@ -310,22 +286,19 @@ Revisions are created automatically on every save. Use `saveAsRevision()` when y
 
 #### Manually saving a revision
 
-Save a named snapshot at any point without waiting for a model update:
+Save a named snapshot at any point without waiting for a model update, optionally with extra context:
 
 ```php
 $article->saveAsRevision('Before major refactor');
-```
 
-Attach arbitrary key/value data to the revision using the `properties` argument:
-
-```php
+// Attach arbitrary key/value context via the properties argument
 $article->saveAsRevision('Before major refactor', [
     'reason' => 'Restructuring content',
     'ticket' => 'PROJ-42',
 ]);
 ```
 
-The properties are stored as JSON and available on the revision instance:
+Properties are stored as JSON and available on the revision instance:
 
 ```php
 $revision->properties['ticket']; // 'PROJ-42'
@@ -340,10 +313,8 @@ Any revision can be used to restore a model — and its tracked relations — to
 To roll back a model to its most recent revision:
 
 ```php
-$article->rollback();
+$article->rollback(); // returns false if no revisions exist
 ```
-
-Returns `false` if no revisions exist.
 
 #### Rolling back to a specific revision
 
@@ -357,7 +328,7 @@ $article->rollbackToRevision($revision);
 
 #### Disabling revision creation on rollback
 
-By default, every rollback automatically creates a new revision capturing the restored state, so the history always reflects what happened. You can disable this per model:
+By default, every rollback creates a new revision capturing the restored state. Disable this per model:
 
 ```php
 public function getRevisionOptions(): RevisableOptions
@@ -373,7 +344,7 @@ The package fires events before and after revisioning and rollback. These can be
 
 #### Listening to events
 
-The package fires four model events you can hook into directly on your model or via an observer.
+The package fires four model events you can hook into directly or via an observer:
 
 ```php
 // Fires before a revision is created — return false to abort
@@ -397,7 +368,7 @@ Post::rolledBack(function (Post $post): void {
 });
 ```
 
-You can also register an observer class, which is useful when handling multiple events on the same model:
+An observer class is useful when handling multiple events on the same model:
 
 ```php
 class PostObserver
@@ -412,7 +383,7 @@ Post::observe(PostObserver::class);
 
 #### Suppressing revisioning
 
-Run operations without creating a revision:
+To run an operation without creating a revision:
 
 ```php
 $article->withoutRevisioning(function () use ($article) {
