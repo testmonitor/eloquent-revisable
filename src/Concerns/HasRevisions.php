@@ -217,11 +217,15 @@ trait HasRevisions
     }
 
     /**
-     * Manually save a new revision for a model instance.
+     * Manually save a revision for a model instance.
      */
-    public function saveAsRevision(?string $name = null, array $properties = []): Revision
+    public function saveAsRevision(?string $name = null, array $properties = [], ?bool $replace = null): Revision
     {
         $options = $this->getRevisionOptions();
+
+        $existing = $replace ?? $options->shouldReplace($this)
+            ? $this->revisionToReplace()
+            : null;
 
         return app(Revisioner::class)
             ->for($this)
@@ -232,7 +236,11 @@ trait HasRevisions
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
             ->limit($options->limit)
-            ->save();
+            ->when(
+                $existing,
+                fn ($revisioner, $existing) => $revisioner->replace($existing),
+                fn ($revisioner) => $revisioner->save()
+            );
     }
 
     /**

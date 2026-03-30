@@ -206,4 +206,70 @@ class ReplacingRevisionsTest extends TestCase
         $this->assertTrue($revisioningFired);
         $this->assertTrue($revisionedFired);
     }
+
+    #[Test]
+    public function it_creates_a_new_revision_when_replace_is_false_regardless_of_configuration()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $post->saveAsRevision(replace: false);
+
+        // Then
+        $this->assertCount(2, $post->revisions()->get());
+    }
+
+    #[Test]
+    public function it_replaces_the_latest_revision_when_replace_is_true_regardless_of_configuration()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(false);
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $post->saveAsRevision(replace: true);
+
+        // Then
+        $this->assertCount(1, $post->revisions()->get());
+    }
+
+    #[Test]
+    public function it_follows_the_configured_replace_when_no_replace_parameter_is_given()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $post->saveAsRevision();
+
+        // Then
+        $this->assertCount(1, $post->revisions()->get());
+    }
 }
