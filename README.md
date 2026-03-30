@@ -211,13 +211,15 @@ Pass `null` to disable automatic naming entirely:
 return RevisableOptions::defaults()->nameRevisionUsing(null);
 ```
 
+---
+
 ### Reading revisions
 
 Revisions are standard Eloquent models and can be queried directly on any revisionable model, or across all models using the built-in scopes.
 
 #### Accessing revisions
 
-All revisions are available via the `revisions` relationship, and the most recent one via `latestRevision`:
+All revisions are available via the `revisions` relationship:
 
 ```php
 $article = Article::find(1);
@@ -225,10 +227,13 @@ $article = Article::find(1);
 foreach ($article->revisions as $revision) {
     echo $revision->name . ' — ' . $revision->created_at . PHP_EOL;
 }
+```
 
-// Most recent and oldest revision
-$revision = $article->latestRevision;
-$revision = $article->firstRevision;
+Use `firstRevision` and `latestRevision` to jump directly to either end of the history:
+
+```php
+$article->firstRevision;
+$article->latestRevision;
 ```
 
 #### Querying revisions
@@ -284,6 +289,8 @@ Use `all()` to include fields and relations that did not change:
 $all = $diff->all();
 ```
 
+---
+
 ### Saving revisions
 
 Revisions are created automatically on every save. Use `saveAsRevision()` when you need a named snapshot or want to attach additional context.
@@ -307,6 +314,8 @@ Properties are stored as JSON and available on the revision instance:
 ```php
 $revision->properties['ticket']; // 'PROJ-42'
 ```
+
+---
 
 ### Rolling back
 
@@ -339,6 +348,8 @@ public function getRevisionOptions(): RevisableOptions
         ->disableRevisionOnRollback();
 }
 ```
+
+---
 
 ### Events & control
 
