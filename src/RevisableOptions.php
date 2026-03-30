@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\NameGenerator;
 use TestMonitor\Revisable\Generators\NameGeneratorFactory;
@@ -27,6 +28,15 @@ class RevisableOptions
      * Enabled by default so every rollback is itself captured as a revision.
      */
     public bool $revisionOnRollback = true;
+
+    /**
+     * Controls whether the latest revision should be replaced instead of creating a new one.
+     * Accepts a boolean or a callable receiving the model and returning a boolean, enabling
+     * state-based behaviour such as replacing while in draft.
+     *
+     * @var bool|callable
+     */
+    public mixed $replaceWhen = false;
 
     /**
      * The limit of revisions to be created for a model instance.
@@ -106,6 +116,27 @@ class RevisableOptions
         $this->revisionOnRollback = false;
 
         return $this;
+    }
+
+    /**
+     * Replace the latest revision instead of creating a new one when the condition is met.
+     * Pass a boolean or a callable that receives the model and returns a boolean.
+     */
+    public function replaceWhen(mixed $replace): self
+    {
+        $this->replaceWhen = $replace;
+
+        return $this;
+    }
+
+    /**
+     * Resolve whether the latest revision should be replaced for the given model.
+     */
+    public function shouldReplace(Model $model): bool
+    {
+        return is_callable($this->replaceWhen)
+            ? (bool) ($this->replaceWhen)($model)
+            : (bool) $this->replaceWhen;
     }
 
     /**

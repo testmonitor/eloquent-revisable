@@ -155,7 +155,11 @@ trait HasRevisions
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
             ->limit($options->limit)
-            ->save();
+            ->when(
+                $options->shouldReplace($this) ? $this->revisionToReplace($options) : null,
+                fn ($revisioner, $existing) => $revisioner->replace($existing),
+                fn ($revisioner) => $revisioner->save()
+            );
 
         $this->fireModelEvent('revisioned', false);
 
@@ -191,6 +195,14 @@ trait HasRevisions
         }
 
         return true;
+    }
+
+    /**
+     * Return the latest revision to replace, or null if a new one should be created.
+     */
+    protected function revisionToReplace(): ?Revision
+    {
+        return $this->latestRevision()->first();
     }
 
     /**

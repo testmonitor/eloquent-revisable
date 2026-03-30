@@ -44,7 +44,11 @@ trait HasRevisionablePivots
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
             ->limit($options->limit)
-            ->save();
+            ->when(
+                $options->shouldReplace($this) ? $this->revisionToReplace($options) : null,
+                fn ($revisioner, $existing) => $revisioner->replace($existing),
+                fn ($revisioner) => $revisioner->save()
+            );
 
         $this->fireModelEvent('revisioned', false);
     }

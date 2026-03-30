@@ -7,12 +7,15 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Traits\Conditionable;
 use TestMonitor\Revisable\Contracts\NameGenerator;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Models\Revision;
 
 class Revisioner
 {
+    use Conditionable;
+
     protected Model $model;
 
     protected array $fields = [];
@@ -115,6 +118,25 @@ class Revisioner
             $this->prune();
 
             return $revision;
+        });
+    }
+
+    /**
+     * Overwrite an existing revision with the current model state, keeping its identity intact.
+     */
+    public function replace(Revision $existing): Revision
+    {
+        return DB::transaction(function () use ($existing) {
+            $snapshot = $this->build();
+
+            $existing->update([
+                'user_id' => $snapshot->user_id,
+                'name' => $snapshot->name,
+                'metadata' => $snapshot->metadata,
+                'properties' => $snapshot->properties,
+            ]);
+
+            return $existing;
         });
     }
 

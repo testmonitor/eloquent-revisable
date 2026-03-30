@@ -183,6 +183,26 @@ public function getRevisionOptions(): RevisableOptions
 }
 ```
 
+#### Living snapshots (replace instead of accumulate)
+
+By default every save creates a new revision. When a model goes through many minor edits before reaching a stable state — such as a draft document — you may prefer to keep a single *living snapshot* that is overwritten on each save, rather than accumulating many interim revisions.
+
+Use `replaceWhen` with a boolean or a callable that receives the model:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->replaceWhen(fn ($model) => $model->status === 'draft');
+}
+```
+
+When the condition is true the latest revision is updated in place; its identity (id, `created_at`) is preserved. When the condition is false a new revision is created as normal, so the transition out of draft becomes its own permanent entry in the history.
+
+If no revision exists yet the first save always creates one, regardless of the condition.
+
+> **Note:** The living snapshot captures the pre-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state before the most recent save, which serves as the rollback point.
+
 #### Custom revision naming
 
 The default `VersionNameGenerator` names revisions sequentially (v1, v2, …). You can provide your own generator by implementing the `NameGenerator` contract and registering it in the options:
