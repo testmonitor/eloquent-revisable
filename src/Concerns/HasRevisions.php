@@ -111,6 +111,17 @@ trait HasRevisions
     }
 
     /**
+     * Get the oldest revision for a given model instance.
+     *
+     * @return MorphOne<Revision, $this>
+     */
+    public function firstRevision(): MorphOne
+    {
+        return $this->morphOne(RevisableServiceProvider::determineRevisionModel(), 'revisionable')
+            ->oldestOfMany();
+    }
+
+    /**
      * Compare the current model state against the latest revision or a specific revision.
      */
     public function diff(?RevisionContract $revision = null): Diff

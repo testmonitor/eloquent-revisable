@@ -226,8 +226,9 @@ foreach ($article->revisions as $revision) {
     echo $revision->name . ' — ' . $revision->created_at . PHP_EOL;
 }
 
-// Most recent revision
+// Most recent and oldest revision
 $revision = $article->latestRevision;
+$revision = $article->firstRevision;
 ```
 
 #### Querying revisions
@@ -247,9 +248,7 @@ $revisions = Revision::forModel($article)->get();
 Any revision can be reconstructed as a model instance reflecting the state at the time it was captured:
 
 ```php
-$revision = $article->revisions()->oldest()->first();
-
-$snapshot = $revision->toModel(); // an Article instance, not a live record
+$snapshot = $article->firstRevision->toModel(); // an Article instance, not a live record
 echo $snapshot->title;
 ```
 
@@ -326,9 +325,7 @@ $article->rollback(); // returns false if no revisions exist
 To restore a model to any earlier revision, pass the revision instance directly:
 
 ```php
-$revision = $article->revisions()->oldest()->first();
-
-$article->rollbackToRevision($revision);
+$article->rollbackToRevision($article->firstRevision);
 ```
 
 #### Disabling revision creation on rollback

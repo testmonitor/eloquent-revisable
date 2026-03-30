@@ -40,6 +40,19 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_can_access_the_first_and_latest_revision()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Final name']);
+
+        // When / Then
+        $this->assertEquals('Post name', $post->firstRevision->metadata['name']);
+        $this->assertEquals('Another post name', $post->latestRevision->metadata['name']);
+    }
+
+    #[Test]
     public function it_can_scope_revisions_by_model()
     {
         // Given
