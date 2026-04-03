@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
+use TestMonitor\Revisable\Tests\Models\Author;
 use TestMonitor\Revisable\Tests\Models\Post;
 use TestMonitor\Revisable\UserResolver;
 
@@ -23,6 +24,166 @@ class CreatingRevisionsTest extends TestCase
 
         // Then
         $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_the_record_is_first_created()
+    {
+        // Given
+        $post = new Post;
+
+        // When
+        $this->createPost($post);
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
+    public function it_creates_a_revision_on_record_creation_when_enabled()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        // When
+        $this->createPost($post);
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_the_model_is_soft_deleted()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use SoftDeletes;
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        // When
+        $post->delete();
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_a_soft_deleted_model_is_restored()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use SoftDeletes;
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        $post->delete();
+
+        // When
+        $post->restore();
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_accumulates_multiple_revisions_across_successive_updates()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Yet another post name', 'slug' => 'yet-another-post-slug', 'content' => 'Yet another post content', 'votes' => 30, 'views' => 300]);
+
+        // Then
+        $this->assertEquals(2, Revision::count());
+    }
+
+    #[Test]
+    public function it_can_manually_save_a_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $post->saveAsRevision();
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_stores_properties_when_manually_saving_a_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $revision = $post->saveAsRevision('Before refactor', ['reason' => 'major rewrite', 'ticket' => 'PROJ-42']);
+
+        // Then
+        $this->assertEquals(['reason' => 'major rewrite', 'ticket' => 'PROJ-42'], $revision->properties);
+    }
+
+    #[Test]
+    public function it_stores_no_properties_when_none_are_provided()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $revision = $post->saveAsRevision();
+
+        // Then
+        $this->assertNull($revision->properties);
+    }
+
+    #[Test]
+    public function it_stores_the_original_attribute_values_in_the_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertEquals('Post name', $revision->metadata['name']);
+        $this->assertEquals('post-slug', $revision->metadata['slug']);
+        $this->assertEquals('Post content', $revision->metadata['content']);
+        $this->assertEquals(10, $revision->metadata['votes']);
+        $this->assertEquals(100, $revision->metadata['views']);
+    }
+
+    #[Test]
+    public function it_stores_the_user_id_using_a_custom_resolver()
+    {
+        // Given
+        app(UserResolver::class)->resolveUsing(fn () => 42);
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertEquals(42, $post->revisions()->firstOrFail()->user_id);
     }
 
     #[Test]
@@ -50,6 +211,43 @@ class CreatingRevisionsTest extends TestCase
         // When / Then
         $this->assertEquals('Post name', $post->firstRevision->metadata['name']);
         $this->assertEquals('Another post name', $post->latestRevision->metadata['name']);
+    }
+
+    #[Test]
+    public function it_can_access_the_user_from_a_revision()
+    {
+        // Given
+        config()->set('revisable.user_model', Author::class);
+
+        $post = $this->createPost();
+        $author = $post->author;
+
+        app(UserResolver::class)->resolveUsing(fn () => $author->id);
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertTrue($author->is($revision->user));
+    }
+
+    #[Test]
+    public function it_returns_null_for_the_user_when_no_user_id_is_set()
+    {
+        // Given
+        config()->set('revisable.user_model', Author::class);
+
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertNull($revision->user);
     }
 
     #[Test]
@@ -91,118 +289,6 @@ class CreatingRevisionsTest extends TestCase
         // Then
         $this->assertCount(1, $revisions);
         $this->assertEquals($author->id, $revisions->first()->user_id);
-    }
-
-    #[Test]
-    public function it_does_not_create_a_revision_when_the_model_is_soft_deleted()
-    {
-        // Given
-        $post = new class extends Post
-        {
-            use SoftDeletes;
-        };
-
-        $post = $this->createPost($post);
-        $this->modifyPost($post);
-        $this->assertEquals(1, Revision::count());
-
-        // When
-        $post->delete();
-
-        // Then
-        $this->assertEquals(1, Revision::count());
-    }
-
-    #[Test]
-    public function it_does_not_create_a_revision_when_the_record_is_first_created()
-    {
-        // Given
-        $post = new Post;
-
-        // When
-        $this->createPost($post);
-
-        // Then
-        $this->assertEquals(0, Revision::count());
-    }
-
-    #[Test]
-    public function it_creates_a_revision_on_record_creation_when_enabled()
-    {
-        // Given
-        $post = new class extends Post
-        {
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions()->enableRevisionOnCreate();
-            }
-        };
-
-        // When
-        $this->createPost($post);
-
-        // Then
-        $this->assertEquals(1, Revision::count());
-    }
-
-    #[Test]
-    public function it_can_manually_save_a_revision()
-    {
-        // Given
-        $post = $this->createPost();
-
-        // When
-        $post->saveAsRevision();
-
-        // Then
-        $this->assertEquals(1, Revision::count());
-    }
-
-    #[Test]
-    public function it_stores_the_user_id_using_a_custom_resolver()
-    {
-        // Given
-        app(UserResolver::class)->resolveUsing(fn () => 42);
-        $post = $this->createPost();
-
-        // When
-        $this->modifyPost($post);
-
-        // Then
-        $this->assertEquals(42, $post->revisions()->firstOrFail()->user_id);
-    }
-
-    #[Test]
-    public function it_stores_the_original_attribute_values_in_the_revision()
-    {
-        // Given
-        $post = $this->createPost();
-
-        // When
-        $this->modifyPost($post);
-
-        // Then
-        $revision = $post->revisions()->firstOrFail();
-
-        $this->assertEquals('Post name', $revision->metadata['name']);
-        $this->assertEquals('post-slug', $revision->metadata['slug']);
-        $this->assertEquals('Post content', $revision->metadata['content']);
-        $this->assertEquals(10, $revision->metadata['votes']);
-        $this->assertEquals(100, $revision->metadata['views']);
-    }
-
-    #[Test]
-    public function it_accumulates_multiple_revisions_across_successive_updates()
-    {
-        // Given
-        $post = $this->createPost();
-
-        // When
-        $this->modifyPost($post);
-        $this->modifyPost($post, ['name' => 'Yet another post name', 'slug' => 'yet-another-post-slug', 'content' => 'Yet another post content', 'votes' => 30, 'views' => 300]);
-
-        // Then
-        $this->assertEquals(2, Revision::count());
     }
 
     #[Test]
@@ -263,32 +349,6 @@ class CreatingRevisionsTest extends TestCase
 
         // Then
         $this->assertEquals(2, $post->revisions()->count());
-    }
-
-    #[Test]
-    public function it_stores_properties_when_manually_saving_a_revision()
-    {
-        // Given
-        $post = $this->createPost();
-
-        // When
-        $revision = $post->saveAsRevision('Before refactor', ['reason' => 'major rewrite', 'ticket' => 'PROJ-42']);
-
-        // Then
-        $this->assertEquals(['reason' => 'major rewrite', 'ticket' => 'PROJ-42'], $revision->properties);
-    }
-
-    #[Test]
-    public function it_stores_no_properties_when_none_are_provided()
-    {
-        // Given
-        $post = $this->createPost();
-
-        // When
-        $revision = $post->saveAsRevision();
-
-        // Then
-        $this->assertNull($revision->properties);
     }
 
     #[Test]
