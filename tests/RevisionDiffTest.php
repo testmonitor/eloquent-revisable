@@ -59,6 +59,38 @@ class RevisionDiffTest extends TestCase
         $this->assertEmpty($diff->changes());
     }
 
+    #[Test]
+    public function it_returns_all_fields_including_unchanged_ones()
+    {
+        // Given
+        // Revision metadata captures the pre-save state, so:
+        // - revision 1 captures the original values (before 1st modify)
+        // - revision 2 captures the values after the 1st modify (before 2nd modify)
+        $post = $this->createPost();
+
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Final name']);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $diff = $revisions->last()->diff();
+
+        // Then
+        $all = $diff->all();
+
+        $this->assertArrayHasKey('name', $all);
+        $this->assertArrayHasKey('votes', $all);
+        $this->assertArrayHasKey('author_id', $all);
+
+        // author_id did not change between the two revisions
+        $this->assertEquals($all['author_id']['old'], $all['author_id']['new']);
+
+        // name is present in all() even though it also appears in changes()
+        $this->assertEquals('Post name', $all['name']['old']);
+        $this->assertEquals('Another post name', $all['name']['new']);
+    }
+
     // vs another revision
 
     #[Test]
@@ -149,35 +181,6 @@ class RevisionDiffTest extends TestCase
         // Then
         $this->assertEmpty($diff->changes());
         $this->assertEmpty($diff->all());
-    }
-
-    #[Test]
-    public function it_returns_all_fields_including_unchanged_ones()
-    {
-        // Given
-        $post = $this->createPost();
-
-        $this->modifyPost($post);
-        $this->modifyPost($post, ['name' => 'Final name']);
-
-        $revisions = $post->revisions()->oldest('id')->get();
-
-        // When
-        $diff = $revisions->last()->diff();
-
-        // Then
-        $all = $diff->all();
-
-        $this->assertArrayHasKey('name', $all);
-        $this->assertArrayHasKey('votes', $all);
-        $this->assertArrayHasKey('author_id', $all);
-
-        // author_id did not change between the two revisions
-        $this->assertEquals($all['author_id']['old'], $all['author_id']['new']);
-
-        // name is present in all() even though it also appears in changes()
-        $this->assertEquals('Post name', $all['name']['old']);
-        $this->assertEquals('Another post name', $all['name']['new']);
     }
 
     // relations
@@ -360,5 +363,33 @@ class RevisionDiffTest extends TestCase
         $this->assertArrayHasKey('comments', $changes);
         $this->assertCount(1, $changes['comments']['added']);
         $this->assertEmpty($changes['comments']['removed']);
+    }
+
+    #[Test]
+    public function it_diffs_direct_relations_with_no_records_in_either_revision()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('comments');
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        // Both revisions are created with no comments, leaving primary_key null in the metadata
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Final name']);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $diff = $revisions->last()->diff();
+
+        // Then
+        $this->assertArrayNotHasKey('comments', $diff->changes());
+        $this->assertArrayHasKey('comments', $diff->all());
     }
 }
