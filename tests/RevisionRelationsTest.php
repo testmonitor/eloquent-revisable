@@ -225,6 +225,33 @@ class RevisionRelationsTest extends TestCase
     }
 
     #[Test]
+    public function it_restores_a_soft_deleted_tag_when_rolling_back_to_a_revision()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('tags');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $this->modifyPost($post);
+
+        $tag = $post->tags()->firstOrFail();
+        $tag->delete();
+        $this->assertEquals(2, $post->tags()->count());
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals(3, $post->tags()->count());
+    }
+
+    #[Test]
     public function it_includes_has_many_relation_data_in_the_revision()
     {
         // Given
