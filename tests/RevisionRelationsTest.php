@@ -109,8 +109,6 @@ class RevisionRelationsTest extends TestCase
         $this->assertEquals('30', $author->age);
     }
 
-    // BelongsToMany
-
     #[Test]
     public function it_includes_belongs_to_many_relation_data_in_the_revision()
     {
@@ -225,8 +223,6 @@ class RevisionRelationsTest extends TestCase
         // Then
         $this->assertEquals(3, $post->tags()->count());
     }
-
-    // HasMany
 
     #[Test]
     public function it_includes_has_many_relation_data_in_the_revision()
@@ -392,8 +388,6 @@ class RevisionRelationsTest extends TestCase
         $this->assertEquals(3, $post->comments()->count());
     }
 
-    // HasOne
-
     #[Test]
     public function it_includes_has_one_relation_data_in_the_revision()
     {
@@ -510,5 +504,63 @@ class RevisionRelationsTest extends TestCase
 
         // Then
         $this->assertEquals($replyCountAtRevision, $post->reply()->count());
+    }
+
+    #[Test]
+    public function it_does_not_restore_any_relations_when_all_are_excluded()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->withRelations('author', 'tags')
+                    ->withoutRestoringRelations();
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $this->modifyPost($post);
+
+        $post->author()->update(['name' => 'Author name updated']);
+        $post->tags()->detach($post->tags()->firstOrFail()->id);
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals('Author name updated', $post->fresh()->author->name);
+        $this->assertEquals(2, $post->tags()->count());
+    }
+
+    #[Test]
+    public function it_does_not_restore_a_specific_relation_when_excluded()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->withRelations('author', 'tags')
+                    ->withoutRestoringRelations('tags');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $this->modifyPost($post);
+
+        $post->author()->update(['name' => 'Author name updated']);
+        $post->tags()->detach($post->tags()->firstOrFail()->id);
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals('Author name', $post->fresh()->author->name);
+        $this->assertEquals(2, $post->tags()->count());
     }
 }

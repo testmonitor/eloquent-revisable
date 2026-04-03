@@ -124,6 +124,34 @@ public function getRevisionOptions(): RevisableOptions
 
 > **Warning:** Rolling back a revision that includes relations will delete related records created after the snapshot was taken (or soft-delete them if the model uses `SoftDeletes`). Only opt in when you are prepared to handle this.
 
+#### Excluding relations from restoration
+
+Relations are always tracked when listed in `withRelations()`, but you can prevent specific relations — or all of them — from being restored during a rollback. This is useful when a relation is managed by another system or process and should not be overwritten on rollback.
+
+Exclude specific relations:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->withRelations('author', 'tags')
+        ->withoutRestoringRelations('tags'); // tags are tracked but never restored
+}
+```
+
+Or exclude all relations from restoration:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->withRelations('author', 'tags')
+        ->withoutRestoringRelations(); // no relations are restored on rollback
+}
+```
+
+Excluded relations are still snapshotted and visible in diffs — only the restoration step is skipped.
+
 #### Tracking many-to-many changes (optional)
 
 Laravel does not fire model events for `BelongsToMany` or `MorphToMany` mutations (`attach`, `detach`, `sync`, `toggle`, `updateExistingPivot`), so the package cannot detect them automatically. Add the optional `HasRevisionablePivots` trait to make pivot changes trigger revisions:

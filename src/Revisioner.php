@@ -24,6 +24,8 @@ class Revisioner
 
     protected array $relations = [];
 
+    protected ?array $exceptRestoringRelations = [];
+
     protected ?int $limit = null;
 
     protected ?string $name = null;
@@ -90,6 +92,13 @@ class Revisioner
         return $this;
     }
 
+    public function withoutRestoringRelations(?array $relations): static
+    {
+        $this->exceptRestoringRelations = $relations;
+
+        return $this;
+    }
+
     /**
      * Build a new revision record for the model, using the configured options.
      */
@@ -151,6 +160,10 @@ class Revisioner
 
                 if ($revision instanceof Revision && isset($revision->metadata['relations'])) {
                     foreach ($revision->metadata['relations'] as $relation => $attributes) {
+                        if ($this->shouldSkipRestoringRelation($relation)) {
+                            continue;
+                        }
+
                         if (RelationType::isDirect($attributes['type'])) {
                             $this->restoreDirectRelation($relation, $attributes);
                         }
@@ -409,6 +422,15 @@ class Revisioner
         }
 
         return $data;
+    }
+
+    protected function shouldSkipRestoringRelation(string $relation): bool
+    {
+        if ($this->exceptRestoringRelations === null) {
+            return true;
+        }
+
+        return in_array($relation, $this->exceptRestoringRelations);
     }
 
     /**

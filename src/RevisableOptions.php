@@ -63,6 +63,12 @@ class RevisableOptions
     public array $relations = [];
 
     /**
+     * The relations that should be excluded from restoration when rolling back.
+     * An empty array means all tracked relations are restored. A null value means no relations are restored.
+     */
+    public ?array $exceptRestoringRelations = [];
+
+    /**
      * The generator used to produce a name for each revision.
      * Defaults to the generator configured in config/revisable.php. Set to null to disable auto-naming.
      */
@@ -175,6 +181,17 @@ class RevisableOptions
     public function withRelations(...$relations): self
     {
         $this->relations = Arr::flatten($relations);
+
+        return $this;
+    }
+
+    /**
+     * Exclude specific relations from being restored during rollback.
+     * When called with no arguments, all relations are excluded from restoration.
+     */
+    public function withoutRestoringRelations(string ...$relations): self
+    {
+        $this->exceptRestoringRelations = empty($relations) ? null : $relations;
 
         return $this;
     }

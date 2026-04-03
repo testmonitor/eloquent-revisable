@@ -273,6 +273,7 @@ trait HasRevisions
             ->onlyFields($options->fields)
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
+            ->withoutRestoringRelations($options->exceptRestoringRelations)
             ->limit($options->limit)
             ->rollback($revision);
 
