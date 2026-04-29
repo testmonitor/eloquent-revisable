@@ -252,6 +252,32 @@ class RevisionRelationsTest extends TestCase
     }
 
     #[Test]
+    public function it_detaches_tags_added_after_a_revision_that_had_no_tags_when_rolling_back()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('tags');
+            }
+        };
+
+        // Revision is captured with zero tags
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $tags = $this->createTags();
+        $post->tags()->attach($tags->pluck('id')->toArray());
+
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals(0, $post->tags()->count());
+    }
+
+    #[Test]
     public function it_includes_has_many_relation_data_in_the_revision()
     {
         // Given
@@ -386,6 +412,36 @@ class RevisionRelationsTest extends TestCase
 
         // Then
         $this->assertEquals($commentCountAtRevision, $post->comments()->count());
+    }
+
+    #[Test]
+    public function it_removes_comments_added_after_a_revision_that_had_no_comments_when_rolling_back()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('comments');
+            }
+        };
+
+        // Revision is captured with zero comments (primary_key was previously stored as null)
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $post->comments()->create([
+            'title' => 'Extra comment title',
+            'content' => 'Extra comment content',
+            'date' => Carbon::now(),
+            'active' => true,
+        ]);
+
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals(0, $post->comments()->count());
     }
 
     #[Test]

@@ -266,19 +266,19 @@ class Revisioner
      */
     protected function buildDirectRelationData(string $relation, array $attributes = []): array
     {
+        $relationInstance = $this->model->{$relation}();
+
         $data = [
             'type' => $attributes['type'],
             'class' => get_class($attributes['model']),
             'records' => [
-                'primary_key' => null,
-                'foreign_key' => null,
+                'primary_key' => $relationInstance->getRelated()->getKeyName(),
+                'foreign_key' => $this->model->getForeignKey(),
                 'items' => [],
             ],
         ];
 
-        foreach ($this->model->{$relation}()->get() as $index => $model) {
-            $data = $this->withForeignKeys($data, $model->getKeyName(), $this->model->getForeignKey());
-
+        foreach ($relationInstance->get() as $index => $model) {
             foreach ($model->getRawOriginal() as $field => $value) {
                 $timestamps = [$model->getCreatedAtColumn(), $model->getUpdatedAtColumn()];
 
@@ -298,24 +298,27 @@ class Revisioner
      */
     protected function buildPivotedRelationData(string $relation, array $attributes = []): array
     {
+        $relationInstance = $this->model->{$relation}();
+        $accessor = $relationInstance->getPivotAccessor();
+        $pivotInstance = $relationInstance->newPivot();
+
         $data = [
             'type' => $attributes['type'],
             'class' => get_class($attributes['model']),
             'records' => [
-                'primary_key' => null,
-                'foreign_key' => null,
+                'primary_key' => $relationInstance->getRelated()->getKeyName(),
+                'foreign_key' => $this->model->getForeignKey(),
                 'items' => [],
             ],
             'pivots' => [
-                'primary_key' => null,
-                'foreign_key' => null,
-                'related_key' => null,
+                'primary_key' => $pivotInstance->getKeyName(),
+                'foreign_key' => $relationInstance->getForeignPivotKeyName(),
+                'related_key' => $relationInstance->getRelatedPivotKeyName(),
                 'items' => [],
             ],
         ];
 
-        foreach ($this->model->{$relation}()->get() as $index => $model) {
-            $accessor = $this->model->{$relation}()->getPivotAccessor();
+        foreach ($relationInstance->get() as $index => $model) {
             $pivot = $model->{$accessor};
 
             foreach ($model->getRawOriginal() as $field => $value) {
@@ -325,17 +328,10 @@ class Revisioner
                     continue;
                 }
 
-                $data = $this->withForeignKeys($data, $model->getKeyName(), $this->model->getForeignKey());
                 $data = $this->withAttributeValue($data, $model->getAttributes(), $index, $field, $value);
             }
 
             foreach ($pivot->getRawOriginal() as $field => $value) {
-                $data = $this->withPivotForeignKeys(
-                    $data,
-                    $pivot->getKeyName(),
-                    $pivot->getForeignKey(),
-                    $pivot->getRelatedKey()
-                );
                 $data = $this->withPivotAttributeValue($data, $pivot->getAttributes(), $index, $field, $value);
             }
         }

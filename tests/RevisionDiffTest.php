@@ -379,7 +379,6 @@ class RevisionDiffTest extends TestCase
 
         $post = $this->createPost($post);
 
-        // Both revisions are created with no comments, leaving primary_key null in the metadata
         $this->modifyPost($post);
         $this->modifyPost($post, ['name' => 'Final name']);
 
