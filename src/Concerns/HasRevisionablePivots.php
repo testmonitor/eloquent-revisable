@@ -14,6 +14,10 @@ use TestMonitor\Revisable\Revisioner;
  * updateExistingPivot.
  *
  * Requires HasRevisions to be present on the same model.
+ *
+ * @mixin \Illuminate\Database\Eloquent\Model
+ * @mixin \TestMonitor\Revisable\Concerns\HasRevisions
+ * @property bool $revisioningEnabled
  */
 trait HasRevisionablePivots
 {

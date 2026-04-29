@@ -15,6 +15,12 @@ use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\RevisableServiceProvider;
 use TestMonitor\Revisable\Revisioner;
 
+/**
+ * @mixin \Illuminate\Database\Eloquent\Model
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \TestMonitor\Revisable\Models\Revision> $revisions
+ * @property-read \TestMonitor\Revisable\Models\Revision|null $latestRevision
+ * @property-read \TestMonitor\Revisable\Models\Revision|null $firstRevision
+ */
 trait HasRevisions
 {
     /**
