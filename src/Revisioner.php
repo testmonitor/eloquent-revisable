@@ -371,31 +371,6 @@ class Revisioner
         return $relations;
     }
 
-    protected function withForeignKeys(array $data, string $primaryKey, string $foreignKey): array
-    {
-        if (! ($data['records']['primary_key'] && $data['records']['foreign_key'])) {
-            $data['records']['primary_key'] = $primaryKey;
-            $data['records']['foreign_key'] = $foreignKey;
-        }
-
-        return $data;
-    }
-
-    protected function withPivotForeignKeys(
-        array $data,
-        string $primaryKey,
-        string $foreignKey,
-        string $relatedKey
-    ): array {
-        if (! ($data['pivots']['primary_key'] && $data['pivots']['foreign_key'] && $data['pivots']['related_key'])) {
-            $data['pivots']['primary_key'] = $primaryKey;
-            $data['pivots']['foreign_key'] = $foreignKey;
-            $data['pivots']['related_key'] = $relatedKey;
-        }
-
-        return $data;
-    }
-
     /**
      * @param  string|int|null  $value
      */
