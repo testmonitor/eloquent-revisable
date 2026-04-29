@@ -15,8 +15,9 @@ use TestMonitor\Revisable\Revisioner;
  *
  * Requires HasRevisions to be present on the same model.
  *
- * @mixin \Illuminate\Database\Eloquent\Model
- * @mixin \TestMonitor\Revisable\Concerns\HasRevisions
+ * @mixin Model
+ * @mixin HasRevisions
+ *
  * @property bool $revisioningEnabled
  */
 trait HasRevisionablePivots

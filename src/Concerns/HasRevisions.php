@@ -3,6 +3,7 @@
 namespace TestMonitor\Revisable\Concerns;
 
 use Closure;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
@@ -16,10 +17,11 @@ use TestMonitor\Revisable\RevisableServiceProvider;
 use TestMonitor\Revisable\Revisioner;
 
 /**
- * @mixin \Illuminate\Database\Eloquent\Model
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \TestMonitor\Revisable\Models\Revision> $revisions
- * @property-read \TestMonitor\Revisable\Models\Revision|null $latestRevision
- * @property-read \TestMonitor\Revisable\Models\Revision|null $firstRevision
+ * @mixin Model
+ *
+ * @property-read Collection<int, Revision> $revisions
+ * @property-read Revision|null $latestRevision
+ * @property-read Revision|null $firstRevision
  */
 trait HasRevisions
 {
