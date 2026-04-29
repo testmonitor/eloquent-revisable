@@ -120,4 +120,29 @@ class RevisionNamingTest extends TestCase
         // Then
         $this->assertEquals('explicit-name', Revision::firstOrFail()->name);
     }
+
+    #[Test]
+    public function it_preserves_the_revision_name_when_replacing()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->nameRevisionUsing(new VersionNameGenerator)
+                    ->enableRevisionOnCreate()
+                    ->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertCount(1, $post->revisions()->get());
+        $this->assertEquals('v1', $post->revisions()->firstOrFail()->name);
+    }
 }

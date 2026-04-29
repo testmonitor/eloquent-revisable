@@ -115,6 +115,39 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_stores_the_original_attribute_values_in_the_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertEquals('Post name', $revision->metadata['name']);
+        $this->assertEquals('post-slug', $revision->metadata['slug']);
+        $this->assertEquals('Post content', $revision->metadata['content']);
+        $this->assertEquals(10, $revision->metadata['votes']);
+        $this->assertEquals(100, $revision->metadata['views']);
+    }
+
+    #[Test]
+    public function it_stores_the_user_id_using_a_custom_resolver()
+    {
+        // Given
+        app(UserResolver::class)->resolveUsing(fn () => 42);
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertEquals(42, $post->revisions()->firstOrFail()->user_id);
+    }
+
+    #[Test]
     public function it_can_manually_save_a_revision()
     {
         // Given
@@ -151,39 +184,6 @@ class CreatingRevisionsTest extends TestCase
 
         // Then
         $this->assertNull($revision->properties);
-    }
-
-    #[Test]
-    public function it_stores_the_original_attribute_values_in_the_revision()
-    {
-        // Given
-        $post = $this->createPost();
-
-        // When
-        $this->modifyPost($post);
-
-        // Then
-        $revision = $post->revisions()->firstOrFail();
-
-        $this->assertEquals('Post name', $revision->metadata['name']);
-        $this->assertEquals('post-slug', $revision->metadata['slug']);
-        $this->assertEquals('Post content', $revision->metadata['content']);
-        $this->assertEquals(10, $revision->metadata['votes']);
-        $this->assertEquals(100, $revision->metadata['views']);
-    }
-
-    #[Test]
-    public function it_stores_the_user_id_using_a_custom_resolver()
-    {
-        // Given
-        app(UserResolver::class)->resolveUsing(fn () => 42);
-        $post = $this->createPost();
-
-        // When
-        $this->modifyPost($post);
-
-        // Then
-        $this->assertEquals(42, $post->revisions()->firstOrFail()->user_id);
     }
 
     #[Test]
@@ -289,6 +289,24 @@ class CreatingRevisionsTest extends TestCase
         // Then
         $this->assertCount(1, $revisions);
         $this->assertEquals($author->id, $revisions->first()->user_id);
+    }
+
+    #[Test]
+    public function it_can_scope_revisions_to_only_rollbacks()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Another name']);
+
+        $post->rollbackToRevision($post->revisions()->oldest()->firstOrFail());
+
+        // When
+        $revisions = $post->revisions()->onlyRollbacks()->get();
+
+        // Then
+        $this->assertCount(1, $revisions);
+        $this->assertTrue($revisions->first()->rollback);
     }
 
     #[Test]
@@ -436,5 +454,22 @@ class CreatingRevisionsTest extends TestCase
 
         // Then
         $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_marks_the_post_rollback_revision_with_a_rollback_flag()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        $this->assertFalse($revisions->first()->rollback);
+        $this->assertTrue($revisions->last()->rollback);
     }
 }

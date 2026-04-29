@@ -10,6 +10,26 @@ use TestMonitor\Revisable\Tests\Models\Post;
 class ReplacingRevisionsTest extends TestCase
 {
     #[Test]
+    public function it_creates_a_new_revision_when_none_exists_yet()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(true);
+            }
+        };
+
+        // When
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertCount(1, $post->revisions);
+    }
+
+    #[Test]
     public function it_replaces_the_latest_revision_when_the_condition_is_true()
     {
         // Given
@@ -31,26 +51,6 @@ class ReplacingRevisionsTest extends TestCase
         // The living snapshot captures the pre-save state, so after two edits it holds
         // the state before the most recent save ('Another post name' before 'Third name').
         $this->assertEquals('Another post name', $post->revisions->first()->metadata['name']);
-    }
-
-    #[Test]
-    public function it_creates_a_new_revision_when_none_exists_yet()
-    {
-        // Given
-        $post = new class extends Post
-        {
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions()->replaceWhen(true);
-            }
-        };
-
-        // When
-        $post = $this->createPost($post);
-        $this->modifyPost($post);
-
-        // Then
-        $this->assertCount(1, $post->revisions);
     }
 
     #[Test]
@@ -205,6 +205,54 @@ class ReplacingRevisionsTest extends TestCase
         // Then
         $this->assertTrue($revisioningFired);
         $this->assertTrue($revisionedFired);
+    }
+
+    #[Test]
+    public function it_always_creates_a_new_revision_on_rollback_when_replace_when_is_true()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertCount(2, $post->revisions()->get());
+    }
+
+    #[Test]
+    public function it_does_not_replace_a_rollback_revision_on_subsequent_edits()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // When
+        $this->modifyPost($post);
+
+        // Then - the rollback revision is preserved; the regular revision is replaced instead
+        $this->assertCount(2, $post->revisions()->get());
+
+        $rollbacks = $post->revisions()->oldest('id')->pluck('rollback')->all();
+        $this->assertEquals([false, true], $rollbacks);
     }
 
     #[Test]

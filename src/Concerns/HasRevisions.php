@@ -209,11 +209,27 @@ trait HasRevisions
     }
 
     /**
+     * Save a rollback revision, always as a new record and marked as a rollback.
+     */
+    protected function saveAsRollbackRevision(RevisableOptions $options): Revision
+    {
+        return app(Revisioner::class)
+            ->for($this)
+            ->nameUsing($options->nameGenerator)
+            ->onlyFields($options->fields)
+            ->exceptFields($options->exceptFields)
+            ->withRelations($options->relations)
+            ->limit($options->limit)
+            ->asRollback()
+            ->save();
+    }
+
+    /**
      * Return the latest revision to replace, or null if a new one should be created.
      */
     protected function revisionToReplace(): ?Revision
     {
-        return $this->latestRevision()->first();
+        return $this->revisions()->notRollback()->latest()->first();
     }
 
     /**
@@ -278,7 +294,7 @@ trait HasRevisions
             ->rollback($revision);
 
         if ($options->revisionOnRollback) {
-            $this->saveAsRevision();
+            $this->saveAsRollbackRevision($options);
         }
 
         $this->fireModelEvent('rolledBack', false);

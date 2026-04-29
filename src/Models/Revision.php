@@ -21,6 +21,7 @@ class Revision extends Model implements RevisionContract
         'name',
         'metadata',
         'properties',
+        'rollback',
         'revisionable_id',
         'revisionable_type',
         'user_id',
@@ -29,6 +30,7 @@ class Revision extends Model implements RevisionContract
     protected $casts = [
         'metadata' => 'array',
         'properties' => 'array',
+        'rollback' => 'boolean',
     ];
 
     /**
@@ -70,6 +72,24 @@ class Revision extends Model implements RevisionContract
             'revisionable_id' => $model->getKey(),
             'revisionable_type' => get_class($model),
         ]);
+    }
+
+    /**
+     * Scope revisions to those that are not rollback revisions.
+     */
+    #[Scope]
+    protected function notRollback(Builder $query): void
+    {
+        $query->where('rollback', false);
+    }
+
+    /**
+     * Scope revisions to those that are rollback revisions.
+     */
+    #[Scope]
+    protected function onlyRollbacks(Builder $query): void
+    {
+        $query->where('rollback', true);
     }
 
     /**

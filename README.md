@@ -207,6 +207,8 @@ When the condition is true the latest revision is updated in place; its identity
 
 If no revision exists yet the first save always creates one, regardless of the condition.
 
+Rollback revisions are never targeted for replacement — they are always preserved as permanent checkpoints regardless of the condition.
+
 The living snapshot captures the pre-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state before the most recent save, which serves as the rollback point.
 
 #### Custom revision naming
@@ -266,7 +268,7 @@ $article->latestRevision;
 
 #### Querying revisions
 
-Filter revisions by user or model using the built-in scopes:
+Filter revisions using the built-in scopes:
 
 ```php
 // Revisions created by a specific user
@@ -274,6 +276,12 @@ $revisions = Revision::forUser($user)->get();
 
 // All revisions for a specific model instance
 $revisions = Revision::forModel($article)->get();
+
+// Exclude rollback revisions
+$revisions = $article->revisions()->notRollback()->get();
+
+// Only rollback revisions
+$revisions = $article->revisions()->onlyRollbacks()->get();
 ```
 
 #### Reconstructing a model from a revision
@@ -376,6 +384,13 @@ public function getRevisionOptions(): RevisableOptions
         ->disableRevisionOnRollback();
 }
 ```
+
+#### Rollback revisions
+
+The revision created after a rollback is flagged with `rollback = true`. This has two effects:
+
+- **It is never targeted by `replaceWhen`.** When a model uses living snapshots, subsequent edits replace the most recent regular revision — the rollback revision is always preserved as a permanent checkpoint.
+- **It can be filtered using the built-in scopes** (`notRollback`, `onlyRollbacks`) — see [Querying revisions](#querying-revisions).
 
 ---
 

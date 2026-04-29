@@ -34,6 +34,8 @@ class Revisioner
 
     protected ?NameGenerator $nameGenerator = null;
 
+    protected bool $isRollback = false;
+
     public function __construct(protected UserResolver $userResolver) {}
 
     public function for(Model $model): static
@@ -85,6 +87,13 @@ class Revisioner
         return $this;
     }
 
+    public function asRollback(): static
+    {
+        $this->isRollback = true;
+
+        return $this;
+    }
+
     public function withRelations(array $relations): static
     {
         $this->relations = $relations;
@@ -110,6 +119,7 @@ class Revisioner
         $revision->name = $this->resolveName();
         $revision->metadata = $this->buildData();
         $revision->properties = $this->properties ?: null;
+        $revision->rollback = $this->isRollback;
 
         return $revision;
     }

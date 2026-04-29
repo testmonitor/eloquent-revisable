@@ -82,6 +82,7 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->json('metadata')->nullable();
             $table->json('properties')->nullable();
+            $table->boolean('rollback')->default(false);
 
             $table->timestamps();
 
