@@ -175,7 +175,7 @@ trait HasRevisions
             ->withRelations($options->relations)
             ->limit($options->limit)
             ->when(
-                $options->shouldReplace($this) ? $this->revisionToReplace($options) : null,
+                $this->shouldReplaceRevision($options) ? $this->revisionToReplace() : null,
                 fn ($revisioner, $existing) => $revisioner->replace($existing),
                 fn ($revisioner) => $revisioner->save()
             );
@@ -233,11 +233,23 @@ trait HasRevisions
     }
 
     /**
+     * Determine whether the latest revision should be replaced instead of creating a new one.
+     */
+    protected function shouldReplaceRevision(RevisableOptions $options): bool
+    {
+        if (! $options->shouldReplace($this)) {
+            return false;
+        }
+
+        return ! $this->latestRevision()->value('rollback');
+    }
+
+    /**
      * Return the latest revision to replace, or null if a new one should be created.
      */
     protected function revisionToReplace(): ?Revision
     {
-        return $this->revisions()->notRollback()->latest()->first();
+        return $this->latestRevision()->first();
     }
 
     /**
@@ -247,7 +259,7 @@ trait HasRevisions
     {
         $options = $this->getRevisionOptions();
 
-        $existing = $replace ?? $options->shouldReplace($this)
+        $existing = $replace ?? $this->shouldReplaceRevision($options)
             ? $this->revisionToReplace()
             : null;
 

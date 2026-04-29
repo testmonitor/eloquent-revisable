@@ -248,11 +248,11 @@ class ReplacingRevisionsTest extends TestCase
         // When
         $this->modifyPost($post);
 
-        // Then - the rollback revision is preserved; the regular revision is replaced instead
-        $this->assertCount(2, $post->revisions()->get());
+        // Then - the rollback revision is preserved; a new regular revision is created
+        $this->assertCount(3, $post->revisions()->get());
 
         $rollbacks = $post->revisions()->oldest('id')->pluck('rollback')->all();
-        $this->assertEquals([false, true], $rollbacks);
+        $this->assertEquals([false, true, false], $rollbacks);
     }
 
     #[Test]

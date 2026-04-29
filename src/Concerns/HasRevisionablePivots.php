@@ -50,7 +50,7 @@ trait HasRevisionablePivots
             ->withRelations($options->relations)
             ->limit($options->limit)
             ->when(
-                $options->shouldReplace($this) ? $this->revisionToReplace($options) : null,
+                $this->shouldReplaceRevision($options) ? $this->revisionToReplace() : null,
                 fn ($revisioner, $existing) => $revisioner->replace($existing),
                 fn ($revisioner) => $revisioner->save()
             );
