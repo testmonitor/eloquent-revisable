@@ -391,4 +391,46 @@ class RevisionDiffTest extends TestCase
         $this->assertArrayNotHasKey('comments', $diff->changes());
         $this->assertArrayHasKey('comments', $diff->all());
     }
+
+    #[Test]
+    public function it_returns_an_empty_diff_for_a_direct_relation_when_primary_key_is_missing_in_both_revisions()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('comments');
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Final name']);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // Simulate corrupted/legacy metadata where primary_key is absent
+        $revisions->each(function ($revision) {
+            $metadata = $revision->metadata;
+            if (isset($metadata['relations']['comments']['records'])) {
+                $metadata['relations']['comments']['records']['primary_key'] = null;
+                $revision->update(['metadata' => $metadata]);
+            }
+        });
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $diff = $revisions->last()->diff();
+
+        // Then
+        $this->assertArrayNotHasKey('comments', $diff->changes());
+        $this->assertArrayHasKey('comments', $diff->all());
+
+        $this->assertEmpty($diff->all()['comments']['added']);
+        $this->assertEmpty($diff->all()['comments']['removed']);
+        $this->assertEmpty($diff->all()['comments']['changed']);
+    }
 }
