@@ -140,7 +140,7 @@ class Revisioner
 
             $existing->update([
                 'user_id' => $snapshot->user_id,
-                'name' => $snapshot->name,
+                'name' => $this->name ?? $existing->name,
                 'metadata' => $snapshot->metadata,
                 'properties' => $snapshot->properties,
             ]);
