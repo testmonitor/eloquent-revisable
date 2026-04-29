@@ -138,6 +138,32 @@ class ReplacingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_updates_changes_when_a_revision_is_replaced()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $this->modifyPost($post, ['name' => 'Third name']);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertArrayHasKey('name', $revision->changes);
+        $this->assertEquals('Post name', $revision->changes['name']['old']);
+        $this->assertEquals('Another post name', $revision->changes['name']['new']);
+    }
+
+    #[Test]
     public function it_replaces_the_revision_on_pivot_changes()
     {
         // Given

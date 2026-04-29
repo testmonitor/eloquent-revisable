@@ -22,6 +22,7 @@ class Revision extends Model implements RevisionContract
         'name',
         'metadata',
         'properties',
+        'changes',
         'type',
         'revisionable_id',
         'revisionable_type',
@@ -31,6 +32,7 @@ class Revision extends Model implements RevisionContract
     protected $casts = [
         'metadata' => 'array',
         'properties' => 'array',
+        'changes' => 'array',
         'type' => RevisionType::class,
     ];
 

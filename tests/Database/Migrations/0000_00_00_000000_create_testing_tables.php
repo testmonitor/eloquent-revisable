@@ -83,6 +83,7 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->json('metadata')->nullable();
             $table->json('properties')->nullable();
+            $table->json('changes')->nullable();
             $table->enum('type', RevisionType::cases())->default(RevisionType::Default->value);
 
             $table->timestamps();

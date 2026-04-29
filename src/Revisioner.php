@@ -19,6 +19,12 @@ class Revisioner
 
     protected Model $model;
 
+    protected ?int $limit = null;
+
+    protected ?string $name = null;
+
+    protected array $properties = [];
+
     protected array $fields = [];
 
     protected array $exceptFields = [];
@@ -26,12 +32,6 @@ class Revisioner
     protected array $relations = [];
 
     protected ?array $exceptRestoringRelations = [];
-
-    protected ?int $limit = null;
-
-    protected ?string $name = null;
-
-    protected array $properties = [];
 
     protected ?NameGenerator $nameGenerator = null;
 
@@ -119,6 +119,7 @@ class Revisioner
         $revision->user_id = $this->userResolver->resolve();
         $revision->name = $this->resolveName();
         $revision->metadata = $this->buildData();
+        $revision->changes = $this->buildChanges($revision);
         $revision->properties = $this->properties ?: null;
         $revision->type = $this->revisionType;
 
@@ -154,6 +155,7 @@ class Revisioner
                 'name' => $this->name ?? $existing->name,
                 'metadata' => $snapshot->metadata,
                 'properties' => $snapshot->properties,
+                'changes' => $snapshot->changes,
             ]);
 
             return $existing;
@@ -237,6 +239,20 @@ class Revisioner
         }
 
         return $data;
+    }
+
+    /**
+     * Build the changes array by comparing the new revision to the previous one.
+     */
+    protected function buildChanges(Revision $revision): ?array
+    {
+        $previous = $this->model->latestRevision()->first();
+
+        if ($previous === null) {
+            return null;
+        }
+
+        return (new Diff($previous, $revision))->changes() ?: null;
     }
 
     /**

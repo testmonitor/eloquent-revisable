@@ -136,6 +136,41 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_stores_null_changes_for_the_first_revision()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertNull($post->revisions()->firstOrFail()->changes);
+    }
+
+    #[Test]
+    public function it_stores_the_full_diff_in_subsequent_revisions()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        // When
+        $this->modifyPost($post, ['name' => 'Final name']);
+
+        // Then
+        $changes = $post->latestRevision->changes;
+
+        $this->assertArrayHasKey('name', $changes);
+        $this->assertEquals('Post name', $changes['name']['old']);
+        $this->assertEquals('Another post name', $changes['name']['new']);
+
+        $this->assertArrayHasKey('votes', $changes);
+        $this->assertEquals(10, $changes['votes']['old']);
+        $this->assertEquals(20, $changes['votes']['new']);
+    }
+
+    #[Test]
     public function it_stores_the_user_id_using_a_custom_resolver()
     {
         // Given
