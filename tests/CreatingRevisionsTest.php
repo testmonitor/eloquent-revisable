@@ -5,6 +5,7 @@ namespace TestMonitor\Revisable\Tests;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
+use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Author;
@@ -56,6 +57,7 @@ class CreatingRevisionsTest extends TestCase
 
         // Then
         $this->assertEquals(1, Revision::count());
+        $this->assertTrue(Revision::first()->isInitial());
     }
 
     #[Test]
@@ -306,7 +308,7 @@ class CreatingRevisionsTest extends TestCase
 
         // Then
         $this->assertCount(1, $revisions);
-        $this->assertTrue($revisions->first()->rollback);
+        $this->assertEquals(RevisionType::Rollback, $revisions->first()->type);
     }
 
     #[Test]
@@ -469,7 +471,9 @@ class CreatingRevisionsTest extends TestCase
         // Then
         $revisions = $post->revisions()->oldest('id')->get();
 
-        $this->assertFalse($revisions->first()->rollback);
-        $this->assertTrue($revisions->last()->rollback);
+        $this->assertEquals(RevisionType::Default, $revisions->first()->type);
+        $this->assertTrue($revisions->first()->isDefault());
+        $this->assertEquals(RevisionType::Rollback, $revisions->last()->type);
+        $this->assertTrue($revisions->last()->isRollback());
     }
 }

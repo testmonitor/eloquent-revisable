@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Traits\Conditionable;
 use TestMonitor\Revisable\Contracts\NameGenerator;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
+use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\Models\Revision;
 
 class Revisioner
@@ -34,7 +35,7 @@ class Revisioner
 
     protected ?NameGenerator $nameGenerator = null;
 
-    protected bool $isRollback = false;
+    protected RevisionType $revisionType = RevisionType::Default;
 
     public function __construct(protected UserResolver $userResolver) {}
 
@@ -87,9 +88,9 @@ class Revisioner
         return $this;
     }
 
-    public function asRollback(): static
+    public function type(RevisionType $type): static
     {
-        $this->isRollback = true;
+        $this->revisionType = $type;
 
         return $this;
     }
@@ -119,7 +120,7 @@ class Revisioner
         $revision->name = $this->resolveName();
         $revision->metadata = $this->buildData();
         $revision->properties = $this->properties ?: null;
-        $revision->rollback = $this->isRollback;
+        $revision->type = $this->revisionType;
 
         return $revision;
     }

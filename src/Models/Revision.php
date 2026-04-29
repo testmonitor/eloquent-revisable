@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\RevisableServiceProvider;
 
 class Revision extends Model implements RevisionContract
@@ -21,7 +22,7 @@ class Revision extends Model implements RevisionContract
         'name',
         'metadata',
         'properties',
-        'rollback',
+        'type',
         'revisionable_id',
         'revisionable_type',
         'user_id',
@@ -30,7 +31,7 @@ class Revision extends Model implements RevisionContract
     protected $casts = [
         'metadata' => 'array',
         'properties' => 'array',
-        'rollback' => 'boolean',
+        'type' => RevisionType::class,
     ];
 
     /**
@@ -80,7 +81,7 @@ class Revision extends Model implements RevisionContract
     #[Scope]
     protected function notRollback(Builder $query): void
     {
-        $query->where('rollback', false);
+        $query->whereNot('type', RevisionType::Rollback->value);
     }
 
     /**
@@ -89,7 +90,40 @@ class Revision extends Model implements RevisionContract
     #[Scope]
     protected function onlyRollbacks(Builder $query): void
     {
-        $query->where('rollback', true);
+        $query->where('type', RevisionType::Rollback->value);
+    }
+
+    /**
+     * Scope revisions to those that are initial revisions.
+     */
+    #[Scope]
+    protected function onlyInitial(Builder $query): void
+    {
+        $query->where('type', RevisionType::Initial->value);
+    }
+
+    /**
+     * Determine whether this is a regular revision.
+     */
+    public function isDefault(): bool
+    {
+        return $this->type === RevisionType::Default;
+    }
+
+    /**
+     * Determine whether this revision was created on model creation.
+     */
+    public function isInitial(): bool
+    {
+        return $this->type === RevisionType::Initial;
+    }
+
+    /**
+     * Determine whether this revision was created after a rollback.
+     */
+    public function isRollback(): bool
+    {
+        return $this->type === RevisionType::Rollback;
     }
 
     /**

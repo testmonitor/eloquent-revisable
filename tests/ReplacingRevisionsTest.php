@@ -4,6 +4,7 @@ namespace TestMonitor\Revisable\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
+use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
@@ -208,6 +209,36 @@ class ReplacingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_does_not_replace_an_initial_revision()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->enableRevisionOnCreate()
+                    ->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertCount(2, $post->revisions()->get());
+
+        $types = $post->revisions()->oldest('id')->pluck('type')->all();
+        $this->assertEquals([RevisionType::Initial, RevisionType::Default], $types);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+        $this->assertTrue($revisions->first()->isInitial());
+        $this->assertTrue($revisions->last()->isDefault());
+    }
+
+    #[Test]
     public function it_always_creates_a_new_revision_on_rollback_when_replace_when_is_true()
     {
         // Given
@@ -248,11 +279,11 @@ class ReplacingRevisionsTest extends TestCase
         // When
         $this->modifyPost($post);
 
-        // Then - the rollback revision is preserved; a new regular revision is created
+        // Then - the rollback revision is preserved; a new default revision is created
         $this->assertCount(3, $post->revisions()->get());
 
-        $rollbacks = $post->revisions()->oldest('id')->pluck('rollback')->all();
-        $this->assertEquals([false, true, false], $rollbacks);
+        $types = $post->revisions()->oldest('id')->pluck('type')->all();
+        $this->assertEquals([RevisionType::Default, RevisionType::Rollback, RevisionType::Default], $types);
     }
 
     #[Test]

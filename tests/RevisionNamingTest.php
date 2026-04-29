@@ -131,15 +131,15 @@ class RevisionNamingTest extends TestCase
             {
                 return parent::getRevisionOptions()
                     ->nameRevisionUsing(new VersionNameGenerator)
-                    ->enableRevisionOnCreate()
                     ->replaceWhen(true);
             }
         };
 
         $post = $this->createPost($post);
+        $this->modifyPost($post);
 
         // When
-        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Third name']);
 
         // Then
         $this->assertCount(1, $post->revisions()->get());

@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use TestMonitor\Revisable\Enums\RevisionType;
 
 return new class extends Migration
 {
@@ -82,7 +83,7 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->json('metadata')->nullable();
             $table->json('properties')->nullable();
-            $table->boolean('rollback')->default(false);
+            $table->enum('type', RevisionType::cases())->default(RevisionType::Default->value);
 
             $table->timestamps();
 

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\RevisableServiceProvider;
@@ -174,6 +175,7 @@ trait HasRevisions
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
             ->limit($options->limit)
+            ->when($this->wasRecentlyCreated, fn ($revisioner) => $revisioner->type(RevisionType::Initial))
             ->when(
                 $this->shouldReplaceRevision($options) ? $this->revisionToReplace() : null,
                 fn ($revisioner, $existing) => $revisioner->replace($existing),
@@ -228,7 +230,7 @@ trait HasRevisions
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
             ->limit($options->limit)
-            ->asRollback()
+            ->type(RevisionType::Rollback)
             ->save();
     }
 
@@ -241,7 +243,7 @@ trait HasRevisions
             return false;
         }
 
-        return ! $this->latestRevision()->value('rollback');
+        return $this->latestRevision()->first()?->isDefault() ?? false;
     }
 
     /**
