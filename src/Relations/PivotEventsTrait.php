@@ -2,26 +2,37 @@
 
 namespace TestMonitor\Revisable\Relations;
 
+use Illuminate\Database\Eloquent\Model;
+
 /**
  * Overrides mutating BelongsToMany/MorphToMany methods so that the parent model
  * is notified after every pivot change. A bulk-operation guard prevents
  * double-firing when high-level methods (sync, toggle) call attach/detach
  * internally.
+ *
+ * @property Model $parent
+ * @property string $relationName
  */
 trait PivotEventsTrait
 {
     private bool $isBulkPivotOperation = false;
 
-    public function attach($id, array $attributes = [], $touch = true): void
+    /**
+     * @param  bool  $touch
+     */
+    public function attach(mixed $ids, array $attributes = [], $touch = true): void
     {
-        parent::attach($id, $attributes, $touch);
+        parent::attach($ids, $attributes, $touch);
 
         if (! $this->isBulkPivotOperation) {
             $this->touchParentRevision();
         }
     }
 
-    public function detach($ids = null, $touch = true): int
+    /**
+     * @param  bool  $touch
+     */
+    public function detach(mixed $ids = null, $touch = true): int
     {
         $result = parent::detach($ids, $touch);
 
@@ -32,7 +43,10 @@ trait PivotEventsTrait
         return $result;
     }
 
-    public function sync($ids, $detaching = true): array
+    /**
+     * @param  bool  $detaching
+     */
+    public function sync(mixed $ids, $detaching = true): array
     {
         $this->isBulkPivotOperation = true;
 
@@ -49,7 +63,10 @@ trait PivotEventsTrait
         return $changes;
     }
 
-    public function toggle($ids, $touch = true): array
+    /**
+     * @param  bool  $touch
+     */
+    public function toggle(mixed $ids, $touch = true): array
     {
         $this->isBulkPivotOperation = true;
 
@@ -66,7 +83,10 @@ trait PivotEventsTrait
         return $changes;
     }
 
-    public function updateExistingPivot($id, array $attributes, $touch = true): int
+    /**
+     * @param  bool  $touch
+     */
+    public function updateExistingPivot(mixed $id, array $attributes, $touch = true): int
     {
         $result = parent::updateExistingPivot($id, $attributes, $touch);
 
