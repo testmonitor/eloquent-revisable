@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use TestMonitor\Revisable\Relations\BelongsToMany;
 use TestMonitor\Revisable\Relations\MorphToMany;
-use TestMonitor\Revisable\Revisioner;
 
 /**
  * Optional trait that creates a revision whenever a tracked BelongsToMany or
@@ -42,18 +41,7 @@ trait HasRevisionablePivots
             return;
         }
 
-        app(Revisioner::class)
-            ->for($this)
-            ->nameUsing($options->nameGenerator)
-            ->onlyFields($options->fields)
-            ->exceptFields($options->exceptFields)
-            ->withRelations($options->relations)
-            ->limit($options->limit)
-            ->when(
-                $this->shouldReplaceRevision($options) ? $this->revisionToReplace() : null,
-                fn ($revisioner, $existing) => $revisioner->replace($existing),
-                fn ($revisioner) => $revisioner->save()
-            );
+        $this->saveAsRevision();
 
         $this->fireModelEvent('revisioned', false);
     }
