@@ -61,48 +61,6 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
-    public function it_does_not_create_a_revision_when_the_model_is_soft_deleted()
-    {
-        // Given
-        $post = new class extends Post
-        {
-            use SoftDeletes;
-        };
-
-        $post = $this->createPost($post);
-        $this->modifyPost($post);
-        $this->assertEquals(1, Revision::count());
-
-        // When
-        $post->delete();
-
-        // Then
-        $this->assertEquals(1, Revision::count());
-    }
-
-    #[Test]
-    public function it_does_not_create_a_revision_when_a_soft_deleted_model_is_restored()
-    {
-        // Given
-        $post = new class extends Post
-        {
-            use SoftDeletes;
-        };
-
-        $post = $this->createPost($post);
-        $this->modifyPost($post);
-        $this->assertEquals(1, Revision::count());
-
-        $post->delete();
-
-        // When
-        $post->restore();
-
-        // Then
-        $this->assertEquals(1, Revision::count());
-    }
-
-    #[Test]
     public function it_accumulates_multiple_revisions_across_successive_updates()
     {
         // Given
@@ -289,125 +247,6 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
-    public function it_can_scope_revisions_by_model()
-    {
-        // Given
-        $postA = $this->createPost();
-        $postB = Post::create(['author_id' => $postA->author_id, 'name' => 'Post name', 'slug' => 'post-b-slug', 'content' => 'Post content', 'votes' => 10, 'views' => 100]);
-
-        $this->modifyPost($postA);
-        $this->modifyPost($postB, ['slug' => 'post-b-modified-slug']);
-        $this->modifyPost($postB, ['name' => 'Third', 'slug' => 'post-b-third-slug']);
-
-        // When
-        $revisions = Revision::query()->forModel($postA)->get();
-
-        // Then
-        $this->assertCount(1, $revisions);
-        $this->assertEquals($postA->id, $revisions->first()->revisionable_id);
-    }
-
-    #[Test]
-    public function it_can_scope_revisions_by_user()
-    {
-        // Given
-        $post = $this->createPost();
-        $author = $post->author;
-
-        app(UserResolver::class)->resolveUsing(fn () => $author->id);
-        $this->modifyPost($post);
-
-        $otherAuthor = $this->createAuthor();
-        app(UserResolver::class)->resolveUsing(fn () => $otherAuthor->id);
-        $this->modifyPost($post, ['name' => 'Another name']);
-
-        // When
-        $revisions = Revision::query()->forUser($author)->get();
-
-        // Then
-        $this->assertCount(1, $revisions);
-        $this->assertEquals($author->id, $revisions->first()->user_id);
-    }
-
-    #[Test]
-    public function it_can_scope_revisions_to_only_rollbacks()
-    {
-        // Given
-        $post = $this->createPost();
-        $this->modifyPost($post);
-        $this->modifyPost($post, ['name' => 'Another name']);
-
-        $post->rollbackToRevision($post->revisions()->oldest()->firstOrFail());
-
-        // When
-        $revisions = $post->revisions()->onlyRollbacks()->get();
-
-        // Then
-        $this->assertCount(1, $revisions);
-        $this->assertEquals(RevisionType::Rollback, $revisions->first()->type);
-    }
-
-    #[Test]
-    public function it_can_delete_all_revisions_for_a_record()
-    {
-        // Given
-        $post = $this->createPost();
-        $this->modifyPost($post);
-        $this->modifyPost($post, ['name' => 'Yet another post name', 'slug' => 'yet-another-post-slug', 'content' => 'Yet another post content', 'votes' => 30, 'views' => 300]);
-        $this->assertEquals(2, Revision::count());
-
-        // When
-        $post->deleteAllRevisions();
-
-        // Then
-        $this->assertEquals(0, Revision::count());
-    }
-
-    #[Test]
-    public function it_deletes_all_revisions_when_the_model_is_deleted()
-    {
-        // Given
-        $post = $this->createPost();
-        $this->modifyPost($post);
-        $this->assertEquals(1, Revision::count());
-
-        // When
-        $post->delete();
-
-        // Then
-        $this->assertEquals(0, Revision::count());
-    }
-
-    #[Test]
-    public function it_clears_excess_revisions_when_manually_pruned()
-    {
-        // Given
-        $post = new class extends Post
-        {
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions()->limitRevisionsTo(2);
-            }
-        };
-
-        $post = $this->createPost($post);
-
-        DB::table('revisions')->insert([
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
-        ]);
-
-        $this->assertEquals(3, $post->revisions()->count());
-
-        // When
-        $post->clearOldRevisions();
-
-        // Then
-        $this->assertEquals(2, $post->revisions()->count());
-    }
-
-    #[Test]
     public function it_can_rollback_to_a_past_revision()
     {
         // Given
@@ -511,5 +350,208 @@ class CreatingRevisionsTest extends TestCase
         $this->assertTrue($revisions->first()->isDefault());
         $this->assertEquals(RevisionType::Rollback, $revisions->last()->type);
         $this->assertTrue($revisions->last()->isRollback());
+    }
+
+    #[Test]
+    public function it_can_scope_revisions_by_model()
+    {
+        // Given
+        $postA = $this->createPost();
+        $postB = Post::create(['author_id' => $postA->author_id, 'name' => 'Post name', 'slug' => 'post-b-slug', 'content' => 'Post content', 'votes' => 10, 'views' => 100]);
+
+        $this->modifyPost($postA);
+        $this->modifyPost($postB, ['slug' => 'post-b-modified-slug']);
+        $this->modifyPost($postB, ['name' => 'Third', 'slug' => 'post-b-third-slug']);
+
+        // When
+        $revisions = Revision::query()->forModel($postA)->get();
+
+        // Then
+        $this->assertCount(1, $revisions);
+        $this->assertEquals($postA->id, $revisions->first()->revisionable_id);
+    }
+
+    #[Test]
+    public function it_can_scope_revisions_by_user()
+    {
+        // Given
+        $post = $this->createPost();
+        $author = $post->author;
+
+        app(UserResolver::class)->resolveUsing(fn () => $author->id);
+        $this->modifyPost($post);
+
+        $otherAuthor = $this->createAuthor();
+        app(UserResolver::class)->resolveUsing(fn () => $otherAuthor->id);
+        $this->modifyPost($post, ['name' => 'Another name']);
+
+        // When
+        $revisions = Revision::query()->forUser($author)->get();
+
+        // Then
+        $this->assertCount(1, $revisions);
+        $this->assertEquals($author->id, $revisions->first()->user_id);
+    }
+
+    #[Test]
+    public function it_can_scope_revisions_to_only_initial()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Another name']);
+
+        // When
+        $revisions = $post->revisions()->onlyInitial()->get();
+
+        // Then
+        $this->assertCount(1, $revisions);
+        $this->assertEquals(RevisionType::Initial, $revisions->first()->type);
+    }
+
+    #[Test]
+    public function it_can_scope_revisions_to_only_rollbacks()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Another name']);
+
+        $post->rollbackToRevision($post->revisions()->oldest()->firstOrFail());
+
+        // When
+        $revisions = $post->revisions()->onlyRollbacks()->get();
+
+        // Then
+        $this->assertCount(1, $revisions);
+        $this->assertEquals(RevisionType::Rollback, $revisions->first()->type);
+    }
+
+    #[Test]
+    public function it_can_scope_revisions_to_not_rollbacks()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Another name']);
+
+        $post->rollbackToRevision($post->revisions()->oldest()->firstOrFail());
+
+        // When
+        $revisions = $post->revisions()->notRollback()->get();
+
+        // Then
+        $this->assertCount(2, $revisions);
+        $this->assertNotContains(RevisionType::Rollback, $revisions->pluck('type'));
+    }
+
+    #[Test]
+    public function it_clears_excess_revisions_when_manually_pruned()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->limitRevisionsTo(2);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        DB::table('revisions')->insert([
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $this->assertEquals(3, $post->revisions()->count());
+
+        // When
+        $post->clearOldRevisions();
+
+        // Then
+        $this->assertEquals(2, $post->revisions()->count());
+    }
+
+    #[Test]
+    public function it_can_delete_all_revisions_for_a_record()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Yet another post name', 'slug' => 'yet-another-post-slug', 'content' => 'Yet another post content', 'votes' => 30, 'views' => 300]);
+        $this->assertEquals(2, Revision::count());
+
+        // When
+        $post->deleteAllRevisions();
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
+    public function it_deletes_all_revisions_when_the_model_is_deleted()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        // When
+        $post->delete();
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_the_model_is_soft_deleted()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use SoftDeletes;
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        // When
+        $post->delete();
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+    }
+
+    #[Test]
+    public function it_does_not_create_a_revision_when_a_soft_deleted_model_is_restored()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use SoftDeletes;
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+        $this->assertEquals(1, Revision::count());
+
+        $post->delete();
+
+        // When
+        $post->restore();
+
+        // Then
+        $this->assertEquals(1, Revision::count());
     }
 }

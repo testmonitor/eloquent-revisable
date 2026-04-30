@@ -165,77 +165,6 @@ class ReplacingRevisionsTest extends TestCase
     }
 
     #[Test]
-    public function it_replaces_the_revision_on_pivot_changes()
-    {
-        // Given
-        $post = new class extends Post
-        {
-            use HasRevisionablePivots;
-
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions()
-                    ->withRelations('tags')
-                    ->replaceWhen(true);
-            }
-        };
-
-        $post = $this->createPost($post);
-        $tags = $this->createTags(3);
-
-        // First pivot change creates the revision
-        $post->tags()->attach($tags[0]->id);
-
-        // Second pivot change should replace it
-        $post->tags()->sync($tags->pluck('id')->toArray());
-
-        // When / Then
-        $revisions = $post->revisions;
-
-        $this->assertCount(1, $revisions);
-
-        $tagIds = array_column(
-            $revisions->first()->metadata['relations']['tags']['records']['items'],
-            'id'
-        );
-
-        $this->assertCount(3, $tagIds);
-    }
-
-    #[Test]
-    public function it_fires_events_when_replacing()
-    {
-        // Given
-        $post = new class extends Post
-        {
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions()->replaceWhen(true);
-            }
-        };
-
-        $post = $this->createPost($post);
-
-        $revisioningFired = false;
-        $revisionedFired = false;
-
-        $post::revisioning(function () use (&$revisioningFired) {
-            $revisioningFired = true;
-        });
-
-        $post::revisioned(function () use (&$revisionedFired) {
-            $revisionedFired = true;
-        });
-
-        // When
-        $this->modifyPost($post);
-
-        // Then
-        $this->assertTrue($revisioningFired);
-        $this->assertTrue($revisionedFired);
-    }
-
-    #[Test]
     public function it_does_not_replace_an_initial_revision()
     {
         // Given
@@ -377,5 +306,76 @@ class ReplacingRevisionsTest extends TestCase
 
         // Then
         $this->assertCount(1, $post->revisions()->get());
+    }
+
+    #[Test]
+    public function it_fires_events_when_replacing()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        $revisioningFired = false;
+        $revisionedFired = false;
+
+        $post::revisioning(function () use (&$revisioningFired) {
+            $revisioningFired = true;
+        });
+
+        $post::revisioned(function () use (&$revisionedFired) {
+            $revisionedFired = true;
+        });
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $this->assertTrue($revisioningFired);
+        $this->assertTrue($revisionedFired);
+    }
+
+    #[Test]
+    public function it_replaces_the_revision_on_pivot_changes()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use HasRevisionablePivots;
+
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->withRelations('tags')
+                    ->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+        $tags = $this->createTags(3);
+
+        // First pivot change creates the revision
+        $post->tags()->attach($tags[0]->id);
+
+        // Second pivot change should replace it
+        $post->tags()->sync($tags->pluck('id')->toArray());
+
+        // When / Then
+        $revisions = $post->revisions;
+
+        $this->assertCount(1, $revisions);
+
+        $tagIds = array_column(
+            $revisions->first()->metadata['relations']['tags']['records']['items'],
+            'id'
+        );
+
+        $this->assertCount(3, $tagIds);
     }
 }
