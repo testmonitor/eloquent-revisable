@@ -242,7 +242,7 @@ class Revisioner
     }
 
     /**
-     * Build the changes by diffing the revision snapshot (old state) against the model's current attributes (new state).
+     * Build the changes by diffing the revision snapshot against the model's current attributes.
      */
     protected function buildChanges(Revision $revision): ?array
     {
