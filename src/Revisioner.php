@@ -119,7 +119,7 @@ class Revisioner
         $revision->user_id = $this->userResolver->resolve();
         $revision->name = $this->resolveName();
         $revision->metadata = $this->buildData();
-        $revision->changes = $this->buildChanges($revision);
+        $revision->changed = $this->buildChanges($revision);
         $revision->properties = $this->properties ?: null;
         $revision->type = $this->revisionType;
 
@@ -155,7 +155,7 @@ class Revisioner
                 'name' => $this->name ?? $existing->name,
                 'metadata' => $snapshot->metadata,
                 'properties' => $snapshot->properties,
-                'changes' => $snapshot->changes,
+                'changed' => $snapshot->changed,
             ]);
 
             return $existing;
@@ -262,7 +262,7 @@ class Revisioner
             $current['relations'] = $revision->metadata['relations'] ?? [];
         }
 
-        return (new Diff($previous, $current))->changes() ?: null;
+        return (new Diff($previous, $current))->changed() ?: null;
     }
 
     /**

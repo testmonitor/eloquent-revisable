@@ -66,6 +66,14 @@ class Diff
     }
 
     /**
+     * Return the names of the fields and relations that changed between the two revisions.
+     */
+    public function changed(): array
+    {
+        return array_keys($this->changes());
+    }
+
+    /**
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
      * @return array<string, array{old: mixed, new: mixed}>

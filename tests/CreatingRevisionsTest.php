@@ -103,11 +103,9 @@ class CreatingRevisionsTest extends TestCase
         $this->modifyPost($post);
 
         // Then
-        $changes = $post->revisions()->firstOrFail()->changes;
+        $changes = $post->revisions()->firstOrFail()->changed;
 
-        $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Post name', $changes['name']['old']);
-        $this->assertEquals('Another post name', $changes['name']['new']);
+        $this->assertContains('name', $changes);
     }
 
     #[Test]
@@ -121,12 +119,10 @@ class CreatingRevisionsTest extends TestCase
         $this->modifyPost($post, ['name' => 'Final name']);
 
         // Then
-        $changes = $post->latestRevision->changes;
+        $changes = $post->latestRevision->changed;
 
-        $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Another post name', $changes['name']['old']);
-        $this->assertEquals('Final name', $changes['name']['new']);
-        $this->assertArrayNotHasKey('votes', $changes);
+        $this->assertContains('name', $changes);
+        $this->assertNotContains('votes', $changes);
     }
 
     #[Test]
