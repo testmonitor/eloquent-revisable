@@ -250,9 +250,25 @@ class Revisioner
             return null;
         }
 
-        $current = $this->filterModelData($this->model->getAttributes());
+        $latestRevision = $this->model->latestRevision;
 
-        return (new Diff($revision->metadata ?? [], $current))->changes() ?: null;
+        // Fields from getRawOriginal (pre-save state); relations from the previous revision's snapshot.
+        $previous = [
+            ...Arr::except($revision->metadata ?? [], ['relations']),
+            ...(! empty($this->relations) ? [
+                'relations' => $latestRevision?->metadata['relations'] ?? [],
+            ] : []),
+        ];
+
+        // Fields from getAttributes (post-save state); relations from the live DB state captured in this snapshot.
+        $current = [
+            ...$this->filterModelData($this->model->getAttributes()),
+            ...(! empty($this->relations) ? [
+                'relations' => $revision->metadata['relations'] ?? [],
+            ] : []),
+        ];
+
+        return (new Diff($previous, $current))->changes() ?: null;
     }
 
     /**
