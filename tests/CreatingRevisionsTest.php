@@ -136,7 +136,7 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
-    public function it_stores_null_changes_for_the_first_revision()
+    public function it_stores_the_changed_fields_for_each_revision()
     {
         // Given
         $post = $this->createPost();
@@ -145,11 +145,15 @@ class CreatingRevisionsTest extends TestCase
         $this->modifyPost($post);
 
         // Then
-        $this->assertNull($post->revisions()->firstOrFail()->changes);
+        $changes = $post->revisions()->firstOrFail()->changes;
+
+        $this->assertArrayHasKey('name', $changes);
+        $this->assertEquals('Post name', $changes['name']['old']);
+        $this->assertEquals('Another post name', $changes['name']['new']);
     }
 
     #[Test]
-    public function it_stores_the_full_diff_in_subsequent_revisions()
+    public function it_stores_only_the_fields_that_changed_in_each_revision()
     {
         // Given
         $post = $this->createPost();
@@ -162,12 +166,9 @@ class CreatingRevisionsTest extends TestCase
         $changes = $post->latestRevision->changes;
 
         $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Post name', $changes['name']['old']);
-        $this->assertEquals('Another post name', $changes['name']['new']);
-
-        $this->assertArrayHasKey('votes', $changes);
-        $this->assertEquals(10, $changes['votes']['old']);
-        $this->assertEquals(20, $changes['votes']['new']);
+        $this->assertEquals('Another post name', $changes['name']['old']);
+        $this->assertEquals('Final name', $changes['name']['new']);
+        $this->assertArrayNotHasKey('votes', $changes);
     }
 
     #[Test]

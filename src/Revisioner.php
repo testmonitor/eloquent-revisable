@@ -242,17 +242,17 @@ class Revisioner
     }
 
     /**
-     * Build the changes array by comparing the new revision to the previous one.
+     * Build the changes by diffing the revision snapshot (old state) against the model's current attributes (new state).
      */
     protected function buildChanges(Revision $revision): ?array
     {
-        $previous = $this->model->latestRevision()->first();
-
-        if ($previous === null) {
+        if ($this->model->wasRecentlyCreated) {
             return null;
         }
 
-        return (new Diff($previous, $revision))->changes() ?: null;
+        $current = $this->filterModelData($this->model->getAttributes());
+
+        return (new Diff($revision->metadata ?? [], $current))->changes() ?: null;
     }
 
     /**
@@ -264,6 +264,14 @@ class Revisioner
             ? $this->model->getAttributes()
             : $this->model->getRawOriginal();
 
+        return $this->filterModelData($data);
+    }
+
+    /**
+     * Strip the primary key, timestamps, and unconfigured fields from a model data array.
+     */
+    protected function filterModelData(array $data): array
+    {
         unset($data[$this->model->getKeyName()]);
 
         if ($this->model->usesTimestamps()) {

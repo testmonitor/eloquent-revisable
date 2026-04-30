@@ -150,7 +150,7 @@ trait HasRevisions
             ->withRelations($options->relations)
             ->build();
 
-        return new Diff($revision, $current);
+        return Diff::fromRevisions($revision, $current);
     }
 
     /**

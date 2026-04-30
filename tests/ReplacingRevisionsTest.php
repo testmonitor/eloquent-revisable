@@ -159,8 +159,9 @@ class ReplacingRevisionsTest extends TestCase
         $revision = $post->revisions()->firstOrFail();
 
         $this->assertArrayHasKey('name', $revision->changes);
-        $this->assertEquals('Post name', $revision->changes['name']['old']);
-        $this->assertEquals('Another post name', $revision->changes['name']['new']);
+        $this->assertEquals('Another post name', $revision->changes['name']['old']);
+        $this->assertEquals('Third name', $revision->changes['name']['new']);
+        $this->assertArrayNotHasKey('votes', $revision->changes);
     }
 
     #[Test]

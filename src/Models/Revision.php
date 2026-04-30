@@ -149,7 +149,7 @@ class Revision extends Model implements RevisionContract
     public function diff(?RevisionContract $target = null): Diff
     {
         if ($target instanceof RevisionContract) {
-            return new Diff($this, $target);
+            return Diff::fromRevisions($this, $target);
         }
 
         $previous = $this->previous();
@@ -158,7 +158,7 @@ class Revision extends Model implements RevisionContract
             return Diff::empty();
         }
 
-        return new Diff($previous, $this);
+        return Diff::fromRevisions($previous, $this);
     }
 
     /**

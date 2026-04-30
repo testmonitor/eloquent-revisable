@@ -4,7 +4,6 @@ namespace TestMonitor\Revisable;
 
 use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
-use TestMonitor\Revisable\Models\Revision;
 
 class Diff
 {
@@ -18,11 +17,8 @@ class Diff
      */
     protected array $relations;
 
-    public function __construct(RevisionContract $before, RevisionContract $after)
+    public function __construct(array $before, array $after)
     {
-        $before = $before->metadata ?? [];
-        $after = $after->metadata ?? [];
-
         $this->fields = $this->diffFields($before, $after);
         $this->relations = $this->diffRelations(
             $before['relations'] ?? [],
@@ -31,11 +27,19 @@ class Diff
     }
 
     /**
+     * Create a diff from two revisions.
+     */
+    public static function fromRevisions(RevisionContract $before, RevisionContract $after): static
+    {
+        return new static($before->metadata ?? [], $after->metadata ?? []);
+    }
+
+    /**
      * Create an empty diff with no changes.
      */
     public static function empty(): static
     {
-        return new static(new Revision, new Revision);
+        return new static([], []);
     }
 
     /**
