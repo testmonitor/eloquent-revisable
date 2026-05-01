@@ -19,10 +19,12 @@ class Diff
 
     public function __construct(array $before, array $after)
     {
-        $this->fields = $this->diffFields($before, $after);
+        $this->fields = $this->diffFields(
+            $before['attributes'] ?? [], $after['attributes'] ?? []
+        );
+
         $this->relations = $this->diffRelations(
-            $before['relations'] ?? [],
-            $after['relations'] ?? [],
+            $before['relations'] ?? [], $after['relations'] ?? []
         );
     }
 
@@ -80,9 +82,6 @@ class Diff
      */
     protected function diffFields(array $before, array $after): array
     {
-        $before = Arr::except($before, ['relations']);
-        $after = Arr::except($after, ['relations']);
-
         $fields = [];
 
         foreach (array_unique([...array_keys($before), ...array_keys($after)]) as $key) {

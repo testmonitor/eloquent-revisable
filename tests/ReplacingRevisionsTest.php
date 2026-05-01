@@ -51,7 +51,7 @@ class ReplacingRevisionsTest extends TestCase
 
         // The living snapshot captures the pre-save state, so after two edits it holds
         // the state before the most recent save ('Another post name' before 'Third name').
-        $this->assertEquals('Another post name', $post->revisions->first()->metadata['name']);
+        $this->assertEquals('Another post name', $post->revisions->first()->metadata['attributes']['name']);
     }
 
     #[Test]
@@ -104,8 +104,8 @@ class ReplacingRevisionsTest extends TestCase
         // Each revision captures the state before the save that created/replaced it.
         // Revision 1 was replaced twice while in draft, ending up with the pre-'Draft revision two' state.
         // Revision 2 captured the pre-'Final name' state when the condition turned false.
-        $this->assertEquals('Another post name', $revisions->first()->metadata['name']);
-        $this->assertEquals('Draft revision two', $revisions->last()->metadata['name']);
+        $this->assertEquals('Another post name', $revisions->first()->metadata['attributes']['name']);
+        $this->assertEquals('Draft revision two', $revisions->last()->metadata['attributes']['name']);
     }
 
     #[Test]
@@ -134,7 +134,7 @@ class ReplacingRevisionsTest extends TestCase
         $this->assertEquals($originalId, $revision->id);
 
         // The snapshot captures the state before 'Updated name' was saved.
-        $this->assertEquals('Another post name', $revision->metadata['name']);
+        $this->assertEquals('Another post name', $revision->metadata['attributes']['name']);
     }
 
     #[Test]

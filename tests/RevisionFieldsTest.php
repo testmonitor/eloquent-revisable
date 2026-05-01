@@ -29,11 +29,11 @@ class RevisionFieldsTest extends TestCase
         // Then
         $revision = $post->revisions()->firstOrFail();
 
-        $this->assertArrayHasKey('name', $revision->metadata);
-        $this->assertArrayHasKey('votes', $revision->metadata);
-        $this->assertArrayNotHasKey('slug', $revision->metadata);
-        $this->assertArrayNotHasKey('content', $revision->metadata);
-        $this->assertArrayNotHasKey('views', $revision->metadata);
+        $this->assertArrayHasKey('name', $revision->metadata['attributes']);
+        $this->assertArrayHasKey('votes', $revision->metadata['attributes']);
+        $this->assertArrayNotHasKey('slug', $revision->metadata['attributes']);
+        $this->assertArrayNotHasKey('content', $revision->metadata['attributes']);
+        $this->assertArrayNotHasKey('views', $revision->metadata['attributes']);
     }
 
     #[Test]
@@ -56,11 +56,11 @@ class RevisionFieldsTest extends TestCase
         // Then
         $revision = $post->revisions()->firstOrFail();
 
-        $this->assertArrayNotHasKey('name', $revision->metadata);
-        $this->assertArrayNotHasKey('votes', $revision->metadata);
-        $this->assertArrayHasKey('slug', $revision->metadata);
-        $this->assertArrayHasKey('content', $revision->metadata);
-        $this->assertArrayHasKey('views', $revision->metadata);
+        $this->assertArrayNotHasKey('name', $revision->metadata['attributes']);
+        $this->assertArrayNotHasKey('votes', $revision->metadata['attributes']);
+        $this->assertArrayHasKey('slug', $revision->metadata['attributes']);
+        $this->assertArrayHasKey('content', $revision->metadata['attributes']);
+        $this->assertArrayHasKey('views', $revision->metadata['attributes']);
     }
 
     #[Test]

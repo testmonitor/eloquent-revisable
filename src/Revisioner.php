@@ -226,7 +226,7 @@ class Revisioner
      */
     protected function buildData(): array
     {
-        $data = $this->buildModelData();
+        $data = ['attributes' => $this->buildModelData()];
 
         foreach ($this->getRelationsForRevision() as $relation => $attributes) {
             if (RelationType::isDirect($attributes['type'])) {
@@ -250,17 +250,21 @@ class Revisioner
             return null;
         }
 
-        // Fields: pre-save state via getRawOriginal
-        $previous = Arr::except($revision->metadata ?? [], ['relations']);
+        $latestRevision = $this->model->latestRevision()->first();
 
-        // Fields: post-save state via getAttributes
-        $current = $this->filterModelData($this->model->getAttributes());
+        // Previous: pre-save attributes via getRawOriginal with relations from previous revision's snapshot.
+        $previous = [
+            'attributes' => $revision->metadata['attributes'] ?? [],
+            'relations' => ! empty($this->relations) ?
+                $latestRevision?->metadata['relations'] ?? [] : [],
+        ];
 
-        // Relations: previous revision's snapshot vs. live DB state captured in this revision.
-        if (! empty($this->relations)) {
-            $previous['relations'] = $this->model->latestRevision()->first()?->metadata['relations'] ?? [];
-            $current['relations'] = $revision->metadata['relations'] ?? [];
-        }
+        // Current: post-save attributes via getAttributes with relations from live DB state captured in this revision.
+        $current = [
+            'attributes' => $this->filterModelData($this->model->getAttributes()),
+            'relations' => ! empty($this->relations) ?
+                $revision->metadata['relations'] ?? [] : [],
+        ];
 
         return (new Diff($previous, $current))->changed() ?: null;
     }
@@ -456,7 +460,7 @@ class Revisioner
     {
         $attributes = $this->model->getAttributes();
 
-        foreach ($revision->metadata as $field => $value) {
+        foreach ($revision->metadata['attributes'] ?? [] as $field => $value) {
             if (array_key_exists($field, $attributes)) {
                 $attributes[$field] = $value;
             }

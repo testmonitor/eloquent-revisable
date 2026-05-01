@@ -86,11 +86,11 @@ class CreatingRevisionsTest extends TestCase
         // Then
         $revision = $post->revisions()->firstOrFail();
 
-        $this->assertEquals('Post name', $revision->metadata['name']);
-        $this->assertEquals('post-slug', $revision->metadata['slug']);
-        $this->assertEquals('Post content', $revision->metadata['content']);
-        $this->assertEquals(10, $revision->metadata['votes']);
-        $this->assertEquals(100, $revision->metadata['views']);
+        $this->assertEquals('Post name', $revision->metadata['attributes']['name']);
+        $this->assertEquals('post-slug', $revision->metadata['attributes']['slug']);
+        $this->assertEquals('Post content', $revision->metadata['attributes']['content']);
+        $this->assertEquals(10, $revision->metadata['attributes']['votes']);
+        $this->assertEquals(100, $revision->metadata['attributes']['views']);
     }
 
     #[Test]
@@ -201,8 +201,8 @@ class CreatingRevisionsTest extends TestCase
         $this->modifyPost($post, ['name' => 'Final name']);
 
         // When / Then
-        $this->assertEquals('Post name', $post->firstRevision->metadata['name']);
-        $this->assertEquals('Another post name', $post->latestRevision->metadata['name']);
+        $this->assertEquals('Post name', $post->firstRevision->metadata['attributes']['name']);
+        $this->assertEquals('Another post name', $post->latestRevision->metadata['attributes']['name']);
     }
 
     #[Test]

@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Enums\RevisionType;
@@ -171,7 +170,7 @@ class Revision extends Model implements RevisionContract
         /** @var Model $model */
         $model = new $class;
 
-        $attributes = Arr::except($this->metadata, ['relations']);
+        $attributes = $this->metadata['attributes'] ?? [];
         $attributes[$model->getKeyName()] = $this->revisionable_id;
 
         $model->setRawAttributes($attributes);
