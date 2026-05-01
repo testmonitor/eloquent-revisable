@@ -20,11 +20,13 @@ class Diff
     public function __construct(array $before, array $after)
     {
         $this->fields = $this->diffFields(
-            $before['attributes'] ?? [], $after['attributes'] ?? []
+            $before['attributes'] ?? [],
+            $after['attributes'] ?? []
         );
 
         $this->relations = $this->diffRelations(
-            $before['relations'] ?? [], $after['relations'] ?? []
+            $before['relations'] ?? [],
+            $after['relations'] ?? []
         );
     }
 
