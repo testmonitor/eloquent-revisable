@@ -255,6 +255,17 @@ trait HasRevisions
     }
 
     /**
+     * Get the revision that immediately precedes the given one.
+     */
+    public function previousRevision(Revision $revision): ?Revision
+    {
+        return $this->revisions()
+            ->where('id', '<', $revision->getKey())
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
      * Manually save a revision for a model instance.
      */
     public function saveAsRevision(?string $name = null, array $properties = [], ?bool $replace = null): Revision

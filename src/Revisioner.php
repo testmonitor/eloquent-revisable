@@ -155,7 +155,7 @@ class Revisioner
                 'name' => $this->name ?? $existing->name,
                 'metadata' => $snapshot->metadata,
                 'properties' => $snapshot->properties,
-                'changed' => $snapshot->changed,
+                'changed' => $this->buildChanges($snapshot, $this->model->previousRevision($existing)),
             ]);
 
             return $existing;
@@ -243,27 +243,31 @@ class Revisioner
 
     /**
      * Build the changes by diffing the revision snapshot against the model's current attributes.
+     * When a baseline revision is provided, it is used as the previous state instead of the snapshot's
+     * pre-save attributes, so that accumulated changes across replacements are all captured.
      */
-    protected function buildChanges(Revision $revision): ?array
+    protected function buildChanges(Revision $revision, ?Revision $baseline = null): ?array
     {
         if ($this->model->wasRecentlyCreated) {
             return null;
         }
 
-        $latestRevision = $this->model->latestRevision()->first();
+        $previousRevision = $baseline ?? $this->model->latestRevision()->first();
 
-        // Previous: pre-save attributes via getRawOriginal with relations from previous revision's snapshot.
         $previous = [
-            'attributes' => $revision->metadata['attributes'] ?? [],
-            'relations' => ! empty($this->relations) ?
-                $latestRevision?->metadata['relations'] ?? [] : [],
+            'attributes' => $baseline !== null
+                ? $previousRevision?->metadata['attributes'] ?? []
+                : $revision->metadata['attributes'] ?? [],
+            'relations' => ! empty($this->relations)
+                ? $previousRevision?->metadata['relations'] ?? []
+                : [],
         ];
 
-        // Current: post-save attributes via getAttributes with relations from live DB state captured in this revision.
         $current = [
             'attributes' => $this->filterModelData($this->model->getAttributes()),
-            'relations' => ! empty($this->relations) ?
-                $revision->metadata['relations'] ?? [] : [],
+            'relations' => ! empty($this->relations)
+                ? $revision->metadata['relations'] ?? []
+                : [],
         ];
 
         return (new Diff($previous, $current))->changed() ?: null;

@@ -138,6 +138,35 @@ class ReplacingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_accumulates_changes_across_all_saves_when_replacing()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->enableRevisionOnCreate()
+                    ->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        // First edit: only name changes — creates a Default revision (Initial is not replaceable)
+        $post->update(['name' => 'First edit']);
+
+        // When: second edit changes a different field — replaces the Default revision
+        $post->update(['votes' => 99]);
+
+        // Then: changed must reflect both saves, diffed against the Initial revision as baseline
+        $revision = $post->revisions()->where('type', RevisionType::Default)->firstOrFail();
+
+        $this->assertContains('name', $revision->changed);
+        $this->assertContains('votes', $revision->changed);
+    }
+
+    #[Test]
     public function it_updates_changes_when_a_revision_is_replaced()
     {
         // Given
