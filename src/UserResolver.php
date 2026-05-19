@@ -23,6 +23,11 @@ class UserResolver
         return $this->auth->guard($this->guard)->id();
     }
 
+    public function matches(int|string|null $userId): bool
+    {
+        return $this->resolve() === $userId;
+    }
+
     public function resolveUsing(Closure $resolver): static
     {
         $this->resolver = $resolver;
