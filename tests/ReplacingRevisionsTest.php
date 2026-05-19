@@ -163,6 +163,34 @@ class ReplacingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_accumulates_changes_across_all_saves_when_replacing()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->enableRevisionOnCreate()
+                    ->replaceWhen(true);
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        $post->update(['name' => 'First edit']);
+
+        // When
+        $post->update(['votes' => 99]);
+
+        // Then
+        $revision = $post->revisions()->where('type', RevisionType::Default)->firstOrFail();
+
+        $this->assertContains('name', $revision->changed);
+        $this->assertContains('votes', $revision->changed);
+    }
+
+    #[Test]
     public function it_does_not_replace_an_initial_revision()
     {
         // Given
