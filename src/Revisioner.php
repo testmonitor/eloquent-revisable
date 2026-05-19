@@ -155,7 +155,7 @@ class Revisioner
                 'name' => $this->name ?? $existing->name,
                 'metadata' => $snapshot->metadata,
                 'properties' => $snapshot->properties,
-                'changed' => $this->buildChanges($snapshot, $this->model->previousRevision($existing)),
+                'changed' => $this->buildChanges($snapshot, $existing->previous()),
             ]);
 
             return $existing;
