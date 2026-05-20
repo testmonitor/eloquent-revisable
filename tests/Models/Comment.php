@@ -9,7 +9,7 @@ use TestMonitor\Revisable\Concerns\BelongsToRevisable;
 
 class Comment extends Model
 {
-    use SoftDeletes, BelongsToRevisable;
+    use BelongsToRevisable, SoftDeletes;
 
     protected $table = 'comments';
 
