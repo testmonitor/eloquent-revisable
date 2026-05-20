@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use TestMonitor\Revisable\Concerns\HasRevisionableChildren;
 use TestMonitor\Revisable\Concerns\HasRevisions;
 use TestMonitor\Revisable\RevisableOptions;
 
 class Post extends Model
 {
-    use HasRevisions;
+    use HasRevisionableChildren, HasRevisions;
 
     protected $table = 'posts';
 
@@ -38,6 +40,11 @@ class Post extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class, 'post_id');
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachmentable');
     }
 
     public function tags(): BelongsToMany

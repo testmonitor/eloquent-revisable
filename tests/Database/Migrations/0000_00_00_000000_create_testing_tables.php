@@ -75,6 +75,14 @@ return new class extends Migration
             $table->foreign('tag_id')->references('id')->on('tags')->onDelete('cascade');
         });
 
+        Schema::create('attachments', function (Blueprint $table) {
+            $table->increments('id');
+            $table->morphs('attachmentable');
+            $table->string('name');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
         Schema::create('revisions', function (Blueprint $table) {
             $table->increments('id');
 
@@ -95,6 +103,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('revisions');
+        Schema::dropIfExists('attachments');
         Schema::dropIfExists('taggables');
         Schema::dropIfExists('post_tag');
         Schema::dropIfExists('tags');

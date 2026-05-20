@@ -5,10 +5,11 @@ namespace TestMonitor\Revisable\Tests\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use TestMonitor\Revisable\Concerns\BelongsToRevisable;
 
 class Comment extends Model
 {
-    use SoftDeletes;
+    use BelongsToRevisable, SoftDeletes;
 
     protected $table = 'comments';
 
