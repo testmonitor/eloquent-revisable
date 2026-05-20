@@ -25,22 +25,7 @@ class UserResolver
 
     public function matches(int|string|null $userId): bool
     {
-        $resolvedUserId = $this->resolve();
-
-        if ($resolvedUserId === null || $userId === null) {
-            return $resolvedUserId === $userId;
-        }
-
-        return $this->normalizeUserId($resolvedUserId) === $this->normalizeUserId($userId);
-    }
-
-    private function normalizeUserId(int|string|null $userId): ?string
-    {
-        if ($userId === null) {
-            return null;
-        }
-
-        return (string) $userId;
+        return $this->resolve() == $userId;
     }
 
     public function resolveUsing(Closure $resolver): static
