@@ -152,9 +152,15 @@ public function getRevisionOptions(): RevisableOptions
 
 Excluded relations are still snapshotted and visible in diffs — only the restoration step is skipped.
 
-#### Tracking many-to-many changes (optional)
+#### Tracking relation changes (optional)
 
-Laravel does not fire model events for `BelongsToMany` or `MorphToMany` mutations (`attach`, `detach`, `sync`, `toggle`, `updateExistingPivot`), so the package cannot detect them automatically. Add the optional `HasRevisionablePivots` trait to make pivot changes trigger revisions:
+Laravel does not fire model events for certain relation operations, so the package provides two optional traits to fill those gaps. Both respect `withoutRevisioning()` and the `revisioning` event, and only trigger when the relation is listed in `withRelations()`.
+
+> **Note:** Bulk query-builder operations such as `$article->attachments()->delete()` do not fire model events and will not trigger a revision regardless of which traits are used.
+
+**Many-to-many (BelongsToMany / MorphToMany)**
+
+`attach`, `detach`, `sync`, `toggle`, and `updateExistingPivot` bypass model events. Add `HasRevisionablePivots` to the parent to capture these changes:
 
 ```php
 use TestMonitor\Revisable\Concerns\HasRevisions;
@@ -173,9 +179,51 @@ class Article extends Model
 }
 ```
 
-A revision is only triggered when the relation is listed in `withRelations()` and the operation results in an actual change. The `withoutRevisioning()` helper and the `revisioning` event continue to work as expected.
+A revision is only triggered when the operation results in an actual change.
 
-If you prefer not to use the built-in trait, [laravel-pivot-events](https://github.com/mikebronner/laravel-pivot-events) fires `pivotAttached`, `pivotDetached`, and `pivotUpdated` events on the parent model — hook into those and call `$model->saveAsRevision()` directly.
+**HasOne, MorphOne, HasMany, MorphMany**
+
+Child model saves and deletes do not bubble up to the parent as model events either. Add `HasRevisionableChildren` to the parent and `BelongsToRevisable` to each child model:
+
+```php
+// Parent model
+use TestMonitor\Revisable\Concerns\HasRevisions;
+use TestMonitor\Revisable\Concerns\HasRevisionableChildren;
+use TestMonitor\Revisable\RevisableOptions;
+
+class Article extends Model
+{
+    use HasRevisions, HasRevisionableChildren;
+
+    public function getRevisionOptions(): RevisableOptions
+    {
+        return RevisableOptions::defaults()
+            ->withRelations('attachments');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class);
+    }
+}
+```
+
+```php
+// Child model
+use TestMonitor\Revisable\Concerns\BelongsToRevisable;
+
+class Attachment extends Model
+{
+    use BelongsToRevisable;
+
+    public function article(): BelongsTo
+    {
+        return $this->belongsTo(Article::class);
+    }
+}
+```
+
+The child automatically detects its revisable parent via its inverse relation (`BelongsTo` or `MorphTo`) — no extra configuration is needed beyond adding the trait.
 
 #### Limiting the number of stored revisions
 
