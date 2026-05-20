@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use ReflectionClass;
 use ReflectionMethod;
+use ReflectionNamedType;
 use TestMonitor\Revisable\RelationType;
 use Throwable;
 
@@ -101,7 +102,11 @@ trait BelongsToRevisable
 
             $returnType = $method->getReturnType();
 
-            if (! $returnType instanceof \ReflectionNamedType || ! is_a($returnType->getName(), Relation::class, true)) {
+            if (! $returnType instanceof ReflectionNamedType) {
+                continue;
+            }
+
+            if (! is_a($returnType->getName(), Relation::class, true)) {
                 continue;
             }
 
@@ -150,7 +155,11 @@ trait BelongsToRevisable
 
             $returnType = $method->getReturnType();
 
-            if (! $returnType instanceof \ReflectionNamedType || ! is_a($returnType->getName(), Relation::class, true)) {
+            if (! $returnType instanceof ReflectionNamedType) {
+                continue;
+            }
+
+            if (! is_a($returnType->getName(), Relation::class, true)) {
                 continue;
             }
 
