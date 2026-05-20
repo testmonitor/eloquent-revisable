@@ -16,6 +16,7 @@ use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\RevisableServiceProvider;
 use TestMonitor\Revisable\Revisioner;
+use TestMonitor\Revisable\UserResolver;
 
 /**
  * @mixin Model
@@ -243,7 +244,13 @@ trait HasRevisions
             return false;
         }
 
-        return $this->latestRevision()->first()?->isDefault() ?? false;
+        $latest = $this->latestRevision()->first();
+
+        if ($latest === null || ! $latest->isDefault()) {
+            return false;
+        }
+
+        return app(UserResolver::class)->matches($latest->user_id);
     }
 
     /**

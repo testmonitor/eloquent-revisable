@@ -209,6 +209,8 @@ If no revision exists yet the first save always creates one, regardless of the c
 
 Rollback revisions are never targeted for replacement — they are always preserved as permanent checkpoints regardless of the condition.
 
+If a different user edits the model, a new revision is always created to preserve per-user attribution.
+
 The living snapshot captures the pre-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state before the most recent save, which serves as the rollback point.
 
 #### Custom revision naming

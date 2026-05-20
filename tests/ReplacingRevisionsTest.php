@@ -7,6 +7,7 @@ use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
 use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
+use TestMonitor\Revisable\UserResolver;
 
 class ReplacingRevisionsTest extends TestCase
 {
@@ -332,6 +333,37 @@ class ReplacingRevisionsTest extends TestCase
 
         // Then
         $this->assertCount(1, $post->revisions()->get());
+    }
+
+    #[Test]
+    public function it_creates_a_new_revision_when_a_different_user_edits()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->replaceWhen(true);
+            }
+        };
+
+        $firstAuthor = $this->createAuthor();
+        $secondAuthor = $this->createAuthor();
+
+        app(UserResolver::class)->resolveUsing(fn () => $firstAuthor->id);
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        app(UserResolver::class)->resolveUsing(fn () => $secondAuthor->id);
+        $this->modifyPost($post, ['name' => 'Edited by second author']);
+
+        // Then
+        $revisions = $post->revisions()->oldest('id')->get();
+        $this->assertCount(2, $revisions);
+        $this->assertEquals($firstAuthor->id, $revisions->first()->user_id);
+        $this->assertEquals($secondAuthor->id, $revisions->last()->user_id);
     }
 
     #[Test]
