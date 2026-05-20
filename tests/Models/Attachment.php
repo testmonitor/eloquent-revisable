@@ -9,7 +9,7 @@ use TestMonitor\Revisable\Concerns\BelongsToRevisable;
 
 class Attachment extends Model
 {
-    use SoftDeletes, BelongsToRevisable;
+    use BelongsToRevisable, SoftDeletes;
 
     protected $table = 'attachments';
 

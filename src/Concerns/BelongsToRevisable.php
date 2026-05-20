@@ -113,6 +113,7 @@ trait BelongsToRevisable
 
             if ($relation instanceof MorphTo) {
                 $morphToMethod ??= [$method->getName(), true];
+
                 continue;
             }
 

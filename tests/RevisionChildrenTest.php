@@ -3,7 +3,6 @@
 namespace TestMonitor\Revisable\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
-use TestMonitor\Revisable\Concerns\HasRevisionableChildren;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Attachment;
@@ -15,7 +14,8 @@ class RevisionChildrenTest extends TestCase
     public function it_creates_a_revision_when_a_tracked_child_is_created()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->withRelations('attachments');
@@ -37,7 +37,8 @@ class RevisionChildrenTest extends TestCase
     public function it_creates_a_revision_when_a_tracked_child_is_updated()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->withRelations('attachments');
@@ -60,7 +61,8 @@ class RevisionChildrenTest extends TestCase
     public function it_creates_a_revision_when_a_tracked_child_is_deleted()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->withRelations('attachments');
@@ -83,7 +85,8 @@ class RevisionChildrenTest extends TestCase
     public function it_creates_a_revision_when_a_tracked_child_is_restored()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->withRelations('attachments');
@@ -109,7 +112,8 @@ class RevisionChildrenTest extends TestCase
     public function it_creates_a_revision_when_a_tracked_child_is_force_deleted()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->withRelations('attachments');
@@ -147,7 +151,8 @@ class RevisionChildrenTest extends TestCase
     public function it_does_not_create_a_revision_when_revisioning_is_disabled()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->withRelations('attachments');
@@ -169,7 +174,8 @@ class RevisionChildrenTest extends TestCase
     public function it_does_not_create_a_revision_when_the_revisioning_event_returns_false()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->withRelations('attachments');

@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use TestMonitor\Revisable\Concerns\HasRevisions;
 use TestMonitor\Revisable\Concerns\HasRevisionableChildren;
+use TestMonitor\Revisable\Concerns\HasRevisions;
 use TestMonitor\Revisable\RevisableOptions;
 
 class Post extends Model
 {
-    use HasRevisions, HasRevisionableChildren;
+    use HasRevisionableChildren, HasRevisions;
 
     protected $table = 'posts';
 
