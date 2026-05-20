@@ -223,7 +223,16 @@ class Attachment extends Model
 }
 ```
 
-The child automatically detects its revisable parent via its inverse relation (`BelongsTo` or `MorphTo`) — no extra configuration is needed beyond adding the trait.
+The child detects its revisable parent by scanning its `BelongsTo` / `MorphTo` methods and the parent's `HasOne` / `MorphOne` / `HasMany` / `MorphMany` methods. **Both sides must declare an explicit return type** — methods without one are skipped silently.
+
+If you cannot add return types, override `revisableParent()` on the child to return the parent directly:
+
+```php
+protected function revisableParent(): ?Model
+{
+    return $this->article;
+}
+```
 
 #### Limiting the number of stored revisions
 

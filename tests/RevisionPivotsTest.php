@@ -314,6 +314,32 @@ class RevisionPivotsTest extends TestCase
     }
 
     #[Test]
+    public function it_does_not_create_a_revision_when_revisioning_is_globally_disabled_via_options()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use HasRevisionablePivots;
+
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->withRelations('tags')
+                    ->enabledWhen(false);
+            }
+        };
+
+        $post = $this->createPost($post);
+        $tags = $this->createTags();
+
+        // When
+        $post->tags()->sync($tags->pluck('id')->toArray());
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
     public function it_does_not_create_a_revision_when_the_revisioning_event_returns_false()
     {
         // Given

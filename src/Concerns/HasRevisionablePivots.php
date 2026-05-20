@@ -33,7 +33,7 @@ trait HasRevisionablePivots
             return;
         }
 
-        if (! $this->revisioningEnabled) {
+        if (! $options->isEnabled() || ! $this->revisioningEnabled) {
             return;
         }
 
