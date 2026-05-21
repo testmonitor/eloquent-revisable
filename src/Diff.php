@@ -4,6 +4,7 @@ namespace TestMonitor\Revisable;
 
 use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
+use TestMonitor\Revisable\Exceptions\InvalidFieldname;
 
 class Diff
 {
@@ -59,6 +60,10 @@ class Diff
      */
     public function get(string $field): array
     {
+        if (! array_key_exists($field, $this->all())) {
+            throw InvalidFieldname::doesNotExist($field);
+        }
+
         return $this->all()[$field];
     }
 

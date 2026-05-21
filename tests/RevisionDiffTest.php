@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Exceptions\InvalidFieldname;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
@@ -89,6 +90,53 @@ class RevisionDiffTest extends TestCase
         // name is present in all() even though it also appears in changes()
         $this->assertEquals('Post name', $all['name']['old']);
         $this->assertEquals('Another post name', $all['name']['new']);
+    }
+
+    #[Test]
+    public function it_returns_specific_field_regardless_of_changes()
+    {
+        // Given
+        // Revision metadata captures the pre-save state, so:
+        // - revision 1 captures the original values (before 1st modify)
+        // - revision 2 captures the values after the 1st modify (before 2nd modify)
+        $post = $this->createPost();
+
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Final name']);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $diff = $revisions->last()->diff();
+
+        // Then
+        $name = $diff->get('name');
+        $authorId = $diff->get('author_id');
+
+        $this->assertEquals('Post name', $name['old']);
+
+        // author_id did not change between the two revisions
+        $this->assertEquals($authorId['old'], $authorId['new']);
+    }
+
+    #[Test]
+    public function it_throws_an_error_when_there_is_a_unknown_revision_fieldname()
+    {
+        // Given
+        // Revision metadata captures the pre-save state, so:
+        // - revision 1 captures the original values (before 1st modify)
+        // - revision 2 captures the values after the 1st modify (before 2nd modify)
+        $post = $this->createPost();
+
+        $this->modifyPost($post);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When / Then
+        $this->expectException(InvalidFieldname::class);
+
+        $diff = $revisions->last()->diff();
+        $diff->get('bogus_field');
     }
 
     // vs another revision
