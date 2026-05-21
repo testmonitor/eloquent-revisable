@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
 use TestMonitor\Revisable\Diff;
-use TestMonitor\Revisable\Exceptions\InvalidFieldname;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
@@ -120,7 +119,7 @@ class RevisionDiffTest extends TestCase
     }
 
     #[Test]
-    public function it_throws_an_error_when_there_is_a_unknown_revision_fieldname()
+    public function it_returns_null_when_there_is_a_unknown_revision_fieldname()
     {
         // Given
         // Revision metadata captures the pre-save state, so:
@@ -132,11 +131,12 @@ class RevisionDiffTest extends TestCase
 
         $revisions = $post->revisions()->oldest('id')->get();
 
-        // When / Then
-        $this->expectException(InvalidFieldname::class);
-
+        // When
         $diff = $revisions->last()->diff();
-        $diff->get('bogus_field');
+        $result = $diff->get('bogus_field');
+
+        // Then
+        $this->assertNull($result);
     }
 
     // vs another revision
