@@ -58,7 +58,6 @@ class Diff
      * Get the diff for a specific field or relation.
      *
      * @param string $field
-     *
      * @return array
      */
     public function get(string $field): array
