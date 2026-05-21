@@ -49,13 +49,21 @@ class Diff
     /**
      * Return all tracked fields and relations, including those that are unchanged.
      */
-    public function all($field = null): array
+    public function all(): array
     {
-        $all = [...$this->fields, ...$this->relations];
+        return [...$this->fields, ...$this->relations];
+    }
 
-        return ($field && isset($all[$field]))
-            ? $all[$field]
-            : $all;
+    /**
+     * Get the diff for a specific field or relation.
+     *
+     * @param string $field
+     *
+     * @return array
+     */
+    public function get(string $field): array
+    {
+        return $this->all()[$field];
     }
 
     /**
