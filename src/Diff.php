@@ -57,7 +57,7 @@ class Diff
     /**
      * Get the diff for a specific field or relation.
      */
-    public function get(string $field): array
+    public function get(string $field): ?array
     {
         return $this->all()[$field] ?? null;
     }
