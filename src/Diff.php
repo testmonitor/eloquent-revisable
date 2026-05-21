@@ -49,9 +49,13 @@ class Diff
     /**
      * Return all tracked fields and relations, including those that are unchanged.
      */
-    public function all(): array
+    public function all($field = null): array
     {
-        return [...$this->fields, ...$this->relations];
+        $all = [...$this->fields, ...$this->relations];
+
+        return ($field && isset($all[$field]))
+            ? $all[$field]
+            : $all;
     }
 
     /**
