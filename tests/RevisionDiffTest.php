@@ -119,12 +119,9 @@ class RevisionDiffTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_null_when_there_is_a_unknown_revision_fieldname()
+    public function it_returns_null_when_there_is_an_unknown_revision_field_name()
     {
         // Given
-        // Revision metadata captures the pre-save state, so:
-        // - revision 1 captures the original values (before 1st modify)
-        // - revision 2 captures the values after the 1st modify (before 2nd modify)
         $post = $this->createPost();
 
         $this->modifyPost($post);
