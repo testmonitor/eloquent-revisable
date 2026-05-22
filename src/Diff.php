@@ -55,6 +55,14 @@ class Diff
     }
 
     /**
+     * Get the diff for a specific field or relation.
+     */
+    public function get(string $field): ?array
+    {
+        return $this->all()[$field] ?? null;
+    }
+
+    /**
      * Return only the fields and relations that changed between the two revisions.
      */
     public function changes(): array

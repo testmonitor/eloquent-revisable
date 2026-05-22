@@ -91,6 +91,51 @@ class RevisionDiffTest extends TestCase
         $this->assertEquals('Another post name', $all['name']['new']);
     }
 
+    #[Test]
+    public function it_returns_specific_field_regardless_of_changes()
+    {
+        // Given
+        // Revision metadata captures the pre-save state, so:
+        // - revision 1 captures the original values (before 1st modify)
+        // - revision 2 captures the values after the 1st modify (before 2nd modify)
+        $post = $this->createPost();
+
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Final name']);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $diff = $revisions->last()->diff();
+
+        // Then
+        $name = $diff->get('name');
+        $authorId = $diff->get('author_id');
+
+        $this->assertEquals('Post name', $name['old']);
+
+        // author_id did not change between the two revisions
+        $this->assertEquals($authorId['old'], $authorId['new']);
+    }
+
+    #[Test]
+    public function it_returns_null_when_there_is_an_unknown_revision_field_name()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $this->modifyPost($post);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $diff = $revisions->last()->diff();
+        $result = $diff->get('bogus_field');
+
+        // Then
+        $this->assertNull($result);
+    }
+
     // vs another revision
 
     #[Test]
