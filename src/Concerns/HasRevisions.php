@@ -157,15 +157,15 @@ trait HasRevisions
     /**
      * Create a new revision record for the model instance.
      */
-    public function createNewRevision(): Revision|bool
+    public function createNewRevision(bool $force = false): Revision|bool
     {
         $options = $this->getRevisionOptions();
 
-        if (! $this->shouldCreateRevision($options)) {
+        if (! $this->shouldCreateRevision($options) && ! $force) {
             return false;
         }
 
-        if ($this->fireModelEvent('revisioning') === false) {
+        if ($this->fireModelEvent('revisioning') === false && ! $force) {
             return false;
         }
 
