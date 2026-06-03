@@ -268,6 +268,19 @@ Rollback revisions are never targeted for replacement — they are always preser
 
 If a different user edits the model, a new revision is always created to preserve per-user attribution.
 
+Use `replaceWithin` to limit replacement to a time window. Once the window has passed since the last save, the next edit produces a new revision instead:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->replaceWhen(fn ($model) => $model->status === 'draft')
+        ->replaceWithin(new \DateInterval('PT1H'));
+}
+```
+
+The window is measured from the revision's last update, so it resets on every save within the window.
+
 The living snapshot captures the pre-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state before the most recent save, which serves as the rollback point.
 
 #### Custom revision naming

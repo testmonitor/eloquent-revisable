@@ -39,6 +39,12 @@ class RevisableOptions
     public mixed $replaceWhen = false;
 
     /**
+     * The maximum age of the latest revision for it to be eligible for replacement.
+     * When set, a revision older than this interval will not be replaced — a new one is created instead.
+     */
+    public ?\DateInterval $replaceWindow = null;
+
+    /**
      * The limit of revisions to be created for a model instance.
      * If the limit is reached, oldest revisions will start getting deleted to make room for new ones.
      */
@@ -131,6 +137,17 @@ class RevisableOptions
     public function replaceWhen(mixed $replace): self
     {
         $this->replaceWhen = $replace;
+
+        return $this;
+    }
+
+    /**
+     * Only replace the latest revision when it was last updated within the given interval.
+     * A revision older than the interval always produces a new revision instead.
+     */
+    public function replaceWithin(\DateInterval $interval): self
+    {
+        $this->replaceWindow = $interval;
 
         return $this;
     }
