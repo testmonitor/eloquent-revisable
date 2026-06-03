@@ -4,6 +4,7 @@ namespace TestMonitor\Revisable;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use TestMonitor\Revisable\Contracts\NameGenerator;
 use TestMonitor\Revisable\Generators\NameGeneratorFactory;
 
@@ -156,7 +157,7 @@ class RevisableOptions
      * Resolve whether the given timestamp falls within the configured replace window.
      * Always returns true when no window is configured.
      */
-    public function isWithinReplaceWindow(\Illuminate\Support\Carbon $updatedAt): bool
+    public function isWithinReplaceWindow(Carbon $updatedAt): bool
     {
         return $this->replaceWindow === null || $updatedAt->gte(now()->sub($this->replaceWindow));
     }
