@@ -153,6 +153,15 @@ class RevisableOptions
     }
 
     /**
+     * Resolve whether the given timestamp falls within the configured replace window.
+     * Always returns true when no window is configured.
+     */
+    public function isWithinReplaceWindow(\Illuminate\Support\Carbon $updatedAt): bool
+    {
+        return $this->replaceWindow === null || $updatedAt->gte(now()->sub($this->replaceWindow));
+    }
+
+    /**
      * Resolve whether the latest revision should be replaced for the given model.
      */
     public function shouldReplace(Model $model): bool

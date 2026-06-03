@@ -254,7 +254,7 @@ trait HasRevisions
             return false;
         }
 
-        if ($options->replaceWindow !== null && $latest->updated_at->lt(now()->sub($options->replaceWindow))) {
+        if (! $options->isWithinReplaceWindow($latest->{$latest->getUpdatedAtColumn()})) {
             return false;
         }
 
