@@ -12,7 +12,8 @@ class RevisionPropertiesTest extends TestCase
     public function it_can_set_a_single_property_on_a_revision()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->enableRevisionOnCreate();
@@ -33,7 +34,8 @@ class RevisionPropertiesTest extends TestCase
     public function it_can_set_multiple_properties_on_a_revision()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->enableRevisionOnCreate();
@@ -56,7 +58,8 @@ class RevisionPropertiesTest extends TestCase
     public function it_merges_properties_without_overwriting_existing_keys()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->enableRevisionOnCreate();
@@ -80,7 +83,8 @@ class RevisionPropertiesTest extends TestCase
     public function it_can_remove_a_single_property_from_a_revision()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->enableRevisionOnCreate();
@@ -104,7 +108,8 @@ class RevisionPropertiesTest extends TestCase
     public function it_can_clear_all_properties_from_a_revision()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->enableRevisionOnCreate();
@@ -126,7 +131,8 @@ class RevisionPropertiesTest extends TestCase
     public function it_returns_the_revision_for_chaining()
     {
         // Given
-        $post = new class extends Post {
+        $post = new class extends Post
+        {
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()->enableRevisionOnCreate();
