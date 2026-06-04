@@ -250,7 +250,15 @@ trait HasRevisions
             return false;
         }
 
-        return app(UserResolver::class)->matches($latest->user_id);
+        if (! app(UserResolver::class)->matches($latest->user_id)) {
+            return false;
+        }
+
+        if (! $options->isWithinReplaceWindow($latest->{$latest->getUpdatedAtColumn()})) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

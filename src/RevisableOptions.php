@@ -4,6 +4,7 @@ namespace TestMonitor\Revisable;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use TestMonitor\Revisable\Contracts\NameGenerator;
 use TestMonitor\Revisable\Generators\NameGeneratorFactory;
 
@@ -37,6 +38,12 @@ class RevisableOptions
      * @var bool|callable
      */
     public mixed $replaceWhen = false;
+
+    /**
+     * The maximum age of the latest revision for it to be eligible for replacement.
+     * When set, a revision older than this interval will not be replaced — a new one is created instead.
+     */
+    public ?\DateInterval $replaceWindow = null;
 
     /**
      * The limit of revisions to be created for a model instance.
@@ -133,6 +140,26 @@ class RevisableOptions
         $this->replaceWhen = $replace;
 
         return $this;
+    }
+
+    /**
+     * Only replace the latest revision when it was last updated within the given interval.
+     * A revision older than the interval always produces a new revision instead.
+     */
+    public function replaceWithin(\DateInterval $interval): self
+    {
+        $this->replaceWindow = $interval;
+
+        return $this;
+    }
+
+    /**
+     * Resolve whether the given timestamp falls within the configured replace window.
+     * Always returns true when no window is configured.
+     */
+    public function isWithinReplaceWindow(Carbon $updatedAt): bool
+    {
+        return $this->replaceWindow === null || $updatedAt->gte(now()->sub($this->replaceWindow));
     }
 
     /**

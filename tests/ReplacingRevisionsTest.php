@@ -436,4 +436,55 @@ class ReplacingRevisionsTest extends TestCase
 
         $this->assertCount(3, $tagIds);
     }
+
+    #[Test]
+    public function it_replaces_the_revision_when_within_the_time_window()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->replaceWhen(true)
+                    ->replaceWithin(new \DateInterval('PT1H'));
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $this->modifyPost($post, ['name' => 'Still within window']);
+
+        // Then
+        $this->assertCount(1, $post->revisions()->get());
+    }
+
+    #[Test]
+    public function it_creates_a_new_revision_when_outside_the_time_window()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->replaceWhen(true)
+                    ->replaceWithin(new \DateInterval('PT1H'));
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // Backdate the revision's updated_at beyond the window
+        $post->revisions()->update(['updated_at' => now()->subHours(2)]);
+
+        // When
+        $this->modifyPost($post, ['name' => 'Outside window']);
+
+        // Then
+        $this->assertCount(2, $post->revisions()->get());
+    }
 }
