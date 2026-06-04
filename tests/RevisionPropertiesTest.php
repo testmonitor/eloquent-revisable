@@ -55,7 +55,7 @@ class RevisionPropertiesTest extends TestCase
     }
 
     #[Test]
-    public function it_merges_properties_without_overwriting_existing_keys()
+    public function it_overwrites_existing_keys_when_setting_properties()
     {
         // Given
         $post = new class extends Post
@@ -67,15 +67,16 @@ class RevisionPropertiesTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $revision = $post->latestRevision;
         $revision->setProperties(['approved' => true]);
 
         // When
-        $revision->setProperties(['score' => 42]);
+        $revision->setProperties(['approved' => false, 'score' => 42]);
 
         // Then
         $fresh = $revision->fresh();
-        $this->assertTrue($fresh->properties['approved']);
+        $this->assertFalse($fresh->properties['approved']);
         $this->assertEquals(42, $fresh->properties['score']);
     }
 
@@ -92,6 +93,7 @@ class RevisionPropertiesTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $revision = $post->latestRevision;
         $revision->setProperties(['approved' => true, 'score' => 42]);
 
@@ -117,6 +119,7 @@ class RevisionPropertiesTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $revision = $post->latestRevision;
         $revision->setProperties(['approved' => true, 'score' => 42]);
 
