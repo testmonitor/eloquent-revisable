@@ -2,10 +2,17 @@
 
 namespace TestMonitor\Revisable\Tests;
 
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
+use TestMonitor\Revisable\Tests\Models\Attachment;
+use TestMonitor\Revisable\Tests\Models\Author;
+use TestMonitor\Revisable\Tests\Models\Comment;
 use TestMonitor\Revisable\Tests\Models\Post;
+use TestMonitor\Revisable\Tests\Models\Reply;
+use TestMonitor\Revisable\Tests\Models\Tag;
 
 class RevisionFieldsTest extends TestCase
 {
@@ -129,5 +136,194 @@ class RevisionFieldsTest extends TestCase
         $this->assertEquals($post->id, $model->id);
         $this->assertEquals('Post name', $model->name);
         $this->assertEquals('post-slug', $model->slug);
+    }
+
+    #[Test]
+    public function it_reconstructs_a_belongs_to_relation_on_to_model()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('author');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post);
+
+        // When
+        $model = $post->revisions()->firstOrFail()->toModel();
+
+        // Then
+        $this->assertTrue($model->relationLoaded('author'));
+        $this->assertInstanceOf(Author::class, $model->author);
+        $this->assertEquals('Author name', $model->author->name);
+    }
+
+    #[Test]
+    public function it_reconstructs_a_has_one_relation_on_to_model()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('reply');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $this->modifyPost($post);
+
+        // When
+        $model = $post->revisions()->firstOrFail()->toModel();
+
+        // Then
+        $this->assertTrue($model->relationLoaded('reply'));
+        $this->assertInstanceOf(Reply::class, $model->reply);
+        $this->assertEquals('Reply subject', $model->reply->subject);
+    }
+
+    #[Test]
+    public function it_reconstructs_a_has_many_relation_on_to_model()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('comments');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $this->modifyPost($post);
+
+        // When
+        $model = $post->revisions()->firstOrFail()->toModel();
+
+        // Then
+        $this->assertTrue($model->relationLoaded('comments'));
+        $this->assertInstanceOf(EloquentCollection::class, $model->comments);
+        $this->assertCount(3, $model->comments);
+        $this->assertContainsOnlyInstancesOf(Comment::class, $model->comments);
+        $this->assertEquals('Comment title 1', $model->comments->first()->title);
+    }
+
+    #[Test]
+    public function it_reconstructs_a_morph_many_relation_on_to_model()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('attachments');
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        $post->withoutRevisioning(function () use ($post) {
+            foreach (['Attachment 1', 'Attachment 2'] as $name) {
+                $attachment = new Attachment(['name' => $name]);
+                $attachment->attachmentable()->associate($post);
+                $attachment->save();
+            }
+        });
+
+        $this->modifyPost($post);
+
+        // When
+        $model = $post->revisions()->firstOrFail()->toModel();
+
+        // Then
+        $this->assertTrue($model->relationLoaded('attachments'));
+        $this->assertInstanceOf(EloquentCollection::class, $model->attachments);
+        $this->assertCount(2, $model->attachments);
+        $this->assertContainsOnlyInstancesOf(Attachment::class, $model->attachments);
+        $this->assertEquals('Attachment 1', $model->attachments->first()->name);
+    }
+
+    #[Test]
+    public function it_reconstructs_a_belongs_to_many_relation_with_pivot_data_on_to_model()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('tags');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+
+        $this->modifyPost($post);
+
+        // When
+        $model = $post->revisions()->firstOrFail()->toModel();
+
+        // Then
+        $this->assertTrue($model->relationLoaded('tags'));
+        $this->assertInstanceOf(EloquentCollection::class, $model->tags);
+        $this->assertCount(3, $model->tags);
+        $this->assertContainsOnlyInstancesOf(Tag::class, $model->tags);
+        $this->assertInstanceOf(Pivot::class, $model->tags->first()->pivot);
+        $this->assertEquals($post->id, $model->tags->first()->pivot->post_id);
+    }
+
+    #[Test]
+    public function it_returns_an_empty_collection_for_a_has_many_relation_with_no_items_on_to_model()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('comments');
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        $this->modifyPost($post);
+
+        // When
+        $model = $post->revisions()->firstOrFail()->toModel();
+
+        // Then
+        $this->assertTrue($model->relationLoaded('comments'));
+        $this->assertInstanceOf(EloquentCollection::class, $model->comments);
+        $this->assertCount(0, $model->comments);
+    }
+
+    #[Test]
+    public function it_returns_null_for_a_has_one_relation_with_no_items_on_to_model()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('reply');
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        $this->modifyPost($post);
+
+        // When
+        $model = $post->revisions()->firstOrFail()->toModel();
+
+        // Then
+        $this->assertTrue($model->relationLoaded('reply'));
+        $this->assertNull($model->reply);
     }
 }

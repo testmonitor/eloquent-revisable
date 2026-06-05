@@ -34,6 +34,13 @@ class RelationType
         MorphMany::class,
     ];
 
+    protected static array $singularRelations = [
+        HasOne::class,
+        MorphOne::class,
+        BelongsTo::class,
+        MorphTo::class,
+    ];
+
     public static function isDirect(string $relation): bool
     {
         return static::isInstanceOf($relation, static::$directRelations);
@@ -47,6 +54,11 @@ class RelationType
     public static function isChild(string $relation): bool
     {
         return static::isInstanceOf($relation, static::$childRelations);
+    }
+
+    public static function isSingular(string $relation): bool
+    {
+        return static::isInstanceOf($relation, static::$singularRelations);
     }
 
     protected static function isInstanceOf(string $relation, array $types): bool

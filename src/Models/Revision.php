@@ -4,13 +4,16 @@ namespace TestMonitor\Revisable\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Enums\RevisionType;
+use TestMonitor\Revisable\RelationType;
 use TestMonitor\Revisable\RevisableServiceProvider;
 
 class Revision extends Model implements RevisionContract
@@ -217,6 +220,43 @@ class Revision extends Model implements RevisionContract
         $model->setRawAttributes($attributes);
         $model->exists = true;
 
+        foreach ($this->metadata['relations'] ?? [] as $name => $data) {
+            $model->setRelation($name, $this->buildRelatedModels($data));
+        }
+
         return $model;
+    }
+
+    /**
+     * Reconstruct related models from stored revision data, returning a single model or collection.
+     */
+    protected function buildRelatedModels(array $data): Model|EloquentCollection|null
+    {
+        $relatedClass = $data['class'];
+        $items = $data['records']['items'] ?? [];
+
+        $collection = new EloquentCollection;
+
+        foreach ($items as $index => $attributes) {
+            /** @var Model $related */
+            $related = new $relatedClass;
+            $related->setRawAttributes($attributes);
+            $related->exists = true;
+
+            if (RelationType::isPivoted($data['type']) && isset($data['pivots']['items'][$index])) {
+                $pivot = new Pivot;
+                $pivot->setRawAttributes($data['pivots']['items'][$index]);
+                $pivot->exists = true;
+                $related->setRelation('pivot', $pivot);
+            }
+
+            $collection->push($related);
+        }
+
+        if (RelationType::isSingular($data['type'])) {
+            return $collection->first();
+        }
+
+        return $collection;
     }
 }
