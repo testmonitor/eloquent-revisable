@@ -128,6 +128,47 @@ class Revision extends Model implements RevisionContract
     }
 
     /**
+     * Merge one or more key/value pairs into the properties column and save.
+     */
+    public function setProperties(array $properties): static
+    {
+        $this->fill(['properties' => [...($this->properties ?? []), ...$properties]])->save();
+
+        return $this;
+    }
+
+    /**
+     * Set a single key/value pair on the properties column and save.
+     */
+    public function setProperty(string $key, mixed $value): static
+    {
+        return $this->setProperties([$key => $value]);
+    }
+
+    /**
+     * Remove all properties from the properties column and save.
+     */
+    public function clearProperties(): static
+    {
+        $this->fill(['properties' => []])->save();
+
+        return $this;
+    }
+
+    /**
+     * Remove a single key from the properties column and save.
+     */
+    public function removeProperty(string $key): static
+    {
+        $properties = $this->properties ?? [];
+        unset($properties[$key]);
+
+        $this->fill(['properties' => $properties])->save();
+
+        return $this;
+    }
+
+    /**
      * Return the revision that directly precedes this one for the same model.
      */
     public function previous(): ?static
