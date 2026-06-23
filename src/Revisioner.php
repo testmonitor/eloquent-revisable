@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -320,6 +321,9 @@ class Revisioner
     protected function buildDirectRelationData(string $relation, array $attributes = []): array
     {
         $relationInstance = $this->model->{$relation}();
+        $records = $this->model->relationLoaded($relation)
+            ? Collection::wrap($this->model->getRelation($relation))
+            : $relationInstance->get();
 
         $data = [
             'type' => $attributes['type'],
@@ -331,7 +335,7 @@ class Revisioner
             ],
         ];
 
-        foreach ($relationInstance->get() as $index => $model) {
+        foreach ($records as $index => $model) {
             foreach ($model->getRawOriginal() as $field => $value) {
                 $timestamps = [$model->getCreatedAtColumn(), $model->getUpdatedAtColumn()];
 
@@ -354,6 +358,9 @@ class Revisioner
         $relationInstance = $this->model->{$relation}();
         $accessor = $relationInstance->getPivotAccessor();
         $pivotInstance = $relationInstance->newPivot();
+        $records = $this->model->relationLoaded($relation)
+            ? $this->model->getRelation($relation)
+            : $relationInstance->get();
 
         $data = [
             'type' => $attributes['type'],
@@ -371,7 +378,7 @@ class Revisioner
             ],
         ];
 
-        foreach ($relationInstance->get() as $index => $model) {
+        foreach ($records as $index => $model) {
             $pivot = $model->{$accessor};
 
             foreach ($model->getRawOriginal() as $field => $value) {
@@ -511,6 +518,8 @@ class Revisioner
 
             $relatedModel->save();
         }
+
+        $this->model->unsetRelation($relation);
     }
 
     /**
@@ -550,5 +559,7 @@ class Revisioner
                 ])
             );
         }
+
+        $this->model->unsetRelation($relation);
     }
 }

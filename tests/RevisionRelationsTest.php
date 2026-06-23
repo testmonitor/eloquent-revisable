@@ -48,6 +48,33 @@ class RevisionRelationsTest extends TestCase
     }
 
     #[Test]
+    public function it_includes_belongs_to_relation_data_in_the_revision_when_the_relation_is_preloaded()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('author');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post->load('author');
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertArrayHasKey('author', $revision->metadata['relations']);
+        $this->assertEquals($post->author->title, $revision->metadata['relations']['author']['records']['items'][0]['title']);
+        $this->assertEquals($post->author->name, $revision->metadata['relations']['author']['records']['items'][0]['name']);
+        $this->assertEquals($post->author->age, $revision->metadata['relations']['author']['records']['items'][0]['age']);
+    }
+
+    #[Test]
     public function it_captures_the_author_values_at_the_time_of_revisioning()
     {
         // Given
@@ -109,6 +136,8 @@ class RevisionRelationsTest extends TestCase
         $this->assertEquals('30', $author->age);
     }
 
+    // BelongsToMany
+
     #[Test]
     public function it_includes_belongs_to_many_relation_data_in_the_revision()
     {
@@ -143,6 +172,39 @@ class RevisionRelationsTest extends TestCase
             $this->assertEquals($tag->id, $revision->metadata['relations']['tags']['pivots']['items'][$i - 1]['tag_id']);
             $this->assertArrayNotHasKey('created_at', $revision->metadata['relations']['tags']['records']['items'][$i - 1]);
             $this->assertArrayNotHasKey('updated_at', $revision->metadata['relations']['tags']['records']['items'][$i - 1]);
+        }
+    }
+
+    #[Test]
+    public function it_includes_belongs_to_many_relation_data_in_the_revision_when_the_relation_is_preloaded()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('tags');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $post->load('tags');
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertCount(3, $revision->metadata['relations']['tags']['records']['items']);
+
+        for ($i = 1; $i <= 3; $i++) {
+            $tag = Tag::find($i);
+
+            $this->assertEquals($tag->name, $revision->metadata['relations']['tags']['records']['items'][$i - 1]['name']);
+            $this->assertEquals($post->id, $revision->metadata['relations']['tags']['pivots']['items'][$i - 1]['post_id']);
+            $this->assertEquals($tag->id, $revision->metadata['relations']['tags']['pivots']['items'][$i - 1]['tag_id']);
         }
     }
 
@@ -277,6 +339,8 @@ class RevisionRelationsTest extends TestCase
         $this->assertEquals(0, $post->tags()->count());
     }
 
+    // HasMany
+
     #[Test]
     public function it_includes_has_many_relation_data_in_the_revision()
     {
@@ -305,6 +369,38 @@ class RevisionRelationsTest extends TestCase
             $comment = Comment::limit(1)->offset($i - 1)->firstOrFail();
 
             $this->assertEquals($post->id, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['post_id']);
+            $this->assertEquals($comment->title, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['title']);
+            $this->assertEquals($comment->content, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['content']);
+        }
+    }
+
+    #[Test]
+    public function it_includes_has_many_relation_data_in_the_revision_when_the_relation_is_preloaded()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('comments');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $post->load('comments');
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertCount(3, $revision->metadata['relations']['comments']['records']['items']);
+
+        for ($i = 1; $i <= 3; $i++) {
+            $comment = Comment::limit(1)->offset($i - 1)->firstOrFail();
+
             $this->assertEquals($comment->title, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['title']);
             $this->assertEquals($comment->content, $revision->metadata['relations']['comments']['records']['items'][$i - 1]['content']);
         }
@@ -471,6 +567,8 @@ class RevisionRelationsTest extends TestCase
         $this->assertEquals(3, $post->comments()->count());
     }
 
+    // HasOne
+
     #[Test]
     public function it_includes_has_one_relation_data_in_the_revision()
     {
@@ -497,6 +595,59 @@ class RevisionRelationsTest extends TestCase
         $this->assertEquals($post->id, $revision->metadata['relations']['reply']['records']['items'][0]['post_id']);
         $this->assertEquals('Reply subject', $revision->metadata['relations']['reply']['records']['items'][0]['subject']);
         $this->assertEquals('Reply content', $revision->metadata['relations']['reply']['records']['items'][0]['content']);
+    }
+
+    #[Test]
+    public function it_includes_has_one_relation_data_in_the_revision_when_the_relation_is_preloaded()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('reply');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post = $this->populatePost($post);
+        $post->load('reply');
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertArrayHasKey('reply', $revision->metadata['relations']);
+        $this->assertCount(1, $revision->metadata['relations']['reply']['records']['items']);
+        $this->assertEquals('Reply subject', $revision->metadata['relations']['reply']['records']['items'][0]['subject']);
+        $this->assertEquals('Reply content', $revision->metadata['relations']['reply']['records']['items'][0]['content']);
+    }
+
+    #[Test]
+    public function it_includes_an_empty_snapshot_for_a_preloaded_has_one_relation_when_no_related_model_exists()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('reply');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $post->load('reply');
+
+        // When
+        $this->modifyPost($post);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertArrayHasKey('reply', $revision->metadata['relations']);
+        $this->assertEmpty($revision->metadata['relations']['reply']['records']['items']);
     }
 
     #[Test]
@@ -588,6 +739,8 @@ class RevisionRelationsTest extends TestCase
         // Then
         $this->assertEquals($replyCountAtRevision, $post->reply()->count());
     }
+
+    // Multi-relation
 
     #[Test]
     public function it_does_not_restore_any_relations_when_all_are_excluded()

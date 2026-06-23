@@ -41,6 +41,8 @@ trait HasRevisionablePivots
             return;
         }
 
+        $this->unsetRelation($relationName);
+
         $this->saveAsRevision();
 
         $this->fireModelEvent('revisioned', false);

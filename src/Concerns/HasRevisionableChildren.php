@@ -38,6 +38,8 @@ trait HasRevisionableChildren
             return;
         }
 
+        $this->unsetRelation($relation);
+
         $this->saveAsRevision();
 
         $this->fireModelEvent('revisioned', false);
