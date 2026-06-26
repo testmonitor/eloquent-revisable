@@ -384,8 +384,8 @@ The output of `changes()` contains field entries and relation entries in one fla
 ```php
 $changes = $diff->changes();
 
-// Field: ['old' => mixed, 'new' => mixed]
-$changes['title'];    // ['old' => 'Draft', 'new' => 'Published']
+// Field: ['before' => mixed, 'after' => mixed]
+$changes['title'];    // ['before' => 'Draft', 'after' => 'Published']
 
 // Relation: ['added' => [...ids], 'removed' => [...ids], 'changed' => [...]]
 $changes['tags'];     // ['added' => [4], 'removed' => [1], 'changed' => []]
@@ -395,6 +395,13 @@ Use `all()` to include fields and relations that did not change:
 
 ```php
 $all = $diff->all();
+```
+
+Call `asHtml()` to render a field diff as HTML with inline change highlights:
+
+```php
+$result = $diff->asHtml()->field('title');
+// ['before' => 'The quick <del>brown</del> fox', 'after' => 'The quick <ins>red</ins> fox']
 ```
 
 ---
