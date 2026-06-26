@@ -163,7 +163,10 @@ class Diff
 
             foreach (array_unique([...array_keys($beforePivot), ...array_keys($afterPivot)]) as $key) {
                 if (($beforePivot[$key] ?? null) !== ($afterPivot[$key] ?? null)) {
-                    $pivotChanges[$key] = ['before' => $beforePivot[$key] ?? null, 'after' => $afterPivot[$key] ?? null];
+                    $pivotChanges[$key] = [
+                        'before' => $beforePivot[$key] ?? null,
+                        'after' => $afterPivot[$key] ?? null,
+                    ];
                 }
             }
 
