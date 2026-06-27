@@ -10,6 +10,7 @@ use TestMonitor\Revisable\Diff;
 class HtmlDiff
 {
     /**
+     * @param  Diff  $diff  The diff to render
      * @param  string  $detailLevel  Granularity of inline highlighting: 'none'|'line'|'word'|'char'
      * @param  string  $lineSeparator  String placed between cells when a multi-line value is joined
      */
