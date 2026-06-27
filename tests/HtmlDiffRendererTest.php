@@ -29,17 +29,17 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_identical_strings_unchanged()
+    public function it_returns_identical_strings_html_encoded()
     {
         // Given
-        $htmlDiff = $this->diffFor('hello world', 'hello world');
+        $htmlDiff = $this->diffFor('<b>hello</b>', '<b>hello</b>');
 
         // When
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertSame('hello world', $result['before']);
-        $this->assertSame('hello world', $result['after']);
+        $this->assertSame('&lt;b&gt;hello&lt;/b&gt;', $result['before']);
+        $this->assertSame('&lt;b&gt;hello&lt;/b&gt;', $result['after']);
     }
 
     // Core contract
@@ -168,6 +168,25 @@ class HtmlDiffRendererTest extends TestCase
         $this->assertIsArray($result['after']);
         $this->assertSame('apple', $result['before'][0]);
         $this->assertStringContainsString('<ins>', $result['after'][1]);
+    }
+
+    #[Test]
+    public function it_keeps_before_and_after_arrays_aligned_after_filtering()
+    {
+        // Given — second pair has empty after, which under independent filtering would remove it from
+        // after but keep it in before (due to the strip_tags difference), shifting subsequent indexes
+        $htmlDiff = $this->diffFor(['apple', 'banana', 'cherry'], ['apple', '', 'grape']);
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — both arrays must have the same length
+        $this->assertCount(count($result['before']), $result['after']);
+
+        // And corresponding entries must be the same pair
+        foreach (array_keys($result['before']) as $i) {
+            $this->assertArrayHasKey($i, $result['after']);
+        }
     }
 
     // Multiline

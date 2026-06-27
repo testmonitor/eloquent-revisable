@@ -69,7 +69,10 @@ class HtmlDiff
 
         // If the values are identical, return them as-is without diffing
         if ($before === $after) {
-            return ['before' => $before, 'after' => $after];
+            return [
+                'before' => $this->escape($before),
+                'after' => $this->escape($after),
+            ];
         }
 
         // Use Diff to generate a side-by-side diff, then extract the inner HTML of the <td> cells
@@ -96,12 +99,21 @@ class HtmlDiff
     {
         $diffs = collect($before)
             ->zip($after)
-            ->map(fn (Collection $pair) => $this->diffValue((string) $pair[0], (string) $pair[1]));
+            ->map(fn (Collection $pair) => $this->diffValue((string) $pair[0], (string) $pair[1]))
+            ->reject(fn (array $pair) => blank(strip_tags($pair['before'])) && blank(strip_tags($pair['after'])));
 
         return [
-            'before' => $diffs->pluck('before')->reject(fn ($value) => blank(strip_tags($value)))->values()->all(),
-            'after' => $diffs->pluck('after')->reject(fn ($value) => blank($value))->values()->all(),
+            'before' => $diffs->pluck('before')->values()->all(),
+            'after' => $diffs->pluck('after')->values()->all(),
         ];
+    }
+
+    /**
+     * HTML-encode a string, consistent with jfcherng's own encoding of diffed values.
+     */
+    protected function escape(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     /**
