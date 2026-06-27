@@ -171,6 +171,36 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_wraps_a_scalar_side_in_an_array_when_the_other_side_is_an_array()
+    {
+        // Given — before is a plain string, after is a JSON-decoded array
+        $htmlDiff = $this->diffFor('apple', json_encode(['apple', 'banana']));
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the scalar is preserved as the first element, not dropped
+        $this->assertIsArray($result['before']);
+        $this->assertIsArray($result['after']);
+        $this->assertNotEmpty($result['before']);
+    }
+
+    #[Test]
+    public function it_retains_elements_that_exist_only_in_the_after_array()
+    {
+        // Given — after has more elements than before; the extra element would be silently
+        // dropped by collect($before)->zip($after) since zip iterates over the caller's length
+        $htmlDiff = $this->diffFor(['apple'], ['apple', 'banana']);
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — both elements are present
+        $this->assertCount(2, $result['after']);
+        $this->assertStringContainsString('banana', $result['after'][1]);
+    }
+
+    #[Test]
     public function it_keeps_before_and_after_arrays_aligned_after_filtering()
     {
         // Given — second pair has empty after, which under independent filtering would remove it from

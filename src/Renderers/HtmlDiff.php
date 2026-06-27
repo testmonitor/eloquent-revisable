@@ -2,7 +2,6 @@
 
 namespace TestMonitor\Revisable\Renderers;
 
-use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Jfcherng\Diff\DiffHelper;
 use TestMonitor\Revisable\Diff;
@@ -41,10 +40,7 @@ class HtmlDiff
 
         // If either value is an array, treat both as arrays and diff them in parallel
         if (is_array($before) || is_array($after)) {
-            return $this->diffArray(
-                is_array($before) ? $before : [],
-                is_array($after) ? $after : [],
-            );
+            return $this->diffArray((array) $before, (array) $after);
         }
 
         return $this->diffValue($before, $after);
@@ -98,14 +94,18 @@ class HtmlDiff
      */
     protected function diffArray(array $before, array $after): array
     {
-        $diffs = collect($before)
-            ->zip($after)
-            ->map(fn (Collection $pair) => $this->diffValue((string) $pair[0], (string) $pair[1]))
-            ->reject(fn (array $pair) => blank(strip_tags($pair['before'])) && blank(strip_tags($pair['after'])));
+        // Zips arrays of unequal length, padding the shorter one with null.
+        $pairs = array_map(null, $before, $after);
+
+        // Diff each pair, filtering out any pairs that are blank after stripping HTML tags
+        $diffs = collect($pairs)
+            ->map(fn (array $pair) => $this->diffValue((string) ($pair[0] ?? ''), (string) ($pair[1] ?? '')))
+            ->reject(fn (array $pair) => blank(strip_tags($pair['before'])) && blank(strip_tags($pair['after'])))
+            ->values();
 
         return [
-            'before' => $diffs->pluck('before')->values()->all(),
-            'after' => $diffs->pluck('after')->values()->all(),
+            'before' => $diffs->pluck('before')->all(),
+            'after' => $diffs->pluck('after')->all(),
         ];
     }
 
