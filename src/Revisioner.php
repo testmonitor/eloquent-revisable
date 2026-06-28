@@ -243,9 +243,9 @@ class Revisioner
     }
 
     /**
-     * Build the changes by diffing the previous revision's snapshot against the new revision's snapshot.
-     * When a baseline revision is provided, it is used as the previous state instead of the most recent
-     * stored revision, so that accumulated changes across replacements are all captured.
+     * Build the changes by diffing the previous state against the new revision's snapshot. Falls back
+     * to the model's raw original attributes when no prior revision exists. When a baseline revision
+     * is provided, it replaces the most recent stored revision to capture accumulated changes.
      */
     protected function buildChanges(Revision $revision, ?Revision $baseline = null): ?array
     {
