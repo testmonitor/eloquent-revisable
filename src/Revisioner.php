@@ -243,9 +243,9 @@ class Revisioner
     }
 
     /**
-     * Build the changes by diffing the revision snapshot against the model's current attributes.
-     * When a baseline revision is provided, it is used as the previous state instead of the snapshot's
-     * pre-save attributes, so that accumulated changes across replacements are all captured.
+     * Build the changes by diffing the previous revision's snapshot against the new revision's snapshot.
+     * When a baseline revision is provided, it is used as the previous state instead of the most recent
+     * stored revision, so that accumulated changes across replacements are all captured.
      */
     protected function buildChanges(Revision $revision, ?Revision $baseline = null): ?array
     {
@@ -256,16 +256,16 @@ class Revisioner
         $previousRevision = $baseline ?? $this->model->latestRevision()->first();
 
         $previous = [
-            'attributes' => $baseline !== null
-                ? $previousRevision?->metadata['attributes'] ?? []
-                : $revision->metadata['attributes'] ?? [],
+            'attributes' => $previousRevision !== null
+                ? $previousRevision->metadata['attributes'] ?? []
+                : $this->filterModelData($this->model->getRawOriginal()),
             'relations' => ! empty($this->relations)
                 ? $previousRevision?->metadata['relations'] ?? []
                 : [],
         ];
 
         $current = [
-            'attributes' => $this->filterModelData($this->model->getAttributes()),
+            'attributes' => $revision->metadata['attributes'] ?? [],
             'relations' => ! empty($this->relations)
                 ? $revision->metadata['relations'] ?? []
                 : [],
@@ -279,11 +279,7 @@ class Revisioner
      */
     protected function buildModelData(): array
     {
-        $data = $this->model->wasRecentlyCreated === true
-            ? $this->model->getAttributes()
-            : $this->model->getRawOriginal();
-
-        return $this->filterModelData($data);
+        return $this->filterModelData($this->model->getAttributes());
     }
 
     /**

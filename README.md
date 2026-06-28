@@ -281,7 +281,7 @@ public function getRevisionOptions(): RevisableOptions
 
 The window is measured from the revision's last update, so it resets on every save within the window.
 
-The living snapshot captures the pre-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state before the most recent save, which serves as the rollback point.
+The living snapshot captures the post-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state of the most recent save, which serves as the rollback point.
 
 #### Custom revision naming
 

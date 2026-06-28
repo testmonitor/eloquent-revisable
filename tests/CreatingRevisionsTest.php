@@ -75,7 +75,7 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
-    public function it_stores_the_original_attribute_values_in_the_revision()
+    public function it_stores_the_post_save_attribute_values_in_the_revision()
     {
         // Given
         $post = $this->createPost();
@@ -86,11 +86,11 @@ class CreatingRevisionsTest extends TestCase
         // Then
         $revision = $post->revisions()->firstOrFail();
 
-        $this->assertEquals('Post name', $revision->metadata['attributes']['name']);
-        $this->assertEquals('post-slug', $revision->metadata['attributes']['slug']);
-        $this->assertEquals('Post content', $revision->metadata['attributes']['content']);
-        $this->assertEquals(10, $revision->metadata['attributes']['votes']);
-        $this->assertEquals(100, $revision->metadata['attributes']['views']);
+        $this->assertEquals('Another post name', $revision->metadata['attributes']['name']);
+        $this->assertEquals('another-post-slug', $revision->metadata['attributes']['slug']);
+        $this->assertEquals('Another post content', $revision->metadata['attributes']['content']);
+        $this->assertEquals(20, $revision->metadata['attributes']['votes']);
+        $this->assertEquals(200, $revision->metadata['attributes']['views']);
     }
 
     #[Test]
@@ -201,8 +201,8 @@ class CreatingRevisionsTest extends TestCase
         $this->modifyPost($post, ['name' => 'Final name']);
 
         // When / Then
-        $this->assertEquals('Post name', $post->firstRevision->metadata['attributes']['name']);
-        $this->assertEquals('Another post name', $post->latestRevision->metadata['attributes']['name']);
+        $this->assertEquals('Another post name', $post->firstRevision->metadata['attributes']['name']);
+        $this->assertEquals('Final name', $post->latestRevision->metadata['attributes']['name']);
     }
 
     #[Test]
@@ -246,13 +246,19 @@ class CreatingRevisionsTest extends TestCase
     public function it_can_rollback_to_a_past_revision()
     {
         // Given
-        $post = $this->createPost();
-        $this->modifyPost($post);
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
 
-        $this->assertEquals('Another post name', $post->name);
+        $post = $this->createPost($post); // Initial revision: 'Post name', votes=10
+        $this->modifyPost($post); // Revision 1: 'Another post name', votes=20
 
         // When
-        $post->rollbackToRevision($post->revisions()->firstOrFail());
+        $post->rollbackToRevision($post->revisions()->oldest()->firstOrFail());
 
         // Then
         $this->assertEquals('Post name', $post->name);
@@ -267,15 +273,15 @@ class CreatingRevisionsTest extends TestCase
     {
         // Given
         $post = $this->createPost();
-        $this->modifyPost($post);
+        $this->modifyPost($post); // Revision 1 (latest): 'Another post name'
 
-        $this->assertEquals('Another post name', $post->name);
+        $post->withoutRevisioning(fn () => $post->update(['name' => 'Current name']));
 
         // When
         $post->rollback();
 
         // Then
-        $this->assertEquals('Post name', $post->fresh()->name);
+        $this->assertEquals('Another post name', $post->fresh()->name);
     }
 
     #[Test]
