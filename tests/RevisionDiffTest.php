@@ -40,7 +40,7 @@ class RevisionDiffTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_the_names_of_changed_fields()
+    public function it_returns_the_names_of_changed_fields_and_relations()
     {
         // Given
         $post = $this->createPost();
