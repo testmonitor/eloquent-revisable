@@ -258,7 +258,7 @@ class Revisioner
         $previous = [
             'attributes' => $previousRevision !== null
                 ? $previousRevision->metadata['attributes'] ?? []
-                : $this->filterModelData($this->model->getRawOriginal()),
+                : $this->filterModelData($this->model->getRevisionOriginal()),
             'relations' => ! empty($this->relations)
                 ? $previousRevision?->metadata['relations'] ?? []
                 : [],

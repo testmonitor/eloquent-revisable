@@ -33,6 +33,11 @@ trait HasRevisions
     protected bool $revisioningEnabled = true;
 
     /**
+     * Model attributes captured before the most recent update, used as the diff baseline.
+     */
+    protected array $revisionOriginal = [];
+
+    /**
      * Register the custom model events fired during revisioning and rollback.
      */
     public function initializeHasRevisions(): void
@@ -47,6 +52,10 @@ trait HasRevisions
     {
         static::created(function (Model $model) {
             $model->createNewRevision();
+        });
+
+        static::updating(function (Model $model) {
+            $model->revisionOriginal = $model->getRawOriginal();
         });
 
         static::updated(function (Model $model) {
@@ -356,6 +365,15 @@ trait HasRevisions
         $options = $this->getRevisionOptions();
 
         app(Revisioner::class)->for($this)->limit($options->limit)->prune();
+    }
+
+    /**
+     * Return the model attributes as they were before the most recent update.
+     * Falls back to getRawOriginal() when called outside an update lifecycle (e.g. saveAsRevision).
+     */
+    public function getRevisionOriginal(): array
+    {
+        return $this->revisionOriginal ?: $this->getRawOriginal();
     }
 
     /**
