@@ -60,6 +60,7 @@ trait HasRevisions
 
         static::updated(function (Model $model) {
             $model->createNewRevision();
+            $model->revisionOriginal = [];
         });
 
         static::deleted(function (Model $model) {
