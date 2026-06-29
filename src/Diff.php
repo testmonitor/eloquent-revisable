@@ -88,6 +88,9 @@ class Diff
 
     /**
      * Wrap this diff in an HTML renderer.
+     *
+     * @param  string  $detailLevel  Granularity of inline highlighting: 'none'|'line'|'word'|'char'
+     * @param  string  $lineSeparator  String placed between cells when a multi-line value is joined
      */
     public function asHtml(string $detailLevel = 'word', string $lineSeparator = '<br>'): HtmlDiff
     {
