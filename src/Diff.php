@@ -69,7 +69,10 @@ class Diff
      */
     public function changes(): array
     {
-        $fieldChanges = Arr::where($this->fields, fn ($entry) => $this->valuesAreDifferent($entry['before'], $entry['after']));
+        $fieldChanges = Arr::where(
+            $this->fields,
+            fn ($entry) => $this->valuesAreDifferent($entry['before'], $entry['after'])
+        );
 
         $relationChanges = Arr::where(
             $this->relations,
