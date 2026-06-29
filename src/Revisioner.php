@@ -47,23 +47,16 @@ class Revisioner
         return $this;
     }
 
-    public function limit(?int $limit): static
-    {
-        $this->limit = $limit;
-
-        return $this;
-    }
-
-    public function onlyFields(array $fields): static
-    {
-        $this->fields = $fields;
-
-        return $this;
-    }
-
     public function exceptFields(array $fields): static
     {
         $this->exceptFields = $fields;
+
+        return $this;
+    }
+
+    public function limit(?int $limit): static
+    {
+        $this->limit = $limit;
 
         return $this;
     }
@@ -75,16 +68,23 @@ class Revisioner
         return $this;
     }
 
-    public function properties(array $properties): static
+    public function nameUsing(?NameGenerator $generator): static
     {
-        $this->properties = $properties;
+        $this->nameGenerator = $generator;
 
         return $this;
     }
 
-    public function nameUsing(?NameGenerator $generator): static
+    public function onlyFields(array $fields): static
     {
-        $this->nameGenerator = $generator;
+        $this->fields = $fields;
+
+        return $this;
+    }
+
+    public function properties(array $properties): static
+    {
+        $this->properties = $properties;
 
         return $this;
     }
@@ -312,6 +312,28 @@ class Revisioner
     }
 
     /**
+     * Resolve the configured relations into their type/model attributes.
+     */
+    protected function getRelationsForRevision(): array
+    {
+        $relations = [];
+
+        foreach ($this->relations as $relation) {
+            $instance = $this->model->{$relation}();
+
+            if ($instance instanceof Relation) {
+                $relations[$relation] = [
+                    'type' => get_class($instance),
+                    'model' => $instance->getRelated(),
+                    'original' => $instance->getParent(),
+                ];
+            }
+        }
+
+        return $relations;
+    }
+
+    /**
      * Extract revision data for a direct (non-pivot) relation.
      */
     protected function buildDirectRelationData(string $relation, array $attributes = []): array
@@ -396,28 +418,6 @@ class Revisioner
     }
 
     /**
-     * Resolve the configured relations into their type/model attributes.
-     */
-    protected function getRelationsForRevision(): array
-    {
-        $relations = [];
-
-        foreach ($this->relations as $relation) {
-            $instance = $this->model->{$relation}();
-
-            if ($instance instanceof Relation) {
-                $relations[$relation] = [
-                    'type' => get_class($instance),
-                    'model' => $instance->getRelated(),
-                    'original' => $instance->getParent(),
-                ];
-            }
-        }
-
-        return $relations;
-    }
-
-    /**
      * @param  string|int|null  $value
      */
     protected function withAttributeValue(
@@ -449,15 +449,6 @@ class Revisioner
         }
 
         return $data;
-    }
-
-    protected function shouldSkipRestoringRelation(string $relation): bool
-    {
-        if ($this->exceptRestoringRelations === null) {
-            return true;
-        }
-
-        return in_array($relation, $this->exceptRestoringRelations);
     }
 
     /**
@@ -557,5 +548,14 @@ class Revisioner
         }
 
         $this->model->unsetRelation($relation);
+    }
+
+    protected function shouldSkipRestoringRelation(string $relation): bool
+    {
+        if ($this->exceptRestoringRelations === null) {
+            return true;
+        }
+
+        return in_array($relation, $this->exceptRestoringRelations);
     }
 }
