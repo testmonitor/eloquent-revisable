@@ -4,11 +4,12 @@ namespace TestMonitor\Revisable;
 
 use Illuminate\Support\Arr;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
+use TestMonitor\Revisable\Renderers\HtmlDiff;
 
 class Diff
 {
     /**
-     * @var array<string, array{old: mixed, new: mixed}>
+     * @var array<string, array{before: mixed, after: mixed}>
      */
     protected array $fields;
 
@@ -67,7 +68,7 @@ class Diff
      */
     public function changes(): array
     {
-        $fieldChanges = Arr::where($this->fields, fn ($entry) => $entry['old'] !== $entry['new']);
+        $fieldChanges = Arr::where($this->fields, fn ($entry) => $entry['before'] !== $entry['after']);
 
         $relationChanges = Arr::where(
             $this->relations,
@@ -86,9 +87,20 @@ class Diff
     }
 
     /**
+     * Wrap this diff in an HTML renderer.
+     *
+     * @param  string  $detailLevel  Granularity of inline highlighting: 'none'|'line'|'word'|'char'
+     * @param  string  $lineSeparator  String placed between cells when a multi-line value is joined
+     */
+    public function asHtml(string $detailLevel = 'word', string $lineSeparator = '<br>'): HtmlDiff
+    {
+        return new HtmlDiff($this, $detailLevel, $lineSeparator);
+    }
+
+    /**
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
-     * @return array<string, array{old: mixed, new: mixed}>
+     * @return array<string, array{before: mixed, after: mixed}>
      */
     protected function diffFields(array $before, array $after): array
     {
@@ -96,8 +108,8 @@ class Diff
 
         foreach (array_unique([...array_keys($before), ...array_keys($after)]) as $key) {
             $fields[$key] = [
-                'old' => Arr::get($before, $key),
-                'new' => Arr::get($after, $key),
+                'before' => Arr::get($before, $key),
+                'after' => Arr::get($after, $key),
             ];
         }
 
@@ -154,7 +166,10 @@ class Diff
 
             foreach (array_unique([...array_keys($beforePivot), ...array_keys($afterPivot)]) as $key) {
                 if (($beforePivot[$key] ?? null) !== ($afterPivot[$key] ?? null)) {
-                    $pivotChanges[$key] = ['old' => $beforePivot[$key] ?? null, 'new' => $afterPivot[$key] ?? null];
+                    $pivotChanges[$key] = [
+                        'before' => $beforePivot[$key] ?? null,
+                        'after' => $afterPivot[$key] ?? null,
+                    ];
                 }
             }
 
