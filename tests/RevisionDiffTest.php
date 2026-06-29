@@ -40,6 +40,26 @@ class RevisionDiffTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_the_names_of_changed_fields()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Final name', 'votes' => 30]);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $changed = $revisions->last()->diff()->changed();
+
+        // Then
+        $this->assertContains('name', $changed);
+        $this->assertContains('votes', $changed);
+        $this->assertNotContains('author_id', $changed);
+    }
+
+    #[Test]
     public function it_returns_an_empty_diff_when_there_is_no_previous_revision()
     {
         // Given
@@ -469,5 +489,33 @@ class RevisionDiffTest extends TestCase
         $this->assertEmpty($diff->all()['comments']['added']);
         $this->assertEmpty($diff->all()['comments']['removed']);
         $this->assertEmpty($diff->all()['comments']['changed']);
+    }
+
+    // json comparison
+
+    #[Test]
+    public function it_reports_a_json_encoded_field_as_changed_when_the_content_differs()
+    {
+        // Given
+        $diff = new Diff(
+            ['attributes' => ['instructions' => '["a","b","c"]']],
+            ['attributes' => ['instructions' => '["a","b","d"]']],
+        );
+
+        // Then
+        $this->assertArrayHasKey('instructions', $diff->changes());
+    }
+
+    #[Test]
+    public function it_does_not_report_a_json_encoded_field_as_changed_when_only_whitespace_differs()
+    {
+        // Given
+        $diff = new Diff(
+            ['attributes' => ['instructions' => '["a","b","c"]']],
+            ['attributes' => ['instructions' => '["a", "b", "c"]']],
+        );
+
+        // Then
+        $this->assertArrayNotHasKey('instructions', $diff->changes());
     }
 }
