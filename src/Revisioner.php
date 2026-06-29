@@ -47,23 +47,16 @@ class Revisioner
         return $this;
     }
 
-    public function limit(?int $limit): static
-    {
-        $this->limit = $limit;
-
-        return $this;
-    }
-
-    public function onlyFields(array $fields): static
-    {
-        $this->fields = $fields;
-
-        return $this;
-    }
-
     public function exceptFields(array $fields): static
     {
         $this->exceptFields = $fields;
+
+        return $this;
+    }
+
+    public function limit(?int $limit): static
+    {
+        $this->limit = $limit;
 
         return $this;
     }
@@ -75,16 +68,23 @@ class Revisioner
         return $this;
     }
 
-    public function properties(array $properties): static
+    public function nameUsing(?NameGenerator $generator): static
     {
-        $this->properties = $properties;
+        $this->nameGenerator = $generator;
 
         return $this;
     }
 
-    public function nameUsing(?NameGenerator $generator): static
+    public function onlyFields(array $fields): static
     {
-        $this->nameGenerator = $generator;
+        $this->fields = $fields;
+
+        return $this;
+    }
+
+    public function properties(array $properties): static
+    {
+        $this->properties = $properties;
 
         return $this;
     }
@@ -243,9 +243,9 @@ class Revisioner
     }
 
     /**
-     * Build the changes by diffing the revision snapshot against the model's current attributes.
-     * When a baseline revision is provided, it is used as the previous state instead of the snapshot's
-     * pre-save attributes, so that accumulated changes across replacements are all captured.
+     * Build the changes by diffing the previous state against the new revision's snapshot. Falls back
+     * to the model's raw original attributes when no prior revision exists. When a baseline revision
+     * is provided, it replaces the most recent stored revision to capture accumulated changes.
      */
     protected function buildChanges(Revision $revision, ?Revision $baseline = null): ?array
     {
@@ -256,16 +256,16 @@ class Revisioner
         $previousRevision = $baseline ?? $this->model->latestRevision()->first();
 
         $previous = [
-            'attributes' => $baseline !== null
-                ? $previousRevision?->metadata['attributes'] ?? []
-                : $revision->metadata['attributes'] ?? [],
+            'attributes' => $previousRevision !== null
+                ? $previousRevision->metadata['attributes'] ?? []
+                : $this->filterModelData($this->model->getRevisionOriginal()),
             'relations' => ! empty($this->relations)
                 ? $previousRevision?->metadata['relations'] ?? []
                 : [],
         ];
 
         $current = [
-            'attributes' => $this->filterModelData($this->model->getAttributes()),
+            'attributes' => $revision->metadata['attributes'] ?? [],
             'relations' => ! empty($this->relations)
                 ? $revision->metadata['relations'] ?? []
                 : [],
@@ -279,11 +279,7 @@ class Revisioner
      */
     protected function buildModelData(): array
     {
-        $data = $this->model->wasRecentlyCreated === true
-            ? $this->model->getAttributes()
-            : $this->model->getRawOriginal();
-
-        return $this->filterModelData($data);
+        return $this->filterModelData($this->model->getAttributes());
     }
 
     /**
@@ -313,6 +309,28 @@ class Revisioner
         }
 
         return $data;
+    }
+
+    /**
+     * Resolve the configured relations into their type/model attributes.
+     */
+    protected function getRelationsForRevision(): array
+    {
+        $relations = [];
+
+        foreach ($this->relations as $relation) {
+            $instance = $this->model->{$relation}();
+
+            if ($instance instanceof Relation) {
+                $relations[$relation] = [
+                    'type' => get_class($instance),
+                    'model' => $instance->getRelated(),
+                    'original' => $instance->getParent(),
+                ];
+            }
+        }
+
+        return $relations;
     }
 
     /**
@@ -400,28 +418,6 @@ class Revisioner
     }
 
     /**
-     * Resolve the configured relations into their type/model attributes.
-     */
-    protected function getRelationsForRevision(): array
-    {
-        $relations = [];
-
-        foreach ($this->relations as $relation) {
-            $instance = $this->model->{$relation}();
-
-            if ($instance instanceof Relation) {
-                $relations[$relation] = [
-                    'type' => get_class($instance),
-                    'model' => $instance->getRelated(),
-                    'original' => $instance->getParent(),
-                ];
-            }
-        }
-
-        return $relations;
-    }
-
-    /**
      * @param  string|int|null  $value
      */
     protected function withAttributeValue(
@@ -453,15 +449,6 @@ class Revisioner
         }
 
         return $data;
-    }
-
-    protected function shouldSkipRestoringRelation(string $relation): bool
-    {
-        if ($this->exceptRestoringRelations === null) {
-            return true;
-        }
-
-        return in_array($relation, $this->exceptRestoringRelations);
     }
 
     /**
@@ -561,5 +548,14 @@ class Revisioner
         }
 
         $this->model->unsetRelation($relation);
+    }
+
+    protected function shouldSkipRestoringRelation(string $relation): bool
+    {
+        if ($this->exceptRestoringRelations === null) {
+            return true;
+        }
+
+        return in_array($relation, $this->exceptRestoringRelations);
     }
 }

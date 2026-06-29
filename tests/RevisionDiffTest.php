@@ -15,13 +15,10 @@ class RevisionDiffTest extends TestCase
     public function it_diffs_against_the_previous_revision()
     {
         // Given
-        // Revision metadata captures the pre-save state, so:
-        // - revision 1 captures the original values (before 1st modify)
-        // - revision 2 captures the values after the 1st modify (before 2nd modify)
         $post = $this->createPost();
 
         $this->modifyPost($post);
-        $this->modifyPost($post, ['name' => 'Final name']);
+        $this->modifyPost($post, ['name' => 'Final name', 'votes' => 30]);
 
         $revisions = $post->revisions()->oldest('id')->get();
 
@@ -34,12 +31,12 @@ class RevisionDiffTest extends TestCase
         $changes = $diff->changes();
 
         $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Post name', $changes['name']['before']);
-        $this->assertEquals('Another post name', $changes['name']['after']);
+        $this->assertEquals('Another post name', $changes['name']['before']);
+        $this->assertEquals('Final name', $changes['name']['after']);
 
         $this->assertArrayHasKey('votes', $changes);
-        $this->assertEquals(10, $changes['votes']['before']);
-        $this->assertEquals(20, $changes['votes']['after']);
+        $this->assertEquals(20, $changes['votes']['before']);
+        $this->assertEquals(30, $changes['votes']['after']);
     }
 
     #[Test]
@@ -63,9 +60,6 @@ class RevisionDiffTest extends TestCase
     public function it_returns_all_fields_including_unchanged_ones()
     {
         // Given
-        // Revision metadata captures the pre-save state, so:
-        // - revision 1 captures the original values (before 1st modify)
-        // - revision 2 captures the values after the 1st modify (before 2nd modify)
         $post = $this->createPost();
 
         $this->modifyPost($post);
@@ -87,17 +81,14 @@ class RevisionDiffTest extends TestCase
         $this->assertEquals($all['author_id']['before'], $all['author_id']['after']);
 
         // name is present in all() even though it also appears in changes()
-        $this->assertEquals('Post name', $all['name']['before']);
-        $this->assertEquals('Another post name', $all['name']['after']);
+        $this->assertEquals('Another post name', $all['name']['before']);
+        $this->assertEquals('Final name', $all['name']['after']);
     }
 
     #[Test]
     public function it_returns_specific_field_regardless_of_changes()
     {
         // Given
-        // Revision metadata captures the pre-save state, so:
-        // - revision 1 captures the original values (before 1st modify)
-        // - revision 2 captures the values after the 1st modify (before 2nd modify)
         $post = $this->createPost();
 
         $this->modifyPost($post);
@@ -112,7 +103,7 @@ class RevisionDiffTest extends TestCase
         $name = $diff->get('name');
         $authorId = $diff->get('author_id');
 
-        $this->assertEquals('Post name', $name['before']);
+        $this->assertEquals('Another post name', $name['before']);
 
         // author_id did not change between the two revisions
         $this->assertEquals($authorId['before'], $authorId['after']);
@@ -145,7 +136,7 @@ class RevisionDiffTest extends TestCase
         $post = $this->createPost();
 
         $this->modifyPost($post);
-        $this->modifyPost($post, ['name' => 'Final name']);
+        $this->modifyPost($post, ['name' => 'Final name', 'votes' => 30]);
 
         $revisions = $post->revisions()->oldest('id')->get();
 
@@ -156,12 +147,12 @@ class RevisionDiffTest extends TestCase
         $changes = $diff->changes();
 
         $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Post name', $changes['name']['before']);
-        $this->assertEquals('Another post name', $changes['name']['after']);
+        $this->assertEquals('Another post name', $changes['name']['before']);
+        $this->assertEquals('Final name', $changes['name']['after']);
 
         $this->assertArrayHasKey('votes', $changes);
-        $this->assertEquals(10, $changes['votes']['before']);
-        $this->assertEquals(20, $changes['votes']['after']);
+        $this->assertEquals(20, $changes['votes']['before']);
+        $this->assertEquals(30, $changes['votes']['after']);
     }
 
     // vs current model
@@ -172,9 +163,10 @@ class RevisionDiffTest extends TestCase
         // Given
         $post = $this->createPost();
 
-        $this->modifyPost($post);
+        $this->modifyPost($post); // Revision 1 (latest): 'Another post name', votes=20
 
-        $post->update(['name' => 'Current name', 'votes' => 50]);
+        // Update the DB without creating a new revision to simulate live drift
+        $post->withoutRevisioning(fn () => $post->update(['name' => 'Current name', 'votes' => 50]));
 
         // When
         $diff = $post->fresh()->diff();
@@ -206,11 +198,11 @@ class RevisionDiffTest extends TestCase
         $changes = $diff->changes();
 
         $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Post name', $changes['name']['before']);
+        $this->assertEquals('Another post name', $changes['name']['before']);
         $this->assertEquals('Current name', $changes['name']['after']);
 
         $this->assertArrayHasKey('votes', $changes);
-        $this->assertEquals(10, $changes['votes']['before']);
+        $this->assertEquals(20, $changes['votes']['before']);
         $this->assertEquals(50, $changes['votes']['after']);
     }
 

@@ -33,6 +33,11 @@ trait HasRevisions
     protected bool $revisioningEnabled = true;
 
     /**
+     * Model attributes captured before the most recent update, used as the diff baseline.
+     */
+    protected array $revisionOriginal = [];
+
+    /**
      * Register the custom model events fired during revisioning and rollback.
      */
     public function initializeHasRevisions(): void
@@ -49,8 +54,13 @@ trait HasRevisions
             $model->createNewRevision();
         });
 
+        static::updating(function (Model $model) {
+            $model->revisionOriginal = $model->getRawOriginal();
+        });
+
         static::updated(function (Model $model) {
             $model->createNewRevision();
+            $model->revisionOriginal = [];
         });
 
         static::deleted(function (Model $model) {
@@ -110,17 +120,6 @@ trait HasRevisions
     }
 
     /**
-     * Get the most recent revision for a given model instance.
-     *
-     * @return MorphOne<Revision, $this>
-     */
-    public function latestRevision(): MorphOne
-    {
-        return $this->morphOne(RevisableServiceProvider::determineRevisionModel(), 'revisionable')
-            ->latestOfMany();
-    }
-
-    /**
      * Get the oldest revision for a given model instance.
      *
      * @return MorphOne<Revision, $this>
@@ -129,6 +128,17 @@ trait HasRevisions
     {
         return $this->morphOne(RevisableServiceProvider::determineRevisionModel(), 'revisionable')
             ->oldestOfMany();
+    }
+
+    /**
+     * Get the most recent revision for a given model instance.
+     *
+     * @return MorphOne<Revision, $this>
+     */
+    public function latestRevision(): MorphOne
+    {
+        return $this->morphOne(RevisableServiceProvider::determineRevisionModel(), 'revisionable')
+            ->latestOfMany();
     }
 
     /**
@@ -186,87 +196,6 @@ trait HasRevisions
         $this->fireModelEvent('revisioned', false);
 
         return $revision;
-    }
-
-    /**
-     * Determine if a revision should be created for the current model state.
-     */
-    protected function shouldCreateRevision(RevisableOptions $options): bool
-    {
-        if (! $options->isEnabled() || ! $this->revisioningEnabled) {
-            return false;
-        }
-
-        if ($this->wasRecentlyCreated && ! $options->onCreate) {
-            return false;
-        }
-
-        if (
-            array_key_exists(SoftDeletes::class, class_uses($this)) &&
-            array_key_exists($this->getDeletedAtColumn(), $this->getDirty())
-        ) {
-            return false;
-        }
-
-        if (! empty($options->fields)) {
-            return $this->isDirty($options->fields);
-        }
-
-        if (! empty($options->exceptFields)) {
-            return ! empty(Arr::except($this->getDirty(), $options->exceptFields));
-        }
-
-        return true;
-    }
-
-    /**
-     * Save a rollback revision, always as a new record and marked as a rollback.
-     */
-    protected function saveAsRollbackRevision(RevisableOptions $options): Revision
-    {
-        return app(Revisioner::class)
-            ->for($this)
-            ->nameUsing($options->nameGenerator)
-            ->onlyFields($options->fields)
-            ->exceptFields($options->exceptFields)
-            ->withRelations($options->relations)
-            ->limit($options->limit)
-            ->type(RevisionType::Rollback)
-            ->save();
-    }
-
-    /**
-     * Determine whether the latest revision should be replaced instead of creating a new one.
-     */
-    protected function shouldReplaceRevision(RevisableOptions $options): bool
-    {
-        if (! $options->shouldReplace($this)) {
-            return false;
-        }
-
-        $latest = $this->latestRevision()->first();
-
-        if ($latest === null || ! $latest->isDefault()) {
-            return false;
-        }
-
-        if (! app(UserResolver::class)->matches($latest->user_id)) {
-            return false;
-        }
-
-        if (! $options->isWithinReplaceWindow($latest->{$latest->getUpdatedAtColumn()})) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Return the latest revision to replace, or null if a new one should be created.
-     */
-    protected function revisionToReplace(): ?Revision
-    {
-        return $this->latestRevision()->first();
     }
 
     /**
@@ -370,5 +299,95 @@ trait HasRevisions
         } finally {
             $this->revisioningEnabled = true;
         }
+    }
+
+    /**
+     * Return the model attributes as they were before the most recent update.
+     * Falls back to getRawOriginal() when called outside an update lifecycle (e.g. saveAsRevision).
+     */
+    public function getRevisionOriginal(): array
+    {
+        return $this->revisionOriginal ?: $this->getRawOriginal();
+    }
+
+    /**
+     * Determine if a revision should be created for the current model state.
+     */
+    protected function shouldCreateRevision(RevisableOptions $options): bool
+    {
+        if (! $options->isEnabled() || ! $this->revisioningEnabled) {
+            return false;
+        }
+
+        if ($this->wasRecentlyCreated && ! $options->onCreate) {
+            return false;
+        }
+
+        if (
+            array_key_exists(SoftDeletes::class, class_uses($this)) &&
+            array_key_exists($this->getDeletedAtColumn(), $this->getDirty())
+        ) {
+            return false;
+        }
+
+        if (! empty($options->fields)) {
+            return $this->isDirty($options->fields);
+        }
+
+        if (! empty($options->exceptFields)) {
+            return ! empty(Arr::except($this->getDirty(), $options->exceptFields));
+        }
+
+        return true;
+    }
+
+    /**
+     * Determine whether the latest revision should be replaced instead of creating a new one.
+     */
+    protected function shouldReplaceRevision(RevisableOptions $options): bool
+    {
+        if (! $options->shouldReplace($this)) {
+            return false;
+        }
+
+        $latest = $this->latestRevision()->first();
+
+        if ($latest === null || ! $latest->isDefault()) {
+            return false;
+        }
+
+        if (! app(UserResolver::class)->matches($latest->user_id)) {
+            return false;
+        }
+
+        if (! $options->isWithinReplaceWindow($latest->{$latest->getUpdatedAtColumn()})) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Return the latest revision to replace, or null if a new one should be created.
+     */
+    protected function revisionToReplace(): ?Revision
+    {
+        return $this->latestRevision()->first();
+    }
+
+    /**
+     * Save a rollback revision, always as a new record and marked as a rollback.
+     */
+    protected function saveAsRollbackRevision(RevisableOptions $options): Revision
+    {
+        return app(Revisioner::class)
+            ->for($this)
+            ->nameUsing($options->nameGenerator)
+            ->onlyFields($options->fields)
+            ->exceptFields($options->exceptFields)
+            ->withRelations($options->relations)
+            ->limit($options->limit)
+            ->type(RevisionType::Rollback)
+            ->save();
     }
 }

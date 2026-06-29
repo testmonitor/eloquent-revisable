@@ -50,9 +50,9 @@ class ReplacingRevisionsTest extends TestCase
         // When / Then
         $this->assertCount(1, $post->revisions);
 
-        // The living snapshot captures the pre-save state, so after two edits it holds
-        // the state before the most recent save ('Another post name' before 'Third name').
-        $this->assertEquals('Another post name', $post->revisions->first()->metadata['attributes']['name']);
+        // The snapshot holds the post-save state, so after the replacement it holds
+        // the most recent save ('Third name').
+        $this->assertEquals('Third name', $post->revisions->first()->metadata['attributes']['name']);
     }
 
     #[Test]
@@ -102,11 +102,11 @@ class ReplacingRevisionsTest extends TestCase
 
         $this->assertCount(2, $revisions);
 
-        // Each revision captures the state before the save that created/replaced it.
-        // Revision 1 was replaced twice while in draft, ending up with the pre-'Draft revision two' state.
-        // Revision 2 captured the pre-'Final name' state when the condition turned false.
-        $this->assertEquals('Another post name', $revisions->first()->metadata['attributes']['name']);
-        $this->assertEquals('Draft revision two', $revisions->last()->metadata['attributes']['name']);
+        // Each revision captures the post-save state.
+        // Revision 1 was replaced while in draft, ending up with 'Draft revision two'.
+        // Revision 2 captured 'Final name' when the condition turned false.
+        $this->assertEquals('Draft revision two', $revisions->first()->metadata['attributes']['name']);
+        $this->assertEquals('Final name', $revisions->last()->metadata['attributes']['name']);
     }
 
     #[Test]
@@ -134,8 +134,8 @@ class ReplacingRevisionsTest extends TestCase
 
         $this->assertEquals($originalId, $revision->id);
 
-        // The snapshot captures the state before 'Updated name' was saved.
-        $this->assertEquals('Another post name', $revision->metadata['attributes']['name']);
+        // The snapshot holds the post-save state.
+        $this->assertEquals('Updated name', $revision->metadata['attributes']['name']);
     }
 
     #[Test]
@@ -256,13 +256,13 @@ class ReplacingRevisionsTest extends TestCase
         };
 
         $post = $this->createPost($post);
-        $this->modifyPost($post);
-        $post->rollbackToRevision($post->revisions()->firstOrFail());
+        $this->modifyPost($post); // Revision 1: 'Another post name'
+        $post->rollbackToRevision($post->revisions()->firstOrFail()); // Rollback revision created
 
         // When
-        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'After rollback edit']);
 
-        // Then - the rollback revision is preserved; a new default revision is created
+        // Then
         $this->assertCount(3, $post->revisions()->get());
 
         $types = $post->revisions()->oldest('id')->pluck('type')->all();

@@ -134,8 +134,8 @@ class RevisionFieldsTest extends TestCase
         $this->assertInstanceOf(Post::class, $model);
         $this->assertTrue($model->exists);
         $this->assertEquals($post->id, $model->id);
-        $this->assertEquals('Post name', $model->name);
-        $this->assertEquals('post-slug', $model->slug);
+        $this->assertEquals('Another post name', $model->name);
+        $this->assertEquals('another-post-slug', $model->slug);
     }
 
     #[Test]
