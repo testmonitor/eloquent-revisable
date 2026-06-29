@@ -31,12 +31,12 @@ class RevisionDiffTest extends TestCase
         $changes = $diff->changes();
 
         $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Another post name', $changes['name']['old']);
-        $this->assertEquals('Final name', $changes['name']['new']);
+        $this->assertEquals('Another post name', $changes['name']['before']);
+        $this->assertEquals('Final name', $changes['name']['after']);
 
         $this->assertArrayHasKey('votes', $changes);
-        $this->assertEquals(20, $changes['votes']['old']);
-        $this->assertEquals(30, $changes['votes']['new']);
+        $this->assertEquals(20, $changes['votes']['before']);
+        $this->assertEquals(30, $changes['votes']['after']);
     }
 
     #[Test]
@@ -81,8 +81,8 @@ class RevisionDiffTest extends TestCase
         $this->assertEquals($all['author_id']['before'], $all['author_id']['after']);
 
         // name is present in all() even though it also appears in changes()
-        $this->assertEquals('Another post name', $all['name']['old']);
-        $this->assertEquals('Final name', $all['name']['new']);
+        $this->assertEquals('Another post name', $all['name']['before']);
+        $this->assertEquals('Final name', $all['name']['after']);
     }
 
     #[Test]
@@ -103,7 +103,7 @@ class RevisionDiffTest extends TestCase
         $name = $diff->get('name');
         $authorId = $diff->get('author_id');
 
-        $this->assertEquals('Another post name', $name['old']);
+        $this->assertEquals('Another post name', $name['before']);
 
         // author_id did not change between the two revisions
         $this->assertEquals($authorId['before'], $authorId['after']);
@@ -147,12 +147,12 @@ class RevisionDiffTest extends TestCase
         $changes = $diff->changes();
 
         $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Another post name', $changes['name']['old']);
-        $this->assertEquals('Final name', $changes['name']['new']);
+        $this->assertEquals('Another post name', $changes['name']['before']);
+        $this->assertEquals('Final name', $changes['name']['after']);
 
         $this->assertArrayHasKey('votes', $changes);
-        $this->assertEquals(20, $changes['votes']['old']);
-        $this->assertEquals(30, $changes['votes']['new']);
+        $this->assertEquals(20, $changes['votes']['before']);
+        $this->assertEquals(30, $changes['votes']['after']);
     }
 
     // vs current model
@@ -198,12 +198,12 @@ class RevisionDiffTest extends TestCase
         $changes = $diff->changes();
 
         $this->assertArrayHasKey('name', $changes);
-        $this->assertEquals('Another post name', $changes['name']['old']);
-        $this->assertEquals('Current name', $changes['name']['new']);
+        $this->assertEquals('Another post name', $changes['name']['before']);
+        $this->assertEquals('Current name', $changes['name']['after']);
 
         $this->assertArrayHasKey('votes', $changes);
-        $this->assertEquals(20, $changes['votes']['old']);
-        $this->assertEquals(50, $changes['votes']['new']);
+        $this->assertEquals(20, $changes['votes']['before']);
+        $this->assertEquals(50, $changes['votes']['after']);
     }
 
     #[Test]
