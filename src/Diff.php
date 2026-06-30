@@ -3,6 +3,7 @@
 namespace TestMonitor\Revisable;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Renderers\HtmlDiff;
 
@@ -68,7 +69,10 @@ class Diff
      */
     public function changes(): array
     {
-        $fieldChanges = Arr::where($this->fields, fn ($entry) => $entry['before'] !== $entry['after']);
+        $fieldChanges = Arr::where(
+            $this->fields,
+            fn ($entry) => $this->valuesAreDifferent($entry['before'], $entry['after'])
+        );
 
         $relationChanges = Arr::where(
             $this->relations,
@@ -95,6 +99,22 @@ class Diff
     public function asHtml(string $detailLevel = 'word', string $lineSeparator = '<br>'): HtmlDiff
     {
         return new HtmlDiff($this, $detailLevel, $lineSeparator);
+    }
+
+    /**
+     * Compare two attribute values, using semantic JSON equality to ignore cosmetic whitespace differences.
+     */
+    protected function valuesAreDifferent(mixed $before, mixed $after): bool
+    {
+        if ($before === $after) {
+            return false;
+        }
+
+        if (Str::isJson($before) && Str::isJson($after)) {
+            return json_decode($before, true) !== json_decode($after, true);
+        }
+
+        return true;
     }
 
     /**
