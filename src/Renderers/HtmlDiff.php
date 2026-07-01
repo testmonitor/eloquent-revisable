@@ -150,6 +150,10 @@ class HtmlDiff
      */
     protected function diffHtmlValue(string $before, string $after): array
     {
+        if ($this->detailLevel === 'none') {
+            return ['before' => $before, 'after' => $after];
+        }
+
         $merged = (new HtmlDiffer($before, $after))->build();
 
         return [

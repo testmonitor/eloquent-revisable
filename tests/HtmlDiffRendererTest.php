@@ -347,6 +347,27 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_html_unmodified_when_detail_level_is_none()
+    {
+        // Given
+        $htmlDiff = (new Diff(
+            ['attributes' => ['value' => '<p>Hello <strong>world</strong></p>']],
+            ['attributes' => ['value' => '<p>Hello <strong>universe</strong></p>']],
+        ))->asHtml(detailLevel: 'none');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no diff markers, raw HTML returned as-is
+        $this->assertStringNotContainsString('<ins>', $result['before']);
+        $this->assertStringNotContainsString('<del>', $result['before']);
+        $this->assertStringNotContainsString('<ins>', $result['after']);
+        $this->assertStringNotContainsString('<del>', $result['after']);
+        $this->assertStringContainsString('<strong>', $result['before']);
+        $this->assertStringContainsString('<strong>', $result['after']);
+    }
+
+    #[Test]
     public function it_handles_plain_text_before_and_html_after()
     {
         // Given
