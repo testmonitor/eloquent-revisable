@@ -11,6 +11,8 @@ class HtmlDiff
 {
     /**
      * @param  string  $detailLevel  Granularity of inline highlighting: 'none'|'line'|'word'|'char'
+     *                               For HTML fields, only 'none' is mapped; all other levels resolve to word-level
+     *                               because the underlying HTML differ does not support finer granularity.
      * @param  string  $lineSeparator  String placed between cells when a multi-line value is joined
      */
     public function __construct(
@@ -125,9 +127,9 @@ class HtmlDiff
      */
     protected function extractCells(string $diff, string $side): string
     {
-        preg_match_all('/<td class="' . $side . '">(.*?)<\/td>/s', $diff, $matches);
-
-        return implode($this->lineSeparator, $matches[1]);
+        return Str::of($diff)
+            ->matchAll('/<td class="' . $side . '">(.*?)<\/td>/s')
+            ->implode($this->lineSeparator);
     }
 
     /**
@@ -135,7 +137,7 @@ class HtmlDiff
      */
     protected function containsHtml(string $value): bool
     {
-        return preg_match('/<\s*\/?\s*[a-zA-Z][^>]*>/', $value) === 1;
+        return Str::of($value)->test('/<\s*\/?\s*[a-zA-Z][^>]*>/');
     }
 
     /**
@@ -161,9 +163,10 @@ class HtmlDiff
      */
     protected function beforeView(string $merged): string
     {
-        $result = preg_replace('/<ins[^>]*>.*?<\/ins>/s', '', $merged);
-
-        return preg_replace('/<del[^>]*>/', '<del>', $result);
+        return Str::of($merged)
+            ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
+            ->replaceMatches('/<del[^>]*>/', '<del>')
+            ->toString();
     }
 
     /**
@@ -171,8 +174,9 @@ class HtmlDiff
      */
     protected function afterView(string $merged): string
     {
-        $result = preg_replace('/<del[^>]*>.*?<\/del>/s', '', $merged);
-
-        return preg_replace('/<ins[^>]*>/', '<ins>', $result);
+        return Str::of($merged)
+            ->replaceMatches('/<del[^>]*>.*?<\/del>/s', '')
+            ->replaceMatches('/<ins[^>]*>/', '<ins>')
+            ->toString();
     }
 }
