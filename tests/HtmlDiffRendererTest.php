@@ -32,14 +32,28 @@ class HtmlDiffRendererTest extends TestCase
     public function it_returns_identical_strings_html_encoded()
     {
         // Given
+        $htmlDiff = $this->diffFor('hello & world', 'hello & world');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame('hello &amp; world', $result['before']);
+        $this->assertSame('hello &amp; world', $result['after']);
+    }
+
+    #[Test]
+    public function it_renders_identical_html_values_as_html()
+    {
+        // Given
         $htmlDiff = $this->diffFor('<b>hello</b>', '<b>hello</b>');
 
         // When
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertSame('&lt;b&gt;hello&lt;/b&gt;', $result['before']);
-        $this->assertSame('&lt;b&gt;hello&lt;/b&gt;', $result['after']);
+        $this->assertSame('<b>hello</b>', $result['before']);
+        $this->assertSame('<b>hello</b>', $result['after']);
     }
 
     // Core contract
@@ -270,5 +284,82 @@ class HtmlDiffRendererTest extends TestCase
         // Then
         $this->assertStringContainsString('<p>', $result['before']);
         $this->assertStringNotContainsString('<br>', $result['before']);
+    }
+
+    // HTML-aware diffing
+
+    #[Test]
+    public function it_marks_reformatted_words_when_only_formatting_changed()
+    {
+        // Given
+        $htmlDiff = $this->diffFor(
+            '<span>Consequatur quas quia et et.</span>',
+            '<span><strong>Consequatur</strong> quas quia et et.</span>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertStringNotContainsString('&lt;', $result['before']);
+        $this->assertStringNotContainsString('&lt;', $result['after']);
+        $this->assertStringContainsString('<strong>', $result['after']);
+        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('Consequatur', $result['after']);
+    }
+
+    #[Test]
+    public function it_injects_del_and_ins_into_html_when_text_also_changed()
+    {
+        // Given
+        $htmlDiff = $this->diffFor(
+            '<span>Hello world</span>',
+            '<span>Hello <strong>universe</strong></span>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertStringContainsString('<del>', $result['before']);
+        $this->assertStringContainsString('world', $result['before']);
+        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('<strong>', $result['after']);
+        $this->assertStringContainsString('universe', $result['after']);
+        $this->assertStringNotContainsString('&lt;', $result['after']);
+    }
+
+    #[Test]
+    public function it_wraps_consecutive_reformatted_words_in_a_single_marker()
+    {
+        // Given
+        $htmlDiff = $this->diffFor(
+            '<span>Hello world foo</span>',
+            '<span><strong>Hello world</strong> foo</span>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame(1, substr_count($result['after'], '<ins>'));
+        $this->assertStringContainsString('<ins>Hello world</ins>', $result['after']);
+    }
+
+    #[Test]
+    public function it_handles_plain_text_before_and_html_after()
+    {
+        // Given
+        $htmlDiff = $this->diffFor('Hello world', '<strong>Hello</strong> universe');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertStringContainsString('<del>', $result['before']);
+        $this->assertStringContainsString('world', $result['before']);
+        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('<strong>', $result['after']);
+        $this->assertStringContainsString('universe', $result['after']);
     }
 }
