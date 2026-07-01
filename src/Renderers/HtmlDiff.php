@@ -135,7 +135,7 @@ class HtmlDiff
      */
     protected function containsHtml(string $value): bool
     {
-        return $value !== strip_tags($value);
+        return preg_match('/<\s*\/?\s*[a-zA-Z][^>]*>/', $value) === 1;
     }
 
     /**
