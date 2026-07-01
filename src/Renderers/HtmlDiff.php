@@ -168,8 +168,9 @@ class HtmlDiff
     protected function beforeView(string $merged): string
     {
         return Str::of($merged)
+            ->replaceMatches('/<ins class="mod">(.*?)<\/ins>/s', '<del class="mod">$1</del>')
             ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
-            ->replaceMatches('/<del[^>]*>/', '<del>')
+            ->replaceMatches('/<del(?! class="mod")[^>]*>/', '<del>')
             ->toString();
     }
 
@@ -180,7 +181,7 @@ class HtmlDiff
     {
         return Str::of($merged)
             ->replaceMatches('/<del[^>]*>.*?<\/del>/s', '')
-            ->replaceMatches('/<ins[^>]*>/', '<ins>')
+            ->replaceMatches('/<ins(?! class="mod")[^>]*>/', '<ins>')
             ->toString();
     }
 }

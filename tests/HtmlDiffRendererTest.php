@@ -289,6 +289,25 @@ class HtmlDiffRendererTest extends TestCase
     // HTML-aware diffing
 
     #[Test]
+    public function it_retains_content_in_before_view_when_formatting_is_removed()
+    {
+        // Given — only the <strong> wrapper is removed; the word itself is unchanged
+        $htmlDiff = $this->diffFor(
+            '<p><strong>Consequatur</strong> quas quia et et.</p>',
+            '<p>Consequatur quas quia et et.</p>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the word must appear in both views, not just the after view,
+        // and the before view marks it as a formatting change (not a deletion)
+        $this->assertStringContainsString('Consequatur', $result['before']);
+        $this->assertStringContainsString('<del class="mod">', $result['before']);
+        $this->assertStringContainsString('Consequatur', $result['after']);
+    }
+
+    #[Test]
     public function it_marks_reformatted_words_when_only_formatting_changed()
     {
         // Given
@@ -304,7 +323,7 @@ class HtmlDiffRendererTest extends TestCase
         $this->assertStringNotContainsString('&lt;', $result['before']);
         $this->assertStringNotContainsString('&lt;', $result['after']);
         $this->assertStringContainsString('<strong>', $result['after']);
-        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('<ins class="mod">', $result['after']);
         $this->assertStringContainsString('Consequatur', $result['after']);
     }
 
@@ -342,8 +361,8 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertSame(1, substr_count($result['after'], '<ins>'));
-        $this->assertStringContainsString('<ins>Hello world</ins>', $result['after']);
+        $this->assertSame(1, substr_count($result['after'], '<ins class="mod">'));
+        $this->assertStringContainsString('<ins class="mod">Hello world</ins>', $result['after']);
     }
 
     #[Test]
