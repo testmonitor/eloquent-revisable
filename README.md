@@ -404,6 +404,13 @@ $result = $diff->asHtml()->field('title');
 // ['before' => 'The quick <del>brown</del> fox', 'after' => 'The quick <ins>red</ins> fox']
 ```
 
+Fields that contain HTML are handled transparently — markup is rendered rather than escaped (only use this for trusted/sanitized HTML content), and changes are highlighted at the word level within the HTML structure:
+```php
+$result = $diff->asHtml()->field('body');
+// before: '<p>Hello <del>world</del></p>'
+// after:  '<p>Hello <ins>universe</ins></p>'
+```
+
 ---
 
 ### Saving revisions

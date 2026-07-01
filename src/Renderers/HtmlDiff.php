@@ -4,12 +4,15 @@ namespace TestMonitor\Revisable\Renderers;
 
 use Illuminate\Support\Str;
 use Jfcherng\Diff\DiffHelper;
+use Ssddanbrown\HtmlDiff\Diff as HtmlDiffer;
 use TestMonitor\Revisable\Diff;
 
 class HtmlDiff
 {
     /**
      * @param  string  $detailLevel  Granularity of inline highlighting: 'none'|'line'|'word'|'char'
+     *                               For HTML fields, only 'none' is mapped; all other levels resolve to word-level
+     *                               because the underlying HTML differ does not support finer granularity.
      * @param  string  $lineSeparator  String placed between cells when a multi-line value is joined
      */
     public function __construct(
@@ -33,11 +36,11 @@ class HtmlDiff
             return null;
         }
 
-        // Normalize the values to arrays or strings, then diff them accordingly
+        // Normalize the before/after values, then diff them.
         $before = $this->normalize($value['before'] ?? '');
         $after = $this->normalize($value['after'] ?? '');
 
-        // If either value is an array, treat both as arrays and diff them in parallel
+        // If either value is an array, diff each pair in parallel and return arrays of before/after diffs.
         if (is_array($before) || is_array($after)) {
             return $this->diffArray((array) $before, (array) $after);
         }
@@ -63,15 +66,40 @@ class HtmlDiff
         $before = (string) $before;
         $after = (string) $after;
 
-        // If the values are identical, return them as-is without diffing
+        return $this->containsHtml($before) || $this->containsHtml($after)
+            ? $this->diffHtmlValue($before, $after)
+            : $this->diffPlainValue($before, $after);
+    }
+
+    /**
+     * Build HTML diffs for each pair in parallel before/after arrays.
+     *
+     * @return array{before: list<string>, after: list<string>}
+     */
+    protected function diffArray(array $before, array $after): array
+    {
+        $diffs = collect(array_map(null, $before, $after))
+            ->map(fn (array $pair) => $this->diffValue((string) ($pair[0] ?? ''), (string) ($pair[1] ?? '')))
+            ->reject(fn (array $pair) => blank(strip_tags($pair['before'])) && blank(strip_tags($pair['after'])))
+            ->values();
+
+        return [
+            'before' => $diffs->pluck('before')->all(),
+            'after' => $diffs->pluck('after')->all(),
+        ];
+    }
+
+    /**
+     * Build a plain-text diff, escaping identical values and delegating changes to jfcherng/php-diff.
+     *
+     * @return array{before: string, after: string}
+     */
+    protected function diffPlainValue(string $before, string $after): array
+    {
         if ($before === $after) {
-            return [
-                'before' => $this->escape($before),
-                'after' => $this->escape($after),
-            ];
+            return ['before' => $this->escape($before), 'after' => $this->escape($after)];
         }
 
-        // Use Diff to generate a side-by-side diff, then extract the inner HTML of the <td> cells
         $diff = DiffHelper::calculate(
             old: $before,
             new: $after,
@@ -83,28 +111,6 @@ class HtmlDiff
         return [
             'before' => $this->extractCells($diff, 'old'),
             'after' => $this->extractCells($diff, 'new'),
-        ];
-    }
-
-    /**
-     * Build HTML diffs for each pair in parallel before/after arrays.
-     *
-     * @return array{before: list<string>, after: list<string>}
-     */
-    protected function diffArray(array $before, array $after): array
-    {
-        // Zips arrays of unequal length, padding the shorter one with null.
-        $pairs = array_map(null, $before, $after);
-
-        // Diff each pair, filtering out any pairs that are blank after stripping HTML tags
-        $diffs = collect($pairs)
-            ->map(fn (array $pair) => $this->diffValue((string) ($pair[0] ?? ''), (string) ($pair[1] ?? '')))
-            ->reject(fn (array $pair) => blank(strip_tags($pair['before'])) && blank(strip_tags($pair['after'])))
-            ->values();
-
-        return [
-            'before' => $diffs->pluck('before')->all(),
-            'after' => $diffs->pluck('after')->all(),
         ];
     }
 
@@ -121,8 +127,56 @@ class HtmlDiff
      */
     protected function extractCells(string $diff, string $side): string
     {
-        preg_match_all('/<td class="' . $side . '">(.*?)<\/td>/s', $diff, $matches);
+        return Str::of($diff)
+            ->matchAll('/<td class="' . $side . '">(.*?)<\/td>/s')
+            ->implode($this->lineSeparator);
+    }
 
-        return implode($this->lineSeparator, $matches[1]);
+    /**
+     * Return true when the string contains at least one HTML tag.
+     */
+    protected function containsHtml(string $value): bool
+    {
+        return Str::of($value)->test('/<\s*\/?\s*[a-zA-Z][^>]*>/');
+    }
+
+    /**
+     * Build an HTML diff for values where at least one contains HTML markup.
+     *
+     * Delegates to ssddanbrown/htmldiff for DOM-aware diffing, then splits the
+     * merged result into separate before (del-marked) and after (ins-marked) views.
+     *
+     * @return array{before: string, after: string}
+     */
+    protected function diffHtmlValue(string $before, string $after): array
+    {
+        $merged = (new HtmlDiffer($before, $after))->build();
+
+        return [
+            'before' => $this->beforeView($merged),
+            'after' => $this->afterView($merged),
+        ];
+    }
+
+    /**
+     * Extract the before view: remove inserted content, normalise <del> tags.
+     */
+    protected function beforeView(string $merged): string
+    {
+        return Str::of($merged)
+            ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
+            ->replaceMatches('/<del[^>]*>/', '<del>')
+            ->toString();
+    }
+
+    /**
+     * Extract the after view: remove deleted content, normalise <ins> tags.
+     */
+    protected function afterView(string $merged): string
+    {
+        return Str::of($merged)
+            ->replaceMatches('/<del[^>]*>.*?<\/del>/s', '')
+            ->replaceMatches('/<ins[^>]*>/', '<ins>')
+            ->toString();
     }
 }
