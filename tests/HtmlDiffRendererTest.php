@@ -302,8 +302,7 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — the word must appear in both views, not just the after view,
         // and the before view marks it as a formatting change (not a deletion)
-        $this->assertStringContainsString('Consequatur', $result['before']);
-        $this->assertStringContainsString('<del class="mod">', $result['before']);
+        $this->assertStringContainsString('<del class="mod">Consequatur</del>', $result['before']);
         $this->assertStringContainsString('Consequatur', $result['after']);
     }
 
