@@ -110,6 +110,35 @@ class ReplacingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_passes_the_latest_revision_to_the_callable_condition()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->replaceWhen(fn (self $model, $latest) => $latest->metadata['attributes']['name'] !== 'Stop replacing');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $this->modifyPost($post); // creates the first revision
+        $this->modifyPost($post, ['name' => 'Second draft']); // replaces (latest name != 'Stop replacing')
+
+        // When
+        $this->modifyPost($post, ['name' => 'Stop replacing']); // replaces (latest name == 'Second draft', != 'Stop replacing')
+        $this->modifyPost($post, ['name' => 'After freeze']); // should NOT replace (latest name == 'Stop replacing')
+
+        // Then
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        $this->assertCount(2, $revisions);
+        $this->assertEquals('Stop replacing', $revisions->first()->metadata['attributes']['name']);
+        $this->assertEquals('After freeze', $revisions->last()->metadata['attributes']['name']);
+    }
+
+    #[Test]
     public function it_preserves_the_revision_identity_when_replacing()
     {
         // Given
