@@ -346,13 +346,13 @@ trait HasRevisions
      */
     protected function shouldReplaceRevision(RevisableOptions $options): bool
     {
-        if (! $options->shouldReplace($this)) {
-            return false;
-        }
-
         $latest = $this->latestRevision()->first();
 
         if ($latest === null || ! $latest->isDefault()) {
+            return false;
+        }
+
+        if (! $options->shouldReplace($this, $latest)) {
             return false;
         }
 

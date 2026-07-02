@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use TestMonitor\Revisable\Contracts\NameGenerator;
+use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Generators\NameGeneratorFactory;
 
 class RevisableOptions
@@ -165,10 +166,10 @@ class RevisableOptions
     /**
      * Resolve whether the latest revision should be replaced for the given model.
      */
-    public function shouldReplace(Model $model): bool
+    public function shouldReplace(Model $model, RevisionContract $latest): bool
     {
         return is_callable($this->replaceWhen)
-            ? (bool) ($this->replaceWhen)($model)
+            ? (bool) ($this->replaceWhen)($model, $latest)
             : (bool) $this->replaceWhen;
     }
 

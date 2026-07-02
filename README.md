@@ -250,7 +250,7 @@ public function getRevisionOptions(): RevisableOptions
 
 By default every save creates a new revision. When a model goes through many minor edits before reaching a stable state — such as a draft document — you may prefer to keep a single *living snapshot* that is overwritten on each save, rather than accumulating many interim revisions.
 
-Use `replaceWhen` with a boolean or a callable that receives the model:
+Use `replaceWhen` with a boolean or a callable that receives the model and the latest revision:
 
 ```php
 public function getRevisionOptions(): RevisableOptions
@@ -258,6 +258,12 @@ public function getRevisionOptions(): RevisableOptions
     return RevisableOptions::defaults()
         ->replaceWhen(fn ($model) => $model->status === 'draft');
 }
+```
+
+The callable also receives the latest revision as its second argument, which lets you inspect its state when deciding whether to replace:
+
+```php
+->replaceWhen(fn ($model, $latest) => $latest->metadata['attributes']['status'] === 'draft');
 ```
 
 When the condition is true the latest revision is updated in place; its identity (id, `created_at`) is preserved. When the condition is false a new revision is created as normal, so the transition out of draft becomes its own permanent entry in the history.
