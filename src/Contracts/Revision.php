@@ -15,6 +15,8 @@ interface Revision
 
     public function previous(): ?static;
 
+    public function next(): ?static;
+
     public function diff(?self $target = null): Diff;
 
     public function toModel(): Model;

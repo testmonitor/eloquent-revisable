@@ -206,7 +206,7 @@ class Revision extends Model implements RevisionContract
      */
     public function isFirstRevision(): bool
     {
-        return $this->getKey() === $this->revisionable->revisions->min($this->getKeyName());
+        return $this->exists && $this->previous() === null;
     }
 
     /**
@@ -214,7 +214,7 @@ class Revision extends Model implements RevisionContract
      */
     public function isLastRevision(): bool
     {
-        return $this->getKey() === $this->revisionable->revisions->max($this->getKeyName());
+        return $this->exists && $this->next() === null;
     }
 
     /**

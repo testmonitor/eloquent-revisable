@@ -3,6 +3,8 @@
 namespace TestMonitor\Revisable\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
+use TestMonitor\Revisable\Models\Revision;
+use TestMonitor\Revisable\Tests\Models\Post;
 
 class RevisionNavigationTest extends TestCase
 {
@@ -71,7 +73,7 @@ class RevisionNavigationTest extends TestCase
     }
 
     #[Test]
-    public function a_single_revision_is_both_the_first_and_the_last()
+    public function it_treats_a_single_revision_as_both_the_first_and_the_last()
     {
         // Given
         $post = $this->createPost();
@@ -84,5 +86,19 @@ class RevisionNavigationTest extends TestCase
         // Then
         $this->assertTrue($revision->isFirstRevision());
         $this->assertTrue($revision->isLastRevision());
+    }
+
+    #[Test]
+    public function it_treats_an_unsaved_revision_as_neither_the_first_nor_the_last()
+    {
+        // Given
+        $revision = new Revision([
+            'revisionable_type' => Post::class,
+            'revisionable_id' => 1,
+        ]);
+
+        // When / Then
+        $this->assertFalse($revision->isFirstRevision());
+        $this->assertFalse($revision->isLastRevision());
     }
 }
