@@ -187,6 +187,37 @@ class Revision extends Model implements RevisionContract
     }
 
     /**
+     * Return the revision that directly follows this one for the same model.
+     */
+    public function next(): ?static
+    {
+        return static::query()
+            ->where([
+                ['revisionable_type', $this->revisionable_type],
+                ['revisionable_id', $this->revisionable_id],
+                [$this->getKeyName(), '>', $this->getKey()],
+            ])
+            ->oldest($this->getKeyName())
+            ->first();
+    }
+
+    /**
+     * Determine whether this is the oldest revision for its model.
+     */
+    public function isFirstRevision(): bool
+    {
+        return $this->exists && $this->previous() === null;
+    }
+
+    /**
+     * Determine whether this is the most recent revision for its model.
+     */
+    public function isLastRevision(): bool
+    {
+        return $this->exists && $this->next() === null;
+    }
+
+    /**
      * Compare this revision against another revision or its predecessor.
      */
     public function diff(?RevisionContract $target = null): Diff
