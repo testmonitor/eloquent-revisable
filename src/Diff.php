@@ -10,6 +10,16 @@ use TestMonitor\Revisable\Renderers\HtmlDiff;
 class Diff
 {
     /**
+     * @var array<string, mixed>
+     */
+    protected $after;
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected $before;
+
+    /**
      * @var array<string, array{before: mixed, after: mixed}>
      */
     protected array $fields;
@@ -21,6 +31,9 @@ class Diff
 
     public function __construct(array $before, array $after)
     {
+        $this->before = $before;
+        $this->after = $after;
+
         $this->fields = $this->diffFields(
             $before['attributes'] ?? [],
             $after['attributes'] ?? []
@@ -46,6 +59,22 @@ class Diff
     public static function empty(): static
     {
         return new static([], []);
+    }
+
+    /**
+     * Return the "before" revision.
+     */
+    public function before(): array
+    {
+        return $this->before;
+    }
+
+    /**
+     * Return the "after" revision.
+     */
+    public function after(): array
+    {
+        return $this->after;
     }
 
     /**
