@@ -386,6 +386,43 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_omits_a_newly_added_list_item_from_the_before_view()
+    {
+        // Given — a third bullet was added; the old list never had it
+        $htmlDiff = $this->diffFor(
+            '<ul><li>one</li><li>two</li></ul>',
+            '<ul><li>one</li><li>two</li><li>three</li></ul>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no dangling empty bullet in the before view
+        $this->assertStringNotContainsString('<li></li>', $result['before']);
+        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('three', $result['after']);
+    }
+
+    #[Test]
+    public function it_omits_a_newly_added_table_row_from_the_before_view()
+    {
+        // Given — a second row was added; stripping its inserted cell content
+        // would otherwise leave an empty <tr><td></td></tr> behind
+        $htmlDiff = $this->diffFor(
+            '<table><tr><td>one</td></tr></table>',
+            '<table><tr><td>one</td></tr><tr><td>two</td></tr></table>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertStringNotContainsString('<td></td>', $result['before']);
+        $this->assertSame(1, substr_count($result['before'], '<tr>'));
+        $this->assertStringContainsString('two', $result['after']);
+    }
+
+    #[Test]
     public function it_handles_plain_text_before_and_html_after()
     {
         // Given

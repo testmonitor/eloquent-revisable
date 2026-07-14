@@ -168,9 +168,17 @@ class HtmlDiff
     protected function beforeView(string $merged): string
     {
         return Str::of($merged)
+            // Formatting-only changes (e.g. <strong> removed) are marked as <ins class="mod">
+            // by the differ; flip them to <del class="mod"> so the old formatting/text survives here.
             ->replaceMatches('/<ins class="mod">(.*?)<\/ins>/s', '<del class="mod">$1</del>')
+            // Any other inserted text never existed in the before view, so drop it entirely.
             ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
+            // Collapse the differ's own diff-specific <del> classes down to a plain <del>.
             ->replaceMatches('/<del(?! class="mod")[^>]*>/', '<del>')
+            // A wholly new <li>/<p>/<td> is left empty once its inserted content is
+            // stripped above; drop it, then drop any <tr> left empty by that in turn.
+            ->replaceMatches('/<(li|p|td)(\s[^>]*)?>\s*<\/\1>/is', '')
+            ->replaceMatches('/<tr(\s[^>]*)?>\s*<\/tr>/is', '')
             ->toString();
     }
 
@@ -180,7 +188,10 @@ class HtmlDiff
     protected function afterView(string $merged): string
     {
         return Str::of($merged)
+            // Deleted text never exists in the after view, so drop it entirely.
             ->replaceMatches('/<del[^>]*>.*?<\/del>/s', '')
+            // Collapse the differ's own diff-specific <ins> classes down to a plain <ins>,
+            // but leave <ins class="mod"> as-is since it marks a formatting-only change.
             ->replaceMatches('/<ins(?! class="mod")[^>]*>/', '<ins>')
             ->toString();
     }
