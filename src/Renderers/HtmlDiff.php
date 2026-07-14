@@ -168,8 +168,19 @@ class HtmlDiff
     protected function beforeView(string $merged): string
     {
         return Str::of($merged)
+            // Formatting-only change: show the old formatting instead of dropping the text.
             ->replaceMatches('/<ins class="mod">(.*?)<\/ins>/s', '<del class="mod">$1</del>')
+            // Wholly new <tr>: drop the whole row, not just its text.
+            ->replaceMatches(
+                '/<tr(\s[^>]*)?>\s*(?:<(td|th)(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/\2>\s*)+<\/tr>/is', ''
+            )
+            // Wholly new <li>/<p>/<td>/<th>: drop the element, not just its text.
+            ->replaceMatches(
+                '/<(li|p|td|th)(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/\1>/is', ''
+            )
+            // Any other inserted text didn't exist yet, so drop it.
             ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
+            // Normalise the differ's diff-specific <del> classes.
             ->replaceMatches('/<del(?! class="mod")[^>]*>/', '<del>')
             ->toString();
     }
@@ -180,7 +191,9 @@ class HtmlDiff
     protected function afterView(string $merged): string
     {
         return Str::of($merged)
+            // Deleted text no longer exists, so drop it.
             ->replaceMatches('/<del[^>]*>.*?<\/del>/s', '')
+            // Normalise diff-specific <ins> classes, but keep the "mod" marker.
             ->replaceMatches('/<ins(?! class="mod")[^>]*>/', '<ins>')
             ->toString();
     }

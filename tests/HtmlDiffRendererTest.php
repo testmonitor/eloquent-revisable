@@ -270,6 +270,25 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_html_unmodified_when_detail_level_is_none()
+    {
+        // Given
+        $before = '<p>Hello <strong>world</strong></p>';
+        $after = '<p>Hello <strong>universe</strong></p>';
+        $htmlDiff = (new Diff(
+            ['attributes' => ['value' => $before]],
+            ['attributes' => ['value' => $after]],
+        ))->asHtml(detailLevel: 'none');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the raw HTML is returned exactly as given, no diff markers or rewriting
+        $this->assertSame($before, $result['before']);
+        $this->assertSame($after, $result['after']);
+    }
+
+    #[Test]
     public function it_uses_the_configured_line_separator_for_multiline_values()
     {
         // Given
@@ -365,24 +384,58 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_html_unmodified_when_detail_level_is_none()
+    public function it_keeps_preexisting_empty_elements_when_html_is_identical()
     {
-        // Given
-        $htmlDiff = (new Diff(
-            ['attributes' => ['value' => '<p>Hello <strong>world</strong></p>']],
-            ['attributes' => ['value' => '<p>Hello <strong>universe</strong></p>']],
-        ))->asHtml(detailLevel: 'none');
+        // Given — a genuinely empty <p> and <li> that were already there, unrelated to any insertion
+        $htmlDiff = $this->diffFor(
+            '<p>one</p><p></p><ul><li>two</li><li></li></ul>',
+            '<p>one</p><p></p><ul><li>two</li><li></li></ul>',
+        );
 
         // When
         $result = $htmlDiff->field('value');
 
-        // Then — no diff markers, raw HTML returned as-is
-        $this->assertStringNotContainsString('<ins>', $result['before']);
-        $this->assertStringNotContainsString('<del>', $result['before']);
-        $this->assertStringNotContainsString('<ins>', $result['after']);
-        $this->assertStringNotContainsString('<del>', $result['after']);
-        $this->assertStringContainsString('<strong>', $result['before']);
-        $this->assertStringContainsString('<strong>', $result['after']);
+        // Then — both views stay identical to the input, nothing is stripped
+        $this->assertSame($result['before'], $result['after']);
+        $this->assertStringContainsString('<p></p>', $result['before']);
+        $this->assertStringContainsString('<li></li>', $result['before']);
+    }
+
+    #[Test]
+    public function it_omits_a_newly_added_list_item_from_the_before_view()
+    {
+        // Given — a third bullet was added; the old list never had it
+        $htmlDiff = $this->diffFor(
+            '<ul><li>one</li><li>two</li></ul>',
+            '<ul><li>one</li><li>two</li><li>three</li></ul>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the before view still has exactly its original two bullets, no dangling empty one
+        $this->assertSame(2, preg_match_all('/<li[^>]*>/', $result['before']));
+        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('three', $result['after']);
+    }
+
+    #[Test]
+    public function it_omits_a_newly_added_table_row_from_the_before_view()
+    {
+        // Given — a second row was added; stripping its inserted cell content
+        // would otherwise leave an empty <tr><td></td></tr> behind
+        $htmlDiff = $this->diffFor(
+            '<table><tr><td>one</td></tr></table>',
+            '<table><tr><td>one</td></tr><tr><td>two</td></tr></table>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the before view still has exactly its original single row, no dangling empty one
+        $this->assertSame(1, preg_match_all('/<tr[^>]*>/', $result['before']));
+        $this->assertSame(1, preg_match_all('/<td[^>]*>/', $result['before']));
+        $this->assertStringContainsString('two', $result['after']);
     }
 
     #[Test]
