@@ -270,6 +270,27 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_html_unmodified_when_detail_level_is_none()
+    {
+        // Given
+        $htmlDiff = (new Diff(
+            ['attributes' => ['value' => '<p>Hello <strong>world</strong></p>']],
+            ['attributes' => ['value' => '<p>Hello <strong>universe</strong></p>']],
+        ))->asHtml(detailLevel: 'none');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no diff markers, raw HTML returned as-is
+        $this->assertStringNotContainsString('<ins>', $result['before']);
+        $this->assertStringNotContainsString('<del>', $result['before']);
+        $this->assertStringNotContainsString('<ins>', $result['after']);
+        $this->assertStringNotContainsString('<del>', $result['after']);
+        $this->assertStringContainsString('<strong>', $result['before']);
+        $this->assertStringContainsString('<strong>', $result['after']);
+    }
+
+    #[Test]
     public function it_uses_the_configured_line_separator_for_multiline_values()
     {
         // Given
@@ -365,24 +386,21 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_html_unmodified_when_detail_level_is_none()
+    public function it_keeps_preexisting_empty_elements_when_html_is_identical()
     {
-        // Given
-        $htmlDiff = (new Diff(
-            ['attributes' => ['value' => '<p>Hello <strong>world</strong></p>']],
-            ['attributes' => ['value' => '<p>Hello <strong>universe</strong></p>']],
-        ))->asHtml(detailLevel: 'none');
+        // Given — a genuinely empty <p> and <li> that were already there, unrelated to any insertion
+        $htmlDiff = $this->diffFor(
+            '<p>one</p><p></p><ul><li>two</li><li></li></ul>',
+            '<p>one</p><p></p><ul><li>two</li><li></li></ul>',
+        );
 
         // When
         $result = $htmlDiff->field('value');
 
-        // Then — no diff markers, raw HTML returned as-is
-        $this->assertStringNotContainsString('<ins>', $result['before']);
-        $this->assertStringNotContainsString('<del>', $result['before']);
-        $this->assertStringNotContainsString('<ins>', $result['after']);
-        $this->assertStringNotContainsString('<del>', $result['after']);
-        $this->assertStringContainsString('<strong>', $result['before']);
-        $this->assertStringContainsString('<strong>', $result['after']);
+        // Then — both views stay identical to the input, nothing is stripped
+        $this->assertSame($result['before'], $result['after']);
+        $this->assertStringContainsString('<p></p>', $result['before']);
+        $this->assertStringContainsString('<li></li>', $result['before']);
     }
 
     #[Test]
@@ -397,8 +415,8 @@ class HtmlDiffRendererTest extends TestCase
         // When
         $result = $htmlDiff->field('value');
 
-        // Then — no dangling empty bullet in the before view
-        $this->assertStringNotContainsString('<li></li>', $result['before']);
+        // Then — the before view still has exactly its original two bullets, no dangling empty one
+        $this->assertSame(2, preg_match_all('/<li[^>]*>/', $result['before']));
         $this->assertStringContainsString('<ins>', $result['after']);
         $this->assertStringContainsString('three', $result['after']);
     }
@@ -416,9 +434,9 @@ class HtmlDiffRendererTest extends TestCase
         // When
         $result = $htmlDiff->field('value');
 
-        // Then
-        $this->assertStringNotContainsString('<td></td>', $result['before']);
-        $this->assertSame(1, substr_count($result['before'], '<tr>'));
+        // Then — the before view still has exactly its original single row, no dangling empty one
+        $this->assertSame(1, preg_match_all('/<tr[^>]*>/', $result['before']));
+        $this->assertSame(1, preg_match_all('/<td[^>]*>/', $result['before']));
         $this->assertStringContainsString('two', $result['after']);
     }
 

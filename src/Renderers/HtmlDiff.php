@@ -168,17 +168,16 @@ class HtmlDiff
     protected function beforeView(string $merged): string
     {
         return Str::of($merged)
-            // Formatting-only changes (e.g. <strong> removed) are marked as <ins class="mod">
-            // by the differ; flip them to <del class="mod"> so the old formatting/text survives here.
+            // Formatting-only change: show the old formatting instead of dropping the text.
             ->replaceMatches('/<ins class="mod">(.*?)<\/ins>/s', '<del class="mod">$1</del>')
-            // Any other inserted text never existed in the before view, so drop it entirely.
+            // Wholly new <tr>: drop the whole row, not just its text.
+            ->replaceMatches('/<tr(\s[^>]*)?>\s*(?:<td(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/td>\s*)+<\/tr>/is', '')
+            // Wholly new <li>/<p>/<td>: drop the element, not just its text.
+            ->replaceMatches('/<(li|p|td)(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/\1>/is', '')
+            // Any other inserted text didn't exist yet, so drop it.
             ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
-            // Collapse the differ's own diff-specific <del> classes down to a plain <del>.
+            // Normalise the differ's diff-specific <del> classes.
             ->replaceMatches('/<del(?! class="mod")[^>]*>/', '<del>')
-            // A wholly new <li>/<p>/<td> is left empty once its inserted content is
-            // stripped above; drop it, then drop any <tr> left empty by that in turn.
-            ->replaceMatches('/<(li|p|td)(\s[^>]*)?>\s*<\/\1>/is', '')
-            ->replaceMatches('/<tr(\s[^>]*)?>\s*<\/tr>/is', '')
             ->toString();
     }
 
@@ -188,10 +187,9 @@ class HtmlDiff
     protected function afterView(string $merged): string
     {
         return Str::of($merged)
-            // Deleted text never exists in the after view, so drop it entirely.
+            // Deleted text no longer exists, so drop it.
             ->replaceMatches('/<del[^>]*>.*?<\/del>/s', '')
-            // Collapse the differ's own diff-specific <ins> classes down to a plain <ins>,
-            // but leave <ins class="mod"> as-is since it marks a formatting-only change.
+            // Normalise diff-specific <ins> classes, but keep the "mod" marker.
             ->replaceMatches('/<ins(?! class="mod")[^>]*>/', '<ins>')
             ->toString();
     }
