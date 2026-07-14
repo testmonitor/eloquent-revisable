@@ -260,7 +260,7 @@ trait HasRevisions
             ->rollback($revision);
 
         if ($options->revisionOnRollback) {
-            $this->saveAsRollbackRevision($options);
+            $this->saveAsRollbackRevision($options, $revision);
         }
 
         $this->fireModelEvent('rolledBack', false);
@@ -378,7 +378,7 @@ trait HasRevisions
     /**
      * Save a rollback revision, always as a new record and marked as a rollback.
      */
-    protected function saveAsRollbackRevision(RevisableOptions $options): Revision
+    protected function saveAsRollbackRevision(RevisableOptions $options, RevisionContract $revision): Revision
     {
         return app(Revisioner::class)
             ->for($this)
@@ -388,6 +388,9 @@ trait HasRevisions
             ->withRelations($options->relations)
             ->limit($options->limit)
             ->type(RevisionType::Rollback)
+            ->properties([
+                'rollback_from' => $revision->name,
+            ])
             ->save();
     }
 }

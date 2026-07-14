@@ -355,6 +355,24 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_stores_the_source_revision_name_on_the_rollback_revision()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        $source = $post->revisions()->firstOrFail();
+
+        // When
+        $post->rollbackToRevision($source);
+
+        // Then
+        $rollback = $post->revisions()->oldest('id')->get()->last();
+
+        $this->assertEquals($source->name, $rollback->properties['rollback_from']);
+    }
+
+    #[Test]
     public function it_can_scope_revisions_by_model()
     {
         // Given
