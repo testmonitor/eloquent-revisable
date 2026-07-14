@@ -361,13 +361,13 @@ class CreatingRevisionsTest extends TestCase
         $post = $this->createPost();
         $this->modifyPost($post);
 
-        $source = $post->revisions()->firstOrFail();
+        $source = $post->revisions()->oldest('id')->firstOrFail();
 
         // When
         $post->rollbackToRevision($source);
 
         // Then
-        $rollback = $post->revisions()->oldest('id')->get()->last();
+        $rollback = $post->revisions()->latest('id')->firstOrFail();
 
         $this->assertEquals($source->name, $rollback->properties['rollback_from']);
     }
