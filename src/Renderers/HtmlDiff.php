@@ -172,11 +172,11 @@ class HtmlDiff
             ->replaceMatches('/<ins class="mod">(.*?)<\/ins>/s', '<del class="mod">$1</del>')
             // Wholly new <tr>: drop the whole row, not just its text.
             ->replaceMatches(
-                '/<tr(\s[^>]*)?>\s*(?:<td(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/td>\s*)+<\/tr>/is', ''
+                '/<tr(\s[^>]*)?>\s*(?:<(td|th)(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/\2>\s*)+<\/tr>/is', ''
             )
-            // Wholly new <li>/<p>/<td>: drop the element, not just its text.
+            // Wholly new <li>/<p>/<td>/<th>: drop the element, not just its text.
             ->replaceMatches(
-                '/<(li|p|td)(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/\1>/is', ''
+                '/<(li|p|td|th)(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/\1>/is', ''
             )
             // Any other inserted text didn't exist yet, so drop it.
             ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
