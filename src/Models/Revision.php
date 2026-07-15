@@ -218,14 +218,22 @@ class Revision extends Model implements RevisionContract
     }
 
     /**
-     * Compare this revision against another revision or its predecessor.
+     * Compare this revision against another revision, or against nothing (everything it holds appears as added).
      */
     public function diff(?RevisionContract $target = null): Diff
     {
-        if ($target instanceof RevisionContract) {
-            return Diff::fromRevisions($this, $target);
+        if ($target === null) {
+            return Diff::fromRevision($this);
         }
 
+        return Diff::fromRevisions($this, $target);
+    }
+
+    /**
+     * Compare this revision against the one directly preceding it, if any.
+     */
+    public function diffFromPrevious(): Diff
+    {
         $previous = $this->previous();
 
         if ($previous === null) {
