@@ -33,6 +33,14 @@ class Diff
     }
 
     /**
+     * Create a diff of a single revision against nothing, so every field and relation it holds appears as added.
+     */
+    public static function fromRevision(RevisionContract $revision): static
+    {
+        return new static([], $revision->metadata ?? []);
+    }
+
+    /**
      * Create a diff from two revisions.
      */
     public static function fromRevisions(RevisionContract $before, RevisionContract $after): static

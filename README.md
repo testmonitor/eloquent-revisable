@@ -377,8 +377,9 @@ Use `diff()` to compare two states and inspect what changed. It returns a `Diff`
 
 ```php
 // What changed between two revisions
-$diff = $revision->diff();              // vs its predecessor
+$diff = $revision->diff();              // vs nothing — everything it holds appears as added
 $diff = $revision->diff($other);        // vs a specific revision
+$diff = $revision->diffFromPrevious();  // vs its predecessor (empty diff if there is none)
 
 // What changed between the current model and a revision
 $diff = $article->diff();               // vs the latest revision

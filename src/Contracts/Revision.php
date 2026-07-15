@@ -19,5 +19,7 @@ interface Revision
 
     public function diff(?self $target = null): Diff;
 
+    public function diffFromPrevious(): Diff;
+
     public function toModel(): Model;
 }

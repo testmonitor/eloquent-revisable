@@ -11,6 +11,37 @@ use TestMonitor\Revisable\Tests\Models\Post;
 
 class RevisionDiffTest extends TestCase
 {
+    // vs nothing (default)
+
+    #[Test]
+    public function it_diffs_a_revision_against_nothing_by_default()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $this->modifyPost($post, ['name' => 'Another post name', 'votes' => 20]);
+
+        $revision = $post->revisions()->firstOrFail();
+
+        // When
+        $diff = $revision->diff();
+
+        // Then
+        $this->assertInstanceOf(Diff::class, $diff);
+
+        $changes = $diff->changes();
+
+        $this->assertArrayHasKey('name', $changes);
+        $this->assertNull($changes['name']['before']);
+        $this->assertEquals('Another post name', $changes['name']['after']);
+
+        $this->assertArrayHasKey('votes', $changes);
+        $this->assertNull($changes['votes']['before']);
+        $this->assertEquals(20, $changes['votes']['after']);
+    }
+
+    // vs previous revision
+
     #[Test]
     public function it_diffs_against_the_previous_revision()
     {
@@ -23,11 +54,9 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
-        $this->assertInstanceOf(Diff::class, $diff);
-
         $changes = $diff->changes();
 
         $this->assertArrayHasKey('name', $changes);
@@ -51,7 +80,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $changed = $revisions->last()->diff()->changed();
+        $changed = $revisions->last()->diffFromPrevious()->changed();
 
         // Then
         $this->assertContains('name', $changed);
@@ -70,7 +99,7 @@ class RevisionDiffTest extends TestCase
         $revision = $post->revisions()->firstOrFail();
 
         // When
-        $diff = $revision->diff();
+        $diff = $revision->diffFromPrevious();
 
         // Then
         $this->assertEmpty($diff->changes());
@@ -88,7 +117,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
         $all = $diff->all();
@@ -117,7 +146,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
         $name = $diff->get('name');
@@ -140,7 +169,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
         $result = $diff->get('bogus_field');
 
         // Then
@@ -268,7 +297,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
         $changes = $diff->changes();
@@ -305,7 +334,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
         $this->assertArrayNotHasKey('tags', $diff->changes());
@@ -338,7 +367,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
         $changes = $diff->changes();
@@ -412,7 +441,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
         $changes = $diff->changes();
@@ -442,7 +471,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
         $this->assertArrayNotHasKey('comments', $diff->changes());
@@ -480,7 +509,7 @@ class RevisionDiffTest extends TestCase
         $revisions = $post->revisions()->oldest('id')->get();
 
         // When
-        $diff = $revisions->last()->diff();
+        $diff = $revisions->last()->diffFromPrevious();
 
         // Then
         $this->assertArrayNotHasKey('comments', $diff->changes());
