@@ -291,7 +291,7 @@ class CreatingRevisionsTest extends TestCase
         $this->modifyPost($post); // Revision 1: 'Another post name', votes=20
 
         // When
-        $post->rollbackToRevision($post->revisions()->oldest()->firstOrFail());
+        $post->rollbackToRevision($post->revisions()->oldest('version')->firstOrFail());
 
         // Then
         $this->assertEquals('Post name', $post->name);
@@ -478,7 +478,7 @@ class CreatingRevisionsTest extends TestCase
         $this->modifyPost($post);
         $this->modifyPost($post, ['name' => 'Another name']);
 
-        $post->rollbackToRevision($post->revisions()->oldest()->firstOrFail());
+        $post->rollbackToRevision($post->revisions()->oldest('version')->firstOrFail());
 
         // When
         $revisions = $post->revisions()->onlyRollbacks()->get();
@@ -496,7 +496,7 @@ class CreatingRevisionsTest extends TestCase
         $this->modifyPost($post);
         $this->modifyPost($post, ['name' => 'Another name']);
 
-        $post->rollbackToRevision($post->revisions()->oldest()->firstOrFail());
+        $post->rollbackToRevision($post->revisions()->oldest('version')->firstOrFail());
 
         // When
         $revisions = $post->revisions()->notRollback()->get();

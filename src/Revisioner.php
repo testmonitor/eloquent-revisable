@@ -109,7 +109,6 @@ class Revisioner
 
         $revision->user_id = $this->userResolver->resolve();
         $revision->name = $this->name;
-        $revision->version = $this->resolveVersion();
         $revision->metadata = $this->buildData();
         $revision->changed = $this->buildChanges($revision);
         $revision->properties = $this->properties ?: null;
@@ -125,6 +124,7 @@ class Revisioner
     {
         return DB::transaction(function () {
             $revision = $this->build();
+            $revision->version = $this->resolveVersion();
 
             $this->model->revisions()->save($revision);
 

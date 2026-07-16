@@ -22,7 +22,7 @@ class RevisionVersioningTest extends TestCase
         $this->modifyPost($post);
 
         // Then
-        $versions = $post->revisions()->oldest()->pluck('version');
+        $versions = $post->revisions()->oldest('version')->pluck('version');
 
         $this->assertEquals([1, 2, 3], $versions->all());
     }
@@ -57,13 +57,13 @@ class RevisionVersioningTest extends TestCase
         $post = $this->createPost();
         $this->modifyPost($post);
 
-        $firstRevision = $post->revisions()->oldest()->firstOrFail();
+        $firstRevision = $post->revisions()->oldest('version')->firstOrFail();
 
         // When
         $post->rollbackToRevision($firstRevision);
 
         // Then
-        $versions = $post->revisions()->oldest()->pluck('version');
+        $versions = $post->revisions()->oldest('version')->pluck('version');
 
         $this->assertEquals([1, 2], $versions->all());
     }
@@ -88,7 +88,7 @@ class RevisionVersioningTest extends TestCase
         }
 
         // Then
-        $versions = $post->revisions()->oldest('id')->pluck('version')->all();
+        $versions = $post->revisions()->oldest('version')->pluck('version')->all();
 
         $this->assertEquals([4, 5, 6], $versions);
     }
