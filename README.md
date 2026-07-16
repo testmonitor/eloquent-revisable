@@ -35,7 +35,7 @@ Publish the config file and migration:
 	$ php artisan vendor:publish --provider="TestMonitor\Revisable\RevisableServiceProvider" --tag="config"
 	$ php artisan vendor:publish --provider="TestMonitor\Revisable\RevisableServiceProvider" --tag="migrations"
 
-Once published, you can configure your user model, revision model, and name generator in `config/revisable.php`.
+Once published, you can configure your user model and revision model in `config/revisable.php`.
 
 Run the migration to create the `revisions` table:
 
@@ -289,35 +289,15 @@ The window is measured from the revision's last update, so it resets on every sa
 
 The living snapshot captures the post-save state, consistent with normal revision behaviour. After two saves in draft, the snapshot holds the state of the most recent save, which serves as the rollback point.
 
-#### Custom revision naming
+#### Version numbers
 
-The default `VersionNameGenerator` names revisions sequentially (v1, v2, …). You can provide your own generator by implementing the `NameGenerator` contract and registering it in the options:
-
-```php
-use TestMonitor\Revisable\Contracts\NameGenerator;
-
-class TimestampNameGenerator implements NameGenerator
-{
-    public function generate(Model $model): string
-    {
-        return now()->toDateTimeString();
-    }
-}
-```
+Every revision automatically gets a sequential `version` number (1, 2, 3, …), scoped to its model instance. Unlike a generated name, the version is a plain integer, so it carries no language or formatting choices — prefix it with whatever translated string fits your application:
 
 ```php
-public function getRevisionOptions(): RevisableOptions
-{
-    return RevisableOptions::defaults()
-        ->nameRevisionUsing(new TimestampNameGenerator);
-}
+__('Version :number', ['number' => $revision->version]);
 ```
 
-Pass `null` to disable automatic naming entirely:
-
-```php
-return RevisableOptions::defaults()->nameRevisionUsing(null);
-```
+Use `saveAsRevision()` (see below) if you also want a caller-chosen label on top of the version number.
 
 ---
 

@@ -200,7 +200,6 @@ trait HasRevisions
 
         $revision = app(Revisioner::class)
             ->for($this)
-            ->nameUsing($options->nameGenerator)
             ->onlyFields($options->fields)
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
@@ -232,7 +231,6 @@ trait HasRevisions
             ->for($this)
             ->name($name)
             ->properties($properties)
-            ->nameUsing($options->nameGenerator)
             ->onlyFields($options->fields)
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
@@ -451,7 +449,6 @@ trait HasRevisions
     {
         return app(Revisioner::class)
             ->for($this)
-            ->nameUsing($options->nameGenerator)
             ->onlyFields($options->fields)
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)

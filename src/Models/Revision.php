@@ -22,6 +22,7 @@ class Revision extends Model implements RevisionContract
 
     protected $fillable = [
         'name',
+        'version',
         'metadata',
         'properties',
         'changed',
@@ -32,6 +33,7 @@ class Revision extends Model implements RevisionContract
     ];
 
     protected $casts = [
+        'version' => 'integer',
         'metadata' => 'array',
         'properties' => 'array',
         'changed' => 'array',

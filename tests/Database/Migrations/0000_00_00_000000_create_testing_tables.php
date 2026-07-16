@@ -89,6 +89,7 @@ return new class extends Migration
             $table->integer('user_id')->unsigned()->index()->nullable();
             $table->morphs('revisionable');
             $table->string('name')->nullable();
+            $table->unsignedInteger('version');
             $table->json('metadata')->nullable();
             $table->json('properties')->nullable();
             $table->json('changed')->nullable();
@@ -97,6 +98,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null')->onUpdate('cascade');
+            $table->unique(['revisionable_type', 'revisionable_id', 'version']);
         });
     }
 

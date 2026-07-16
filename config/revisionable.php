@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\User;
-use TestMonitor\Revisable\Generators\VersionNameGenerator;
 use TestMonitor\Revisable\Models\Revision;
 
 return [
@@ -11,12 +10,6 @@ return [
      * as long as it extends the default Revision model.
      */
     'revision_model' => Revision::class,
-
-    /*
-     * The generator class used to produce a name for each revision.
-     * Set to null to disable automatic naming.
-     */
-    'name_generator' => VersionNameGenerator::class,
 
     /*
      * You can specify an auth driver here that gets user models.
