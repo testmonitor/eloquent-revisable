@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
+use InvalidArgumentException;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Enums\RevisionType;
@@ -33,9 +34,20 @@ trait HasRevisions
     protected bool $revisioningEnabled = true;
 
     /**
+     * Whether automatic revision creation is currently suspended for this model class,
+     * e.g. while creating a model and its relations inside withSingleRevision().
+     */
+    protected static bool $revisioningSuspended = false;
+
+    /**
      * Model attributes captured before the most recent update, used as the diff baseline.
      */
     protected array $revisionOriginal = [];
+
+    /**
+     * Whether this instance has already produced its Initial revision.
+     */
+    protected bool $revisionInitialCreated = false;
 
     /**
      * Register the custom model events fired during revisioning and rollback.
@@ -55,12 +67,19 @@ trait HasRevisions
         });
 
         static::updating(function (Model $model) {
+            if (static::$revisioningSuspended && ! empty($model->revisionOriginal)) {
+                return;
+            }
+
             $model->revisionOriginal = $model->getRawOriginal();
         });
 
         static::updated(function (Model $model) {
             $model->createNewRevision();
-            $model->revisionOriginal = [];
+
+            if (! static::$revisioningSuspended) {
+                $model->revisionOriginal = [];
+            }
         });
 
         static::deleted(function (Model $model) {
@@ -186,7 +205,7 @@ trait HasRevisions
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
             ->limit($options->limit)
-            ->when($this->wasRecentlyCreated, fn ($revisioner) => $revisioner->type(RevisionType::Initial))
+            ->when($this->isInitialRevision(), fn ($revisioner) => $revisioner->type(RevisionType::Initial))
             ->when(
                 $this->shouldReplaceRevision($options) ? $this->revisionToReplace() : null,
                 fn ($revisioner, $existing) => $revisioner->replace($existing),
@@ -302,6 +321,34 @@ trait HasRevisions
     }
 
     /**
+     * Execute a callback with automatic revisioning suspended for this model class,
+     * then create a single revision from the final state. The callback must return
+     * the model to be revisioned.
+     */
+    public static function withSingleRevision(Closure $callback): mixed
+    {
+        static::$revisioningSuspended = true;
+
+        try {
+            $result = $callback();
+        } finally {
+            static::$revisioningSuspended = false;
+        }
+
+        if (! $result instanceof static) {
+            throw new InvalidArgumentException(
+                'withSingleRevision() callback must return an instance of ' . static::class . '.'
+            );
+        }
+
+        $result->createNewRevision();
+
+        $result->revisionOriginal = [];
+
+        return $result;
+    }
+
+    /**
      * Return the model attributes as they were before the most recent update.
      * Falls back to getRawOriginal() when called outside an update lifecycle (e.g. saveAsRevision).
      */
@@ -311,11 +358,33 @@ trait HasRevisions
     }
 
     /**
+     * Determine whether revisioning is currently suppressed, either for this instance
+     * (via withoutRevisioning()) or for the whole class (via withSingleRevision()).
+     */
+    protected function isRevisioningSuppressed(): bool
+    {
+        return ! $this->revisioningEnabled || static::$revisioningSuspended;
+    }
+
+    /**
+     * Determine whether the next revision should be tagged as Initial, consuming that state
+     * so later revisions on the same instance are tagged Default.
+     */
+    protected function isInitialRevision(): bool
+    {
+        if (! $this->wasRecentlyCreated || $this->revisionInitialCreated) {
+            return false;
+        }
+
+        return $this->revisionInitialCreated = true;
+    }
+
+    /**
      * Determine if a revision should be created for the current model state.
      */
     protected function shouldCreateRevision(RevisableOptions $options): bool
     {
-        if (! $options->isEnabled() || ! $this->revisioningEnabled) {
+        if (! $options->isEnabled() || $this->isRevisioningSuppressed()) {
             return false;
         }
 

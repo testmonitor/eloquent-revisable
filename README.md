@@ -540,6 +540,22 @@ $article->withoutRevisioning(function () use ($article) {
 });
 ```
 
+#### Combining multiple changes into a single revision
+
+Creating a model and then saving one of its tracked relations normally produces two revisions: an initial one for the attributes, and another for the relation change. Use `withSingleRevision()` to suspend automatic revisioning while the callback runs, then create one revision from the final state:
+
+```php
+$article = Article::withSingleRevision(function () {
+    $article = Article::create(['title' => 'Title', 'body' => 'Body']);
+
+    $article->tags()->attach($tagIds);
+
+    return $article;
+});
+```
+
+The callback must return the model to be revisioned.
+
 ## Tests
 
 The package contains integration tests. You can run them using PHPUnit.

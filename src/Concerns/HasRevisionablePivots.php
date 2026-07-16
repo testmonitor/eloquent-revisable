@@ -16,8 +16,6 @@ use TestMonitor\Revisable\Relations\MorphToMany;
  *
  * @mixin Model
  * @mixin HasRevisions
- *
- * @property bool $revisioningEnabled
  */
 trait HasRevisionablePivots
 {
@@ -33,7 +31,7 @@ trait HasRevisionablePivots
             return;
         }
 
-        if (! $options->isEnabled() || ! $this->revisioningEnabled) {
+        if (! $options->isEnabled() || $this->isRevisioningSuppressed()) {
             return;
         }
 

@@ -13,8 +13,6 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @mixin Model
  * @mixin HasRevisions
- *
- * @property bool $revisioningEnabled
  */
 trait HasRevisionableChildren
 {
@@ -30,7 +28,7 @@ trait HasRevisionableChildren
             return;
         }
 
-        if (! $options->isEnabled() || ! $this->revisioningEnabled) {
+        if (! $options->isEnabled() || $this->isRevisioningSuppressed()) {
             return;
         }
 
