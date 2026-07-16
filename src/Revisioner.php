@@ -206,10 +206,11 @@ class Revisioner
 
     /**
      * Resolve the sequential version number for the new revision.
+     * Uses the max version rather than the row count, so pruning never reuses a number.
      */
     protected function resolveVersion(): int
     {
-        return $this->model->revisions()->count() + 1;
+        return ($this->model->revisions()->max('version') ?? 0) + 1;
     }
 
     /**

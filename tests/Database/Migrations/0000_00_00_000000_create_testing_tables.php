@@ -98,6 +98,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null')->onUpdate('cascade');
+            $table->unique(['revisionable_type', 'revisionable_id', 'version']);
         });
     }
 
