@@ -5,9 +5,7 @@ namespace TestMonitor\Revisable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
-use TestMonitor\Revisable\Contracts\NameGenerator;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
-use TestMonitor\Revisable\Generators\NameGeneratorFactory;
 
 class RevisableOptions
 {
@@ -77,21 +75,11 @@ class RevisableOptions
     public ?array $exceptRestoringRelations = [];
 
     /**
-     * The generator used to produce a name for each revision.
-     * Defaults to the generator configured in config/revisable.php. Set to null to disable auto-naming.
-     */
-    public ?NameGenerator $nameGenerator = null;
-
-    /**
      * Start configuring model with the default options.
      */
     public static function defaults(): self
     {
-        $options = new static;
-
-        $options->nameGenerator = NameGeneratorFactory::create();
-
-        return $options;
+        return new static;
     }
 
     /**
@@ -220,16 +208,6 @@ class RevisableOptions
     public function withoutRestoringRelations(string ...$relations): self
     {
         $this->exceptRestoringRelations = empty($relations) ? null : $relations;
-
-        return $this;
-    }
-
-    /**
-     * Set a custom name generator for revisions. Pass null to disable auto-naming.
-     */
-    public function nameRevisionUsing(?NameGenerator $generator): self
-    {
-        $this->nameGenerator = $generator;
 
         return $this;
     }

@@ -89,6 +89,7 @@ return new class extends Migration
             $table->integer('user_id')->unsigned()->index()->nullable();
             $table->morphs('revisionable');
             $table->string('name')->nullable();
+            $table->unsignedInteger('version');
             $table->json('metadata')->nullable();
             $table->json('properties')->nullable();
             $table->json('changed')->nullable();

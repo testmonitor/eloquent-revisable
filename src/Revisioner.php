@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Traits\Conditionable;
-use TestMonitor\Revisable\Contracts\NameGenerator;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\Models\Revision;
@@ -33,8 +32,6 @@ class Revisioner
     protected array $relations = [];
 
     protected ?array $exceptRestoringRelations = [];
-
-    protected ?NameGenerator $nameGenerator = null;
 
     protected RevisionType $revisionType = RevisionType::Default;
 
@@ -64,13 +61,6 @@ class Revisioner
     public function name(?string $name): static
     {
         $this->name = $name;
-
-        return $this;
-    }
-
-    public function nameUsing(?NameGenerator $generator): static
-    {
-        $this->nameGenerator = $generator;
 
         return $this;
     }
@@ -118,7 +108,8 @@ class Revisioner
         $revision = new Revision;
 
         $revision->user_id = $this->userResolver->resolve();
-        $revision->name = $this->resolveName();
+        $revision->name = $this->name;
+        $revision->version = $this->resolveVersion();
         $revision->metadata = $this->buildData();
         $revision->changed = $this->buildChanges($revision);
         $revision->properties = $this->properties ?: null;
@@ -213,13 +204,12 @@ class Revisioner
         }
     }
 
-    protected function resolveName(): ?string
+    /**
+     * Resolve the sequential version number for the new revision.
+     */
+    protected function resolveVersion(): int
     {
-        if ($this->name !== null) {
-            return $this->name;
-        }
-
-        return $this->nameGenerator?->generate($this->model);
+        return $this->model->revisions()->count() + 1;
     }
 
     /**

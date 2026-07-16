@@ -521,9 +521,9 @@ class CreatingRevisionsTest extends TestCase
         $post = $this->createPost($post);
 
         DB::table('revisions')->insert([
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'version' => 1, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'version' => 2, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'version' => 3, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         $this->assertEquals(3, $post->revisions()->count());
