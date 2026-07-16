@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
+use InvalidArgumentException;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Enums\RevisionType;
@@ -66,6 +67,10 @@ trait HasRevisions
         });
 
         static::updating(function (Model $model) {
+            if (static::$revisioningSuspended && ! empty($model->revisionOriginal)) {
+                return;
+            }
+
             $model->revisionOriginal = $model->getRawOriginal();
         });
 
@@ -330,9 +335,15 @@ trait HasRevisions
             static::$revisioningSuspended = false;
         }
 
-        if ($result instanceof Model && method_exists($result, 'createNewRevision')) {
-            $result->createNewRevision();
+        if (! $result instanceof static) {
+            throw new InvalidArgumentException(
+                'withSingleRevision() callback must return an instance of ' . static::class . '.'
+            );
         }
+
+        $result->createNewRevision();
+
+        $result->revisionOriginal = [];
 
         return $result;
     }

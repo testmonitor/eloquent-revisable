@@ -128,6 +128,36 @@ class WithSingleRevisionTest extends TestCase
     }
 
     #[Test]
+    public function it_captures_the_full_diff_across_multiple_updates_inside_the_callback()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions();
+            }
+        };
+
+        $post = $this->createPost($postClass);
+
+        // When
+        $post = $postClass::withSingleRevision(function () use ($post) {
+            $post->update(['name' => 'First update name']);
+            $post->update(['votes' => 999]);
+
+            return $post;
+        });
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+
+        $revision = $post->revisions()->firstOrFail();
+        $this->assertContains('name', $revision->changed);
+        $this->assertContains('votes', $revision->changed);
+    }
+
+    #[Test]
     public function it_replaces_the_merged_revision_on_a_later_update_when_configured_to_replace()
     {
         // Given
@@ -207,6 +237,37 @@ class WithSingleRevisionTest extends TestCase
 
         // Then
         $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
+    public function it_throws_when_the_callback_does_not_return_the_model()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        // When
+        $this->expectException(\InvalidArgumentException::class);
+
+        $postClass::withSingleRevision(function () use ($postClass, $author) {
+            $postClass::create([
+                'author_id' => $author->id,
+                'name' => 'Post name',
+                'slug' => 'post-slug',
+                'content' => 'Post content',
+                'votes' => 10,
+                'views' => 100,
+            ]);
+
+            // Forgot to return the model
+        });
     }
 
     #[Test]
