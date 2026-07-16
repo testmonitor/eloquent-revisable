@@ -61,6 +61,39 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_only_tags_the_first_revision_as_initial_when_reusing_the_same_instance()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        // When
+        $post = $post->create([
+            'author_id' => $author->id,
+            'name' => 'Post name',
+            'slug' => 'post-slug',
+            'content' => 'Post content',
+            'votes' => 10,
+            'views' => 100,
+        ]);
+
+        $post->update(['votes' => 42]);
+
+        // Then
+        $this->assertEquals(2, Revision::count());
+
+        $types = $post->revisions()->oldest('id')->pluck('type')->all();
+        $this->assertEquals([RevisionType::Initial, RevisionType::Default], $types);
+    }
+
+    #[Test]
     public function it_accumulates_multiple_revisions_across_successive_updates()
     {
         // Given
