@@ -547,4 +547,51 @@ class RevisionDiffTest extends TestCase
         // Then
         $this->assertArrayNotHasKey('instructions', $diff->changes());
     }
+
+    // raw snapshot access
+
+    #[Test]
+    public function it_returns_the_raw_before_and_after_snapshots()
+    {
+        // Given
+        $before = ['attributes' => ['name' => 'Old name'], 'relations' => ['tags' => ['pivots' => []]]];
+        $after = ['attributes' => ['name' => 'New name'], 'relations' => ['tags' => ['pivots' => []]]];
+
+        $diff = new Diff($before, $after);
+
+        // Then
+        $this->assertEquals($before, $diff->before());
+        $this->assertEquals($after, $diff->after());
+    }
+
+    #[Test]
+    public function it_returns_a_subkey_of_the_raw_snapshot_using_dot_notation()
+    {
+        // Given
+        $diff = new Diff(
+            ['attributes' => ['name' => 'Old name']],
+            ['attributes' => ['name' => 'New name']],
+        );
+
+        // Then
+        $this->assertEquals(['name' => 'Old name'], $diff->before('attributes'));
+        $this->assertEquals('Old name', $diff->before('attributes.name'));
+
+        $this->assertEquals(['name' => 'New name'], $diff->after('attributes'));
+        $this->assertEquals('New name', $diff->after('attributes.name'));
+    }
+
+    #[Test]
+    public function it_returns_null_for_a_missing_subkey_of_the_raw_snapshot()
+    {
+        // Given
+        $diff = new Diff(
+            ['attributes' => ['name' => 'Old name']],
+            ['attributes' => ['name' => 'New name']],
+        );
+
+        // Then
+        $this->assertNull($diff->before('bogus.key'));
+        $this->assertNull($diff->after('bogus.key'));
+    }
 }

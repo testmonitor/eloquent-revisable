@@ -19,7 +19,7 @@ class Diff
      */
     protected array $relations;
 
-    public function __construct(array $before, array $after)
+    public function __construct(protected array $before, protected array $after)
     {
         $this->fields = $this->diffFields(
             $before['attributes'] ?? [],
@@ -54,6 +54,22 @@ class Diff
     public static function empty(): static
     {
         return new static([], []);
+    }
+
+    /**
+     * Get the raw "before" snapshot metadata, or a subkey of it (e.g. 'attributes', 'relations.tags').
+     */
+    public function before(?string $key = null): mixed
+    {
+        return Arr::get($this->before, $key);
+    }
+
+    /**
+     * Get the raw "after" snapshot metadata, or a subkey of it (e.g. 'attributes', 'relations.tags').
+     */
+    public function after(?string $key = null): mixed
+    {
+        return Arr::get($this->after, $key);
     }
 
     /**
