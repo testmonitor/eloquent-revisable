@@ -67,6 +67,20 @@ class WithoutRevisioningTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_null_and_creates_no_revision_when_manually_saving_a_revision_while_suppressed()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $revision = $post->withoutRevisioning(fn () => $post->saveAsRevision('manual snapshot'));
+
+        // Then
+        $this->assertNull($revision);
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
     public function it_resumes_revisioning_after_the_callback_completes()
     {
         // Given

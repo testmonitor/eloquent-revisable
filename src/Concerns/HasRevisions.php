@@ -188,9 +188,23 @@ trait HasRevisions
      */
     public function createNewRevision(): Revision|bool
     {
-        $options = $this->getRevisionOptions();
+        return $this->buildNewRevision($this->getRevisionOptions());
+    }
 
-        if (! $this->shouldCreateRevision($options)) {
+    /**
+     * Create a new revision record for the model instance, bypassing the tracked-field dirty check.
+     */
+    protected function forceCreateNewRevision(): Revision|bool
+    {
+        return $this->buildNewRevision($this->getRevisionOptions(), force: true);
+    }
+
+    /**
+     * Build and save a new revision record for the model instance.
+     */
+    protected function buildNewRevision(RevisableOptions $options, bool $force = false): Revision|bool
+    {
+        if (! $this->shouldCreateRevision($options, $force)) {
             return false;
         }
 
@@ -217,10 +231,14 @@ trait HasRevisions
     }
 
     /**
-     * Manually save a revision for a model instance.
+     * Manually save a revision for a model instance. Returns null when revisioning is suppressed.
      */
-    public function saveAsRevision(?string $name = null, array $properties = [], ?bool $replace = null): Revision
+    public function saveAsRevision(?string $name = null, array $properties = [], ?bool $replace = null): ?Revision
     {
+        if ($this->isRevisioningSuppressed()) {
+            return null;
+        }
+
         $options = $this->getRevisionOptions();
 
         $existing = $replace ?? $this->shouldReplaceRevision($options)
@@ -339,7 +357,7 @@ trait HasRevisions
             );
         }
 
-        $result->createNewRevision();
+        $result->forceCreateNewRevision();
 
         $result->revisionOriginal = [];
 
@@ -380,7 +398,7 @@ trait HasRevisions
     /**
      * Determine if a revision should be created for the current model state.
      */
-    protected function shouldCreateRevision(RevisableOptions $options): bool
+    protected function shouldCreateRevision(RevisableOptions $options, bool $force = false): bool
     {
         if (! $options->isEnabled() || $this->isRevisioningSuppressed()) {
             return false;
@@ -395,6 +413,10 @@ trait HasRevisions
             array_key_exists($this->getDeletedAtColumn(), $this->getDirty())
         ) {
             return false;
+        }
+
+        if ($force) {
+            return true;
         }
 
         if (! empty($options->fields)) {

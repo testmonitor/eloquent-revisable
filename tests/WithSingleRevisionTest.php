@@ -128,6 +128,74 @@ class WithSingleRevisionTest extends TestCase
     }
 
     #[Test]
+    public function it_creates_a_single_revision_when_only_a_relation_changes_and_no_tracked_field_is_dirty()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->onlyFields('votes')
+                    ->withRelations('attachments');
+            }
+        };
+
+        $post = $this->createPost($postClass);
+
+        // When
+        $post = $postClass::withSingleRevision(function () use ($post) {
+            $post->attachments()->create(['name' => 'document.pdf']);
+
+            return $post;
+        });
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+
+        $revision = $post->revisions()->firstOrFail();
+        $this->assertArrayHasKey('attachments', $revision->metadata['relations'] ?? []);
+        $this->assertCount(1, $revision->metadata['relations']['attachments']['records']['items']);
+    }
+
+    #[Test]
+    public function it_ignores_a_manual_save_as_revision_call_made_inside_the_callback()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('attachments');
+            }
+        };
+
+        $post = $this->createPost($postClass);
+
+        // When
+        $post = $postClass::withSingleRevision(function () use ($post) {
+            $post->update(['votes' => 42]);
+
+            $post->attachments()->create(['name' => 'document.pdf']);
+
+            // Simulates an observer that calls saveAsRevision() directly, unaware
+            // of the ongoing withSingleRevision() suspension.
+            $revision = $post->saveAsRevision('manual snapshot');
+
+            $this->assertNull($revision);
+
+            return $post;
+        });
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+
+        $revision = $post->revisions()->firstOrFail();
+        $this->assertContains('votes', $revision->changed);
+        $this->assertArrayHasKey('attachments', $revision->metadata['relations'] ?? []);
+    }
+
+    #[Test]
     public function it_captures_the_full_diff_across_multiple_updates_inside_the_callback()
     {
         // Given
