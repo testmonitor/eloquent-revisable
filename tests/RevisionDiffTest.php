@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
@@ -89,7 +90,7 @@ class RevisionDiffTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_an_empty_diff_when_there_is_no_previous_revision()
+    public function it_diffs_against_nothing_when_there_is_no_previous_revision()
     {
         // Given
         $post = $this->createPost();
@@ -102,7 +103,15 @@ class RevisionDiffTest extends TestCase
         $diff = $revision->diffFromPrevious();
 
         // Then
-        $this->assertEmpty($diff->changes());
+        $changes = $diff->changes();
+
+        $this->assertArrayHasKey('name', $changes);
+        $this->assertNull($changes['name']['before']);
+        $this->assertEquals('Another post name', $changes['name']['after']);
+
+        $this->assertArrayHasKey('votes', $changes);
+        $this->assertNull($changes['votes']['before']);
+        $this->assertEquals(20, $changes['votes']['after']);
     }
 
     #[Test]
@@ -256,7 +265,7 @@ class RevisionDiffTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_an_empty_diff_when_the_model_has_no_revisions()
+    public function it_diffs_against_nothing_when_the_model_has_no_revisions()
     {
         // Given
         $post = $this->createPost();
@@ -265,8 +274,15 @@ class RevisionDiffTest extends TestCase
         $diff = $post->diff();
 
         // Then
-        $this->assertEmpty($diff->changes());
-        $this->assertEmpty($diff->all());
+        $changes = $diff->changes();
+
+        $this->assertArrayHasKey('name', $changes);
+        $this->assertNull($changes['name']['before']);
+        $this->assertEquals('Post name', $changes['name']['after']);
+
+        $this->assertArrayHasKey('votes', $changes);
+        $this->assertNull($changes['votes']['before']);
+        $this->assertEquals(10, $changes['votes']['after']);
     }
 
     // relations
@@ -527,8 +543,8 @@ class RevisionDiffTest extends TestCase
     {
         // Given
         $diff = new Diff(
-            ['attributes' => ['instructions' => '["a","b","c"]']],
-            ['attributes' => ['instructions' => '["a","b","d"]']],
+            new Revision(['metadata' => ['attributes' => ['instructions' => '["a","b","c"]']]]),
+            new Revision(['metadata' => ['attributes' => ['instructions' => '["a","b","d"]']]]),
         );
 
         // Then
@@ -540,58 +556,120 @@ class RevisionDiffTest extends TestCase
     {
         // Given
         $diff = new Diff(
-            ['attributes' => ['instructions' => '["a","b","c"]']],
-            ['attributes' => ['instructions' => '["a", "b", "c"]']],
+            new Revision(['metadata' => ['attributes' => ['instructions' => '["a","b","c"]']]]),
+            new Revision(['metadata' => ['attributes' => ['instructions' => '["a", "b", "c"]']]]),
         );
 
         // Then
         $this->assertArrayNotHasKey('instructions', $diff->changes());
     }
 
-    // raw snapshot access
+    // source revision access
 
     #[Test]
-    public function it_returns_the_raw_before_and_after_snapshots()
+    public function it_returns_the_source_revisions_a_diff_was_built_from()
+    {
+        // Given
+        $before = new Revision(['metadata' => ['attributes' => ['name' => 'Old name']]]);
+        $after = new Revision(['metadata' => ['attributes' => ['name' => 'New name']]]);
+
+        $diff = new Diff($before, $after);
+
+        // Then
+        $this->assertSame($before, $diff->before());
+        $this->assertSame($after, $diff->after());
+    }
+
+    #[Test]
+    public function it_returns_a_null_before_revision_when_diffing_a_single_revision_against_nothing()
+    {
+        // Given
+        $revision = new Revision(['metadata' => ['attributes' => ['name' => 'New name']]]);
+
+        $diff = Diff::fromNothing($revision);
+
+        // Then
+        $this->assertNull($diff->before());
+        $this->assertSame($revision, $diff->after());
+    }
+
+    // raw metadata access
+
+    #[Test]
+    public function it_returns_the_raw_before_and_after_metadata()
     {
         // Given
         $before = ['attributes' => ['name' => 'Old name'], 'relations' => ['tags' => ['pivots' => []]]];
         $after = ['attributes' => ['name' => 'New name'], 'relations' => ['tags' => ['pivots' => []]]];
 
-        $diff = new Diff($before, $after);
+        $diff = new Diff(new Revision(['metadata' => $before]), new Revision(['metadata' => $after]));
 
         // Then
-        $this->assertEquals($before, $diff->before());
-        $this->assertEquals($after, $diff->after());
+        $this->assertEquals($before, $diff->beforeMetadata());
+        $this->assertEquals($after, $diff->afterMetadata());
     }
 
     #[Test]
-    public function it_returns_a_subkey_of_the_raw_snapshot_using_dot_notation()
+    public function it_returns_a_subkey_of_the_raw_metadata_using_dot_notation()
     {
         // Given
         $diff = new Diff(
-            ['attributes' => ['name' => 'Old name']],
-            ['attributes' => ['name' => 'New name']],
+            new Revision(['metadata' => ['attributes' => ['name' => 'Old name']]]),
+            new Revision(['metadata' => ['attributes' => ['name' => 'New name']]]),
         );
 
         // Then
-        $this->assertEquals(['name' => 'Old name'], $diff->before('attributes'));
-        $this->assertEquals('Old name', $diff->before('attributes.name'));
+        $this->assertEquals(['name' => 'Old name'], $diff->beforeMetadata('attributes'));
+        $this->assertEquals('Old name', $diff->beforeMetadata('attributes.name'));
 
-        $this->assertEquals(['name' => 'New name'], $diff->after('attributes'));
-        $this->assertEquals('New name', $diff->after('attributes.name'));
+        $this->assertEquals(['name' => 'New name'], $diff->afterMetadata('attributes'));
+        $this->assertEquals('New name', $diff->afterMetadata('attributes.name'));
     }
 
     #[Test]
-    public function it_returns_null_for_a_missing_subkey_of_the_raw_snapshot()
+    public function it_returns_null_for_a_missing_subkey_of_the_raw_metadata()
     {
         // Given
         $diff = new Diff(
-            ['attributes' => ['name' => 'Old name']],
-            ['attributes' => ['name' => 'New name']],
+            new Revision(['metadata' => ['attributes' => ['name' => 'Old name']]]),
+            new Revision(['metadata' => ['attributes' => ['name' => 'New name']]]),
         );
 
         // Then
-        $this->assertNull($diff->before('bogus.key'));
-        $this->assertNull($diff->after('bogus.key'));
+        $this->assertNull($diff->beforeMetadata('bogus.key'));
+        $this->assertNull($diff->afterMetadata('bogus.key'));
+    }
+
+    // revision metadata accessor
+
+    #[Test]
+    public function it_returns_the_captured_attributes_and_relations_as_metadata()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $this->modifyPost($post, ['name' => 'Another post name', 'votes' => 20]);
+
+        $revision = $post->revisions()->firstOrFail();
+
+        // When
+        $metadata = $revision->metadata();
+
+        // Then
+        $this->assertEquals('Another post name', $metadata['attributes']['name']);
+        $this->assertEquals(20, $metadata['attributes']['votes']);
+    }
+
+    #[Test]
+    public function it_returns_an_empty_array_of_metadata_for_an_unsaved_revision()
+    {
+        // Given
+        $revision = new Revision([
+            'revisionable_type' => Post::class,
+            'revisionable_id' => 1,
+        ]);
+
+        // When / Then
+        $this->assertEquals([], $revision->metadata());
     }
 }

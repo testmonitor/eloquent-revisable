@@ -161,15 +161,12 @@ trait HasRevisions
     }
 
     /**
-     * Compare the current model state against the latest revision or a specific revision.
+     * Compare the current model state against the latest revision or a specific revision, or against
+     * nothing if it has no revisions at all.
      */
     public function diff(?RevisionContract $revision = null): Diff
     {
         $revision ??= $this->latestRevision;
-
-        if (! $revision) {
-            return Diff::empty();
-        }
 
         $options = $this->getRevisionOptions();
 
@@ -180,7 +177,11 @@ trait HasRevisions
             ->withRelations($options->relations)
             ->build();
 
-        return Diff::fromRevisions($revision, $current);
+        if (! $revision) {
+            return Diff::fromNothing($current);
+        }
+
+        return new Diff($revision, $current);
     }
 
     /**

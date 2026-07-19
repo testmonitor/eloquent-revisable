@@ -220,29 +220,40 @@ class Revision extends Model implements RevisionContract
     }
 
     /**
+     * Get the captured attributes and relations for this revision.
+     *
+     * @return array{attributes?: array<string, mixed>, relations?: array<string, mixed>}
+     */
+    public function metadata(): array
+    {
+        return $this->getAttribute('metadata') ?? [];
+    }
+
+    /**
      * Compare this revision against another revision, or against nothing (everything it holds appears as added).
      */
     public function diff(?RevisionContract $target = null): Diff
     {
         if ($target === null) {
-            return Diff::fromRevision($this);
+            return Diff::fromNothing($this);
         }
 
-        return Diff::fromRevisions($this, $target);
+        return new Diff($this, $target);
     }
 
     /**
-     * Compare this revision against the one directly preceding it, if any.
+     * Compare this revision against the one directly preceding it, or against nothing
+     * if it's the first revision.
      */
     public function diffFromPrevious(): Diff
     {
         $previous = $this->previous();
 
         if ($previous === null) {
-            return Diff::empty();
+            return Diff::fromNothing($this);
         }
 
-        return Diff::fromRevisions($previous, $this);
+        return new Diff($previous, $this);
     }
 
     /**

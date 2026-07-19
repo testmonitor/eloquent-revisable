@@ -4,14 +4,15 @@ namespace TestMonitor\Revisable\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\Renderers\HtmlDiff;
 
 class HtmlDiffRendererTest extends TestCase
 {
     protected function diffFor(mixed $old, mixed $new, string $field = 'value'): HtmlDiff
     {
-        $before = ['attributes' => [$field => $old]];
-        $after = ['attributes' => [$field => $new]];
+        $before = new Revision(['metadata' => ['attributes' => [$field => $old]]]);
+        $after = new Revision(['metadata' => ['attributes' => [$field => $new]]]);
 
         return (new Diff($before, $after))->asHtml();
     }
@@ -257,8 +258,8 @@ class HtmlDiffRendererTest extends TestCase
     {
         // Given
         $htmlDiff = (new Diff(
-            ['attributes' => ['value' => 'abcde']],
-            ['attributes' => ['value' => 'abXde']],
+            new Revision(['metadata' => ['attributes' => ['value' => 'abcde']]]),
+            new Revision(['metadata' => ['attributes' => ['value' => 'abXde']]]),
         ))->asHtml(detailLevel: 'char');
 
         // When
@@ -276,8 +277,8 @@ class HtmlDiffRendererTest extends TestCase
         $before = '<p>Hello <strong>world</strong></p>';
         $after = '<p>Hello <strong>universe</strong></p>';
         $htmlDiff = (new Diff(
-            ['attributes' => ['value' => $before]],
-            ['attributes' => ['value' => $after]],
+            new Revision(['metadata' => ['attributes' => ['value' => $before]]]),
+            new Revision(['metadata' => ['attributes' => ['value' => $after]]]),
         ))->asHtml(detailLevel: 'none');
 
         // When
@@ -293,8 +294,8 @@ class HtmlDiffRendererTest extends TestCase
     {
         // Given
         $htmlDiff = (new Diff(
-            ['attributes' => ['value' => "Line one\nLine two"]],
-            ['attributes' => ['value' => "Line one\nLine changed"]],
+            new Revision(['metadata' => ['attributes' => ['value' => "Line one\nLine two"]]]),
+            new Revision(['metadata' => ['attributes' => ['value' => "Line one\nLine changed"]]]),
         ))->asHtml(lineSeparator: '<p>');
 
         // When

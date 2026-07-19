@@ -263,7 +263,7 @@ public function getRevisionOptions(): RevisableOptions
 The callable also receives the latest revision as its second argument, which lets you inspect its state when deciding whether to replace:
 
 ```php
-->replaceWhen(fn ($model, $latest) => $latest->metadata['attributes']['status'] === 'draft');
+->replaceWhen(fn ($model, $latest) => $latest->metadata()['attributes']['status'] === 'draft');
 ```
 
 When the condition is true the latest revision is updated in place; its identity (id, `created_at`) is preserved. When the condition is false a new revision is created as normal, so the transition out of draft becomes its own permanent entry in the history.
@@ -359,10 +359,10 @@ Use `diff()` to compare two states and inspect what changed. It returns a `Diff`
 // What changed between two revisions
 $diff = $revision->diff();              // vs nothing — everything it holds appears as added
 $diff = $revision->diff($other);        // vs a specific revision
-$diff = $revision->diffFromPrevious();  // vs its predecessor (empty diff if there is none)
+$diff = $revision->diffFromPrevious();  // vs its predecessor (vs nothing if it's the first revision)
 
 // What changed between the current model and a revision
-$diff = $article->diff();               // vs the latest revision
+$diff = $article->diff();               // vs the latest revision (vs nothing if none exist yet)
 $diff = $article->diff($revision);      // vs a specific revision
 ```
 
@@ -389,6 +389,16 @@ Call `asHtml()` to render a field diff as HTML with inline change highlights:
 ```php
 $result = $diff->asHtml()->field('title');
 // ['before' => 'The quick <del>brown</del> fox', 'after' => 'The quick <ins>red</ins> fox']
+```
+
+Use `before()` and `after()` to get back the two revisions the diff was built from (either may be `null` when diffed against nothing), and `beforeMetadata()` / `afterMetadata()` to read their raw captured metadata, optionally by dot-notation subkey:
+
+```php
+$diff->before();                        // the "before" revision, or null
+$diff->after();                         // the "after" revision, or null
+
+$diff->beforeMetadata();                // the full raw metadata array
+$diff->beforeMetadata('attributes.title'); // a specific subkey
 ```
 
 Fields that contain HTML are handled transparently — markup is rendered rather than escaped (only use this for trusted/sanitized HTML content), and changes are highlighted at the word level within the HTML structure:

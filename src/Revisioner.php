@@ -246,21 +246,25 @@ class Revisioner
 
         $previousRevision = $baseline ?? $this->model->latestRevision()->first();
 
-        $previous = [
-            'attributes' => $previousRevision !== null
-                ? $previousRevision->metadata['attributes'] ?? []
-                : $this->filterModelData($this->model->getRevisionOriginal()),
-            'relations' => ! empty($this->relations)
-                ? $previousRevision?->metadata['relations'] ?? []
-                : [],
-        ];
+        $previous = new Revision([
+            'metadata' => [
+                'attributes' => $previousRevision !== null
+                    ? $previousRevision->metadata['attributes'] ?? []
+                    : $this->filterModelData($this->model->getRevisionOriginal()),
+                'relations' => ! empty($this->relations)
+                    ? $previousRevision?->metadata['relations'] ?? []
+                    : [],
+            ],
+        ]);
 
-        $current = [
-            'attributes' => $revision->metadata['attributes'] ?? [],
-            'relations' => ! empty($this->relations)
-                ? $revision->metadata['relations'] ?? []
-                : [],
-        ];
+        $current = new Revision([
+            'metadata' => [
+                'attributes' => $revision->metadata['attributes'] ?? [],
+                'relations' => ! empty($this->relations)
+                    ? $revision->metadata['relations'] ?? []
+                    : [],
+            ],
+        ]);
 
         return (new Diff($previous, $current))->changed() ?: null;
     }
@@ -449,7 +453,7 @@ class Revisioner
     {
         $attributes = $this->model->getAttributes();
 
-        foreach ($revision->metadata['attributes'] ?? [] as $field => $value) {
+        foreach ($revision->metadata()['attributes'] ?? [] as $field => $value) {
             if (array_key_exists($field, $attributes)) {
                 $attributes[$field] = $value;
             }
