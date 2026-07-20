@@ -19,57 +19,57 @@ class Diff
      */
     protected array $relations;
 
-    public function __construct(protected array $before, protected array $after)
+    public function __construct(protected ?RevisionContract $before, protected ?RevisionContract $after)
     {
         $this->fields = $this->diffFields(
-            $before['attributes'] ?? [],
-            $after['attributes'] ?? []
+            $before?->metadata()['attributes'] ?? [],
+            $after?->metadata()['attributes'] ?? []
         );
 
         $this->relations = $this->diffRelations(
-            $before['relations'] ?? [],
-            $after['relations'] ?? []
+            $before?->metadata()['relations'] ?? [],
+            $after?->metadata()['relations'] ?? []
         );
     }
 
     /**
      * Create a diff of a single revision against nothing, so every field and relation it holds appears as added.
      */
-    public static function fromRevision(RevisionContract $revision): static
+    public static function fromNothing(RevisionContract $revision): static
     {
-        return new static([], $revision->metadata ?? []);
+        return new static(null, $revision);
     }
 
     /**
-     * Create a diff from two revisions.
+     * Get the "before" revision this diff was built from, or null if diffed against nothing.
      */
-    public static function fromRevisions(RevisionContract $before, RevisionContract $after): static
+    public function before(): ?RevisionContract
     {
-        return new static($before->metadata ?? [], $after->metadata ?? []);
+        return $this->before;
     }
 
     /**
-     * Create an empty diff with no changes.
+     * Get the "after" revision this diff was built from, or null if diffed against nothing.
      */
-    public static function empty(): static
+    public function after(): ?RevisionContract
     {
-        return new static([], []);
+        return $this->after;
     }
 
     /**
-     * Get the raw "before" snapshot metadata, or a subkey of it (e.g. 'attributes', 'relations.tags').
+     * Get the raw "before" revision metadata, or a subkey of it (e.g. 'attributes', 'relations.tags').
      */
-    public function before(?string $key = null): mixed
+    public function beforeMetadata(?string $key = null): mixed
     {
-        return Arr::get($this->before, $key);
+        return Arr::get($this->before?->metadata() ?? [], $key);
     }
 
     /**
-     * Get the raw "after" snapshot metadata, or a subkey of it (e.g. 'attributes', 'relations.tags').
+     * Get the raw "after" revision metadata, or a subkey of it (e.g. 'attributes', 'relations.tags').
      */
-    public function after(?string $key = null): mixed
+    public function afterMetadata(?string $key = null): mixed
     {
-        return Arr::get($this->after, $key);
+        return Arr::get($this->after?->metadata() ?? [], $key);
     }
 
     /**

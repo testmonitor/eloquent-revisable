@@ -118,7 +118,7 @@ class ReplacingRevisionsTest extends TestCase
             public function getRevisionOptions(): RevisableOptions
             {
                 return parent::getRevisionOptions()
-                    ->replaceWhen(fn (self $model, $latest) => $latest->metadata['attributes']['name'] !== 'Stop replacing');
+                    ->replaceWhen(fn (self $model, $latest) => $latest->metadata()['attributes']['name'] !== 'Stop replacing');
             }
         };
 

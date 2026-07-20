@@ -9,13 +9,15 @@ use TestMonitor\Revisable\Diff;
 
 interface Revision
 {
-    public function user(): BelongsTo;
-
     public function revisionable(): MorphTo;
+
+    public function user(): BelongsTo;
 
     public function previous(): ?static;
 
     public function next(): ?static;
+
+    public function metadata(): array;
 
     public function diff(?self $target = null): Diff;
 
