@@ -249,19 +249,19 @@ class Revisioner
         $previous = new Revision([
             'metadata' => [
                 'attributes' => $previousRevision !== null
-                    ? $previousRevision->metadata['attributes'] ?? []
+                    ? $previousRevision->metadata()['attributes'] ?? []
                     : $this->filterModelData($this->model->getRevisionOriginal()),
                 'relations' => ! empty($this->relations)
-                    ? $previousRevision?->metadata['relations'] ?? []
+                    ? $previousRevision?->metadata()['relations'] ?? []
                     : [],
             ],
         ]);
 
         $current = new Revision([
             'metadata' => [
-                'attributes' => $revision->metadata['attributes'] ?? [],
+                'attributes' => $revision->metadata()['attributes'] ?? [],
                 'relations' => ! empty($this->relations)
-                    ? $revision->metadata['relations'] ?? []
+                    ? $revision->metadata()['relations'] ?? []
                     : [],
             ],
         ]);
