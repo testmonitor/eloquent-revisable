@@ -23,6 +23,8 @@ interface Revision
 
     public function metadata(): array;
 
+    public function version(): int;
+
     public function diff(?self $target = null): Diff;
 
     public function diffFromPrevious(): Diff;

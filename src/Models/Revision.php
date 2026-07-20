@@ -224,7 +224,7 @@ class Revision extends Model implements RevisionContract
      */
     public function isNewerThan(?RevisionContract $revision): bool
     {
-        return is_null($revision) || $this->version > $revision->version;
+        return is_null($revision) || $this->version() > $revision->version();
     }
 
     /**
@@ -232,7 +232,7 @@ class Revision extends Model implements RevisionContract
      */
     public function isOlderThan(?RevisionContract $revision): bool
     {
-        return ! is_null($revision) && $this->version < $revision->version;
+        return ! is_null($revision) && $this->version() < $revision->version();
     }
 
     /**
@@ -243,6 +243,14 @@ class Revision extends Model implements RevisionContract
     public function metadata(): array
     {
         return $this->getAttribute('metadata') ?? [];
+    }
+
+    /**
+     * Get the version number of this revision.
+     */
+    public function version(): int
+    {
+        return $this->getAttribute('version');
     }
 
     /**

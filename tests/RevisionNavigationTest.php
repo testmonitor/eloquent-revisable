@@ -111,7 +111,7 @@ class RevisionNavigationTest extends TestCase
         $this->modifyPost($post);
         $this->modifyPost($post, ['name' => 'Yet another post name']);
 
-        $revisions = $post->revisions()->orderBy('id')->get();
+        $revisions = $post->revisions()->orderBy('version')->get();
 
         // When / Then
         $this->assertTrue($revisions->last()->isNewerThan($revisions->first()));
@@ -128,7 +128,7 @@ class RevisionNavigationTest extends TestCase
         $this->modifyPost($post);
         $this->modifyPost($post, ['name' => 'Yet another post name']);
 
-        $revisions = $post->revisions()->orderBy('id')->get();
+        $revisions = $post->revisions()->orderBy('version')->get();
 
         // When / Then
         $this->assertTrue($revisions->first()->isOlderThan($revisions->last()));
