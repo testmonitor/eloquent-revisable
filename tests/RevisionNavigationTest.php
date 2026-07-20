@@ -101,4 +101,38 @@ class RevisionNavigationTest extends TestCase
         $this->assertFalse($revision->isFirstRevision());
         $this->assertFalse($revision->isLastRevision());
     }
+
+    #[Test]
+    public function it_determines_whether_a_revision_is_newer_than_another()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Yet another post name']);
+
+        $revisions = $post->revisions()->orderBy('id')->get();
+
+        // When / Then
+        $this->assertTrue($revisions->last()->isNewerThan($revisions->first()));
+        $this->assertFalse($revisions->first()->isNewerThan($revisions->last()));
+        $this->assertTrue($revisions->first()->isNewerThan(null));
+    }
+
+    #[Test]
+    public function it_determines_whether_a_revision_is_older_than_another()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $this->modifyPost($post);
+        $this->modifyPost($post, ['name' => 'Yet another post name']);
+
+        $revisions = $post->revisions()->orderBy('id')->get();
+
+        // When / Then
+        $this->assertTrue($revisions->first()->isOlderThan($revisions->last()));
+        $this->assertFalse($revisions->last()->isOlderThan($revisions->first()));
+        $this->assertFalse($revisions->first()->isOlderThan(null));
+    }
 }

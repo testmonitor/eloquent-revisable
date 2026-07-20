@@ -220,6 +220,22 @@ class Revision extends Model implements RevisionContract
     }
 
     /**
+     * Determine whether this revision is newer than the given revision.
+     */
+    public function isNewerThan(?RevisionContract $revision): bool
+    {
+        return is_null($revision) || $this->version > $revision->version;
+    }
+
+    /**
+     * Determine whether this revision is older than the given revision.
+     */
+    public function isOlderThan(?RevisionContract $revision): bool
+    {
+        return ! is_null($revision) && $this->version < $revision->version;
+    }
+
+    /**
      * Get the captured attributes and relations for this revision.
      *
      * @return array{attributes?: array<string, mixed>, relations?: array<string, mixed>}

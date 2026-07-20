@@ -17,6 +17,10 @@ interface Revision
 
     public function next(): ?static;
 
+    public function isNewerThan(?self $revision): bool;
+
+    public function isOlderThan(?self $revision): bool;
+
     public function metadata(): array;
 
     public function diff(?self $target = null): Diff;
