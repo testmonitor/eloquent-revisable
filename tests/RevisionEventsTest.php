@@ -75,6 +75,61 @@ class RevisionEventsTest extends TestCase
     }
 
     #[Test]
+    public function it_passes_the_target_revision_to_the_rolling_back_listener()
+    {
+        // Given
+        $capturedRevision = null;
+        Post::rollingBack(function (Post $post, Revision $revision) use (&$capturedRevision) {
+            $capturedRevision = $revision;
+        });
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        $revision = $post->revisions()->firstOrFail();
+
+        // When
+        $post->rollbackToRevision($revision);
+
+        // Then
+        $this->assertTrue($revision->is($capturedRevision));
+    }
+
+    #[Test]
+    public function it_allows_the_rolling_back_listener_to_mutate_the_revision_before_restore()
+    {
+        // Given
+        Post::rollingBack(function (Post $post, Revision $revision) {
+            $metadata = $revision->metadata;
+            $metadata['attributes']['name'] = 'Overridden by listener';
+            $revision->metadata = $metadata;
+        });
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        // When
+        $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertEquals('Overridden by listener', $post->fresh()->name);
+    }
+
+    #[Test]
+    public function it_does_not_roll_back_when_the_rolling_back_event_returns_false()
+    {
+        // Given
+        Post::rollingBack(fn () => false);
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        // When
+        $result = $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertFalse($result);
+        $this->assertEquals('Another post name', $post->fresh()->name);
+    }
+
+    #[Test]
     public function it_fires_the_rolled_back_event_after_a_rollback()
     {
         // Given
@@ -93,18 +148,22 @@ class RevisionEventsTest extends TestCase
     }
 
     #[Test]
-    public function it_does_not_roll_back_when_the_rolling_back_event_returns_false()
+    public function it_passes_the_target_revision_to_the_rolled_back_listener()
     {
         // Given
-        Post::rollingBack(fn () => false);
+        $capturedRevision = null;
+        Post::rolledBack(function (Post $post, Revision $revision) use (&$capturedRevision) {
+            $capturedRevision = $revision;
+        });
         $post = $this->createPost();
         $this->modifyPost($post);
 
+        $revision = $post->revisions()->firstOrFail();
+
         // When
-        $result = $post->rollbackToRevision($post->revisions()->firstOrFail());
+        $post->rollbackToRevision($revision);
 
         // Then
-        $this->assertFalse($result);
-        $this->assertEquals('Another post name', $post->fresh()->name);
+        $this->assertTrue($revision->is($capturedRevision));
     }
 }
