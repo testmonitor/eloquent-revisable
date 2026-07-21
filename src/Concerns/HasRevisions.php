@@ -481,7 +481,7 @@ trait HasRevisions
         }
 
         return $dispatcher->{$halt ? 'until' : 'dispatch'}(
-            "eloquent.{$event}: ".static::class,
+            "eloquent.{$event}: " . static::class,
             [$this, $revision]
         );
     }
