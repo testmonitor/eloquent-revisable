@@ -274,7 +274,14 @@ class Revisioner
      */
     protected function buildModelData(): array
     {
-        return $this->filterModelData($this->model->getAttributes());
+        $attributes = $this->model->getAttributes();
+
+        if ($this->model->wasRecentlyCreated) {
+            // Backfill DB-assigned defaults without discarding unsaved in-memory changes.
+            $attributes += $this->model->fresh()?->getAttributes() ?? [];
+        }
+
+        return $this->filterModelData($attributes);
     }
 
     /**

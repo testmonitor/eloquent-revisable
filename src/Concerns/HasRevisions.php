@@ -107,9 +107,8 @@ trait HasRevisions
     }
 
     /**
-     * Register a listener for the rollingBack event, which fires before a rollback is performed.
-     * Receives the model and the target revision; mutating the revision here affects the restore.
-     * Return false from the callback to abort the rollback.
+     * Register a listener for the rollingBack event. Return false to abort the rollback;
+     * mutate the passed revision to change what gets restored.
      */
     public static function rollingBack(Closure $callback): void
     {
@@ -117,8 +116,7 @@ trait HasRevisions
     }
 
     /**
-     * Register a listener for the rolledBack event, which fires after a rollback is performed.
-     * Receives the model and the revision it was rolled back to.
+     * Register a listener for the rolledBack event, fired after a rollback with the target revision.
      */
     public static function rolledBack(Closure $callback): void
     {
@@ -163,8 +161,7 @@ trait HasRevisions
     }
 
     /**
-     * Compare the current model state against the latest revision or a specific revision, or against
-     * nothing if it has no revisions at all.
+     * Compare the current model state against the latest revision, a specific revision, or nothing.
      */
     public function diff(?RevisionContract $revision = null): Diff
     {
@@ -468,9 +465,8 @@ trait HasRevisions
     }
 
     /**
-     * Fire an observable event with the model and revision, dispatching directly instead of
-     * via fireModelEvent() so third-party overrides of that method (e.g. laravel-pivot-events)
-     * don't interfere.
+     * Fire an event with the model and revision, bypassing fireModelEvent() so overrides of it
+     * (e.g. laravel-pivot-events) can't interfere.
      */
     protected function fireRevisionEvent(string $event, bool $halt, RevisionContract $revision): mixed
     {
