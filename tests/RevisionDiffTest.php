@@ -468,6 +468,43 @@ class RevisionDiffTest extends TestCase
     }
 
     #[Test]
+    public function it_includes_changed_direct_relation_records_in_changes()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('comments');
+            }
+        };
+
+        $post = $this->createPost($post);
+
+        $comment = $post->comments()->create(['title' => 'First comment', 'content' => 'Original content', 'date' => now(), 'active' => true]);
+        $this->modifyPost($post);
+
+        // Revision 2: same comment, only its content changed
+        $comment->update(['content' => 'Updated content']);
+        $this->modifyPost($post, ['name' => 'Final name']);
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $diff = $revisions->last()->diffFromPrevious();
+
+        // Then
+        $changes = $diff->changes();
+
+        $this->assertArrayHasKey('comments', $changes);
+        $this->assertEmpty($changes['comments']['added']);
+        $this->assertEmpty($changes['comments']['removed']);
+        $this->assertArrayHasKey($comment->id, $changes['comments']['changed']);
+        $this->assertEquals('Original content', $changes['comments']['changed'][$comment->id]['content']['before']);
+        $this->assertEquals('Updated content', $changes['comments']['changed'][$comment->id]['content']['after']);
+    }
+
+    #[Test]
     public function it_diffs_direct_relations_with_no_records_in_either_revision()
     {
         // Given

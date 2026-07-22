@@ -195,38 +195,11 @@ class Diff
      */
     protected function diffPivotedRelation(array $before, array $after, string $relatedKey): array
     {
-        $beforeIds = array_column($before['pivots']['items'] ?? [], $relatedKey);
-        $afterIds = array_column($after['pivots']['items'] ?? [], $relatedKey);
-
-        $changed = [];
-
-        foreach (array_intersect($beforeIds, $afterIds) as $id) {
-            $match = fn ($item) => ($item[$relatedKey] ?? null) == $id;
-
-            $beforePivot = Arr::first($before['pivots']['items'] ?? [], $match, []);
-            $afterPivot = Arr::first($after['pivots']['items'] ?? [], $match, []);
-
-            $pivotChanges = [];
-
-            foreach (array_unique([...array_keys($beforePivot), ...array_keys($afterPivot)]) as $key) {
-                if (($beforePivot[$key] ?? null) !== ($afterPivot[$key] ?? null)) {
-                    $pivotChanges[$key] = [
-                        'before' => $beforePivot[$key] ?? null,
-                        'after' => $afterPivot[$key] ?? null,
-                    ];
-                }
-            }
-
-            if (! empty($pivotChanges)) {
-                $changed[$id] = $pivotChanges;
-            }
-        }
-
-        return [
-            'added' => array_values(array_diff($afterIds, $beforeIds)),
-            'removed' => array_values(array_diff($beforeIds, $afterIds)),
-            'changed' => $changed,
-        ];
+        return $this->diffItemsByKey(
+            $before['pivots']['items'] ?? [],
+            $after['pivots']['items'] ?? [],
+            $relatedKey,
+        );
     }
 
     /**
@@ -242,13 +215,54 @@ class Diff
             return ['added' => [], 'removed' => [], 'changed' => []];
         }
 
-        $beforeIds = array_column($before['records']['items'] ?? [], $primaryKey);
-        $afterIds = array_column($after['records']['items'] ?? [], $primaryKey);
+        return $this->diffItemsByKey(
+            $before['records']['items'] ?? [],
+            $after['records']['items'] ?? [],
+            $primaryKey,
+        );
+    }
+
+    /**
+     * Diff two lists of associative arrays keyed by an identifying column, reporting which
+     * identifiers were added, removed, and which retained identifiers had column-level changes.
+     *
+     * @param  list<array<string, mixed>>  $beforeItems
+     * @param  list<array<string, mixed>>  $afterItems
+     * @return array{added: list<mixed>, removed: list<mixed>, changed: array<mixed, mixed>}
+     */
+    protected function diffItemsByKey(array $beforeItems, array $afterItems, string $key): array
+    {
+        $beforeIds = array_column($beforeItems, $key);
+        $afterIds = array_column($afterItems, $key);
+
+        $changed = [];
+
+        foreach (array_intersect($beforeIds, $afterIds) as $id) {
+            $match = fn ($item) => ($item[$key] ?? null) == $id;
+
+            $beforeItem = Arr::first($beforeItems, $match, []);
+            $afterItem = Arr::first($afterItems, $match, []);
+
+            $itemChanges = [];
+
+            foreach (array_unique([...array_keys($beforeItem), ...array_keys($afterItem)]) as $field) {
+                if (($beforeItem[$field] ?? null) !== ($afterItem[$field] ?? null)) {
+                    $itemChanges[$field] = [
+                        'before' => $beforeItem[$field] ?? null,
+                        'after' => $afterItem[$field] ?? null,
+                    ];
+                }
+            }
+
+            if (! empty($itemChanges)) {
+                $changed[$id] = $itemChanges;
+            }
+        }
 
         return [
             'added' => array_values(array_diff($afterIds, $beforeIds)),
             'removed' => array_values(array_diff($beforeIds, $afterIds)),
-            'changed' => [],
+            'changed' => $changed,
         ];
     }
 }
