@@ -108,6 +108,7 @@ trait HasRevisions
 
     /**
      * Register a listener for the rollingBack event, which fires before a rollback is performed.
+     * Receives the model and the target revision; mutating the revision here affects the restore.
      * Return false from the callback to abort the rollback.
      */
     public static function rollingBack(Closure $callback): void
@@ -117,6 +118,7 @@ trait HasRevisions
 
     /**
      * Register a listener for the rolledBack event, which fires after a rollback is performed.
+     * Receives the model and the revision it was rolled back to.
      */
     public static function rolledBack(Closure $callback): void
     {
@@ -280,7 +282,7 @@ trait HasRevisions
      */
     public function rollbackToRevision(RevisionContract $revision): bool
     {
-        if ($this->fireModelEvent('rollingBack') === false) {
+        if ($this->fireRevisionEvent('rollingBack', true, $revision) === false) {
             return false;
         }
 
@@ -299,7 +301,7 @@ trait HasRevisions
             $this->saveAsRollbackRevision($options, $revision);
         }
 
-        $this->fireModelEvent('rolledBack', false);
+        $this->fireRevisionEvent('rolledBack', false, $revision);
 
         return $result;
     }
@@ -463,6 +465,25 @@ trait HasRevisions
     protected function revisionToReplace(): ?Revision
     {
         return $this->latestRevision()->first();
+    }
+
+    /**
+     * Fire an observable event with the model and revision, dispatching directly instead of
+     * via fireModelEvent() so third-party overrides of that method (e.g. laravel-pivot-events)
+     * don't interfere.
+     */
+    protected function fireRevisionEvent(string $event, bool $halt, RevisionContract $revision): mixed
+    {
+        $dispatcher = static::getEventDispatcher();
+
+        if (! $dispatcher) {
+            return true;
+        }
+
+        return $dispatcher->{$halt ? 'until' : 'dispatch'}(
+            "eloquent.{$event}: " . static::class,
+            [$this, $revision]
+        );
     }
 
     /**
