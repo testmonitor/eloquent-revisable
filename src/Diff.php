@@ -15,7 +15,7 @@ class Diff
     protected array $fields;
 
     /**
-     * @var array<string, array{added: list<mixed>, removed: list<mixed>, changed: array<mixed, mixed>}>
+     * @var array<string, array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}>
      */
     protected array $relations;
 
@@ -191,7 +191,7 @@ class Diff
     /**
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
-     * @return array{added: list<mixed>, removed: list<mixed>, changed: array<mixed, mixed>}
+     * @return array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}
      */
     protected function diffPivotedRelation(array $before, array $after, string $relatedKey): array
     {
