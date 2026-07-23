@@ -15,11 +15,4 @@
         <!-- Allow multiple arguments per line in a multi-line function call -->
         <exclude name="PSR2.Methods.FunctionCallSignature.MultipleArguments"/>
     </rule>
-
-    <!-- Allow more characters per line -->
-    <rule ref="Generic.Files.LineLength">
-        <properties>
-            <property name="lineLimit" value="130"/>
-        </properties>
-    </rule>
 </ruleset>

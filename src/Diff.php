@@ -15,7 +15,7 @@ class Diff
     protected array $fields;
 
     /**
-     * @var array<string, array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}>
+     * @var array<string, array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed>}>
      */
     protected array $relations;
 
