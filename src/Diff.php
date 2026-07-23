@@ -262,6 +262,7 @@ class Diff
         return [
             'added' => array_values(array_diff($afterIds, $beforeIds)),
             'removed' => array_values(array_diff($beforeIds, $afterIds)),
+            'kept' => array_values(array_intersect($beforeIds, $afterIds)),
             'changed' => $changed,
         ];
     }
