@@ -348,6 +348,42 @@ class RevisionDiffTest extends TestCase
     }
 
     #[Test]
+    public function it_includes_kept_relations_in_changes()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            use HasRevisionablePivots;
+
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('tags');
+            }
+        };
+
+        $post = $this->createPost($post);
+        $tags = $this->createTags(3);
+
+        // Revision 1: tags 1 and 2
+        $post->tags()->attach($tags->take(2)->pluck('id')->toArray());
+
+        // Revision 2: tags 2 and 3 (tag 1 removed, tag 3 added)
+        $post->tags()->sync($tags->skip(1)->pluck('id')->toArray());
+
+        $revisions = $post->revisions()->oldest('id')->get();
+
+        // When
+        $diff = $revisions->last()->diffFromPrevious();
+
+        // Then
+        $changes = $diff->changes();
+
+        $this->assertArrayHasKey('tags', $changes);
+        $this->assertContains($tags[1]->id, $changes['tags']['kept']);
+        $this->assertEmpty($changes['tags']['changed']);
+    }
+
+    #[Test]
     public function it_includes_relations_with_no_changes_in_all()
     {
         // Given

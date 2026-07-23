@@ -228,7 +228,7 @@ class Diff
      *
      * @param  list<array<string, mixed>>  $beforeItems
      * @param  list<array<string, mixed>>  $afterItems
-     * @return array{added: list<mixed>, removed: list<mixed>, changed: array<mixed, mixed>}
+     * @return array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}
      */
     protected function diffItemsByKey(array $beforeItems, array $afterItems, string $key): array
     {
