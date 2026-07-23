@@ -15,7 +15,7 @@ class Diff
     protected array $fields;
 
     /**
-     * @var array<string, array{added: list<mixed>, removed: list<mixed>, changed: array<mixed, mixed>}>
+     * @var array<string, array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed>}>
      */
     protected array $relations;
 
@@ -191,7 +191,7 @@ class Diff
     /**
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
-     * @return array{added: list<mixed>, removed: list<mixed>, changed: array<mixed, mixed>}
+     * @return array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}
      */
     protected function diffPivotedRelation(array $before, array $after, string $relatedKey): array
     {
@@ -228,7 +228,7 @@ class Diff
      *
      * @param  list<array<string, mixed>>  $beforeItems
      * @param  list<array<string, mixed>>  $afterItems
-     * @return array{added: list<mixed>, removed: list<mixed>, changed: array<mixed, mixed>}
+     * @return array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}
      */
     protected function diffItemsByKey(array $beforeItems, array $afterItems, string $key): array
     {
@@ -262,6 +262,7 @@ class Diff
         return [
             'added' => array_values(array_diff($afterIds, $beforeIds)),
             'removed' => array_values(array_diff($beforeIds, $afterIds)),
+            'kept' => array_values(array_intersect($beforeIds, $afterIds)),
             'changed' => $changed,
         ];
     }
