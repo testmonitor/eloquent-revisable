@@ -285,6 +285,29 @@ class RevisionDiffTest extends TestCase
         $this->assertEquals(10, $changes['votes']['after']);
     }
 
+    #[Test]
+    public function it_preserves_unsaved_changes_when_diffing_the_same_instance_right_after_creation()
+    {
+        // Given
+        $author = $this->createAuthor();
+
+        $post = Post::create([
+            'author_id' => $author->id,
+            'name' => 'Post name',
+            'slug' => 'post-slug',
+            'content' => 'Post content',
+            'votes' => 10,
+            'views' => 100,
+        ]);
+
+        // When
+        $post->votes = 999;
+        $diff = $post->diff();
+
+        // Then
+        $this->assertEquals(999, $diff->all()['votes']['after']);
+    }
+
     // relations
 
     #[Test]

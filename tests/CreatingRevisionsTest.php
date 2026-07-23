@@ -61,6 +61,35 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_captures_database_default_values_on_the_initial_revision()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        // When
+        $post = $post->create([
+            'author_id' => $author->id,
+            'name' => 'Post name',
+            'slug' => 'post-slug',
+        ]);
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertEquals(0, $revision->metadata['attributes']['votes']);
+        $this->assertEquals(0, $revision->metadata['attributes']['views']);
+        $this->assertNull($revision->metadata['attributes']['content']);
+    }
+
+    #[Test]
     public function it_only_tags_the_first_revision_as_initial_when_reusing_the_same_instance()
     {
         // Given
