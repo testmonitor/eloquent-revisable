@@ -157,7 +157,7 @@ class HtmlDiff
         $merged = (new HtmlDiffer($before, $after))->build();
 
         return [
-            'before' => $this->beforeView($merged),
+            'before' => filled($before) ? $this->beforeView($merged) : '',
             'after' => $this->afterView($merged),
         ];
     }
@@ -182,9 +182,6 @@ class HtmlDiff
             ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
             // Normalise the differ's diff-specific <del> classes.
             ->replaceMatches('/<del(?! class="mod")[^>]*>/', '<del>')
-            // Replace empty <li> and <ul> elements that may have been left behind by the above removals.
-            ->replaceMatches('/<li><\/li>/', '')
-            ->replaceMatches('/<ul><\/ul>/', '')
             ->toString();
     }
 
