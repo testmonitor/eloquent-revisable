@@ -84,8 +84,8 @@ class HtmlDiff
             ->values();
 
         return [
-            'before' => $diffs->pluck('before')->all(),
-            'after' => $diffs->pluck('after')->all(),
+            'before' => $diffs->pluck('before')->filter(fn($value) => filled(strip_tags($value)))->all(),
+            'after' => $diffs->pluck('after')->filter(fn($value) => filled(strip_tags($value)))->all(),
         ];
     }
 
@@ -182,6 +182,9 @@ class HtmlDiff
             ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
             // Normalise the differ's diff-specific <del> classes.
             ->replaceMatches('/<del(?! class="mod")[^>]*>/', '<del>')
+            // Replace empty <li> and <ul> elements that may have been left behind by the above removals.
+            ->replaceMatches('/<li><\/li>/', '')
+            ->replaceMatches('/<ul><\/ul>/', '')
             ->toString();
     }
 
