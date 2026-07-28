@@ -84,8 +84,8 @@ class HtmlDiff
             ->values();
 
         return [
-            'before' => $diffs->pluck('before')->filter(fn($value) => filled(strip_tags($value)))->all(),
-            'after' => $diffs->pluck('after')->filter(fn($value) => filled(strip_tags($value)))->all(),
+            'before' => $diffs->pluck('before')->filter(fn ($value) => filled(strip_tags($value)))->all(),
+            'after' => $diffs->pluck('after')->filter(fn ($value) => filled(strip_tags($value)))->all(),
         ];
     }
 
