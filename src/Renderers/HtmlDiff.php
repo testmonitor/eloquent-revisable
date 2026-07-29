@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use Jfcherng\Diff\DiffHelper;
 use Ssddanbrown\HtmlDiff\Diff as HtmlDiffer;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Renderers\Support\HtmlFragment;
 
 class HtmlDiff
 {
@@ -206,25 +207,19 @@ class HtmlDiff
      */
     protected function beforeView(string $merged): string
     {
-        return Str::of($merged)
+        return (new HtmlFragment($merged))
             // Formatting-only change: show the old formatting instead of dropping the text.
-            ->replaceMatches('/<ins class="mod">(.*?)<\/ins>/s', '<del class="mod">$1</del>')
-            // Wholly new <tr>: drop the whole row, not just its text.
-            ->replaceMatches(
-                '/<tr(\s[^>]*)?>\s*(?:<(td|th)(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/\2>\s*)+<\/tr>/is', ''
-            )
-            // Wholly new <li>/<p>/<td>/<th>: drop the element, not just its text.
-            ->replaceMatches(
-                '/<(li|p|td|th)(\s[^>]*)?>(?:\s*<ins[^>]*>.*?<\/ins>)+\s*<\/\1>/is', ''
-            )
+            ->renameElements('//ins[@class="mod"]', 'del')
+            // Drop <li>/<p>/<td>/<th>/<tr> elements that only ever held new content.
+            ->removeElementsEmptiedBy('//li | //p | //td | //th | //tr', 'ins')
             // Any other inserted text didn't exist yet, so drop it.
-            ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
+            ->removeElements('//ins')
             // A wholly new list/table leaves an empty wrapper behind once its rows/items are
             // gone; drop those too, repeating since removing one can empty its own parent.
-            ->pipe(fn ($html) => $this->stripEmptyContainers((string) $html))
+            ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead')
             // Normalise the differ's diff-specific <del> classes.
-            ->replaceMatches('/<del(?! class="mod")[^>]*>/', '<del>')
-            ->toString();
+            ->removeAttribute('//del[not(@class="mod")]', 'class')
+            ->toHtml();
     }
 
     /**
@@ -232,25 +227,16 @@ class HtmlDiff
      */
     protected function afterView(string $merged): string
     {
-        return Str::of($merged)
+        return (new HtmlFragment($merged))
+            // Drop <li>/<p>/<td>/<th>/<tr> elements that only ever held removed content.
+            ->removeElementsEmptiedBy('//li | //p | //td | //th | //tr', 'del')
             // Deleted text no longer exists, so drop it.
-            ->replaceMatches('/<del[^>]*>.*?<\/del>/s', '')
+            ->removeElements('//del')
+            // A wholly deleted list/table leaves an empty wrapper behind once its rows/items
+            // are gone; drop those too.
+            ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead')
             // Normalise diff-specific <ins> classes, but keep the "mod" marker.
-            ->replaceMatches('/<ins(?! class="mod")[^>]*>/', '<ins>')
-            ->toString();
-    }
-
-    /**
-     * Strip now-empty containers (e.g. <ul>, <table>) left behind by removed insertions.
-     */
-    protected function stripEmptyContainers(string $html): string
-    {
-        $pattern = '/<(ul|ol|table|tbody|thead)(?:\s[^>]*)?>\s*<\/\1>/is';
-
-        do {
-            $html = preg_replace($pattern, '', $html, -1, $count);
-        } while ($count > 0);
-
-        return $html;
+            ->removeAttribute('//ins[not(@class="mod")]', 'class')
+            ->toHtml();
     }
 }

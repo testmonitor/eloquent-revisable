@@ -472,6 +472,44 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_omits_a_newly_added_nested_list_item_from_the_before_view()
+    {
+        // Given — the new bullet's text sits inside a <p>, one level deeper than a bare <li>
+        $htmlDiff = $this->diffFor(
+            '<ul><li><p>one</p></li></ul>',
+            '<ul><li><p>one</p></li><li><p>two</p></li></ul>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the whole <li> is gone, not left behind as an empty <li><p></p></li>
+        $this->assertSame(1, preg_match_all('/<li[^>]*>/', $result['before']));
+        $this->assertStringNotContainsString('<p></p>', $result['before']);
+        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('two', $result['after']);
+    }
+
+    #[Test]
+    public function it_omits_a_wholly_deleted_nested_list_item_from_the_after_view()
+    {
+        // Given — the second bullet's text was entirely cleared, tag structure left intact
+        $htmlDiff = $this->diffFor(
+            '<ul><li><p>one</p></li><li><p>two</p></li></ul>',
+            '<ul><li><p>one</p></li><li><p></p></li></ul>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the whole <li> is gone from the after view, not left behind as <li><p></p></li>
+        $this->assertSame(1, preg_match_all('/<li[^>]*>/', $result['after']));
+        $this->assertStringNotContainsString('<p></p>', $result['after']);
+        $this->assertStringContainsString('<del>', $result['before']);
+        $this->assertStringContainsString('two', $result['before']);
+    }
+
+    #[Test]
     public function it_omits_a_wholly_new_list_from_the_before_view()
     {
         // Given — the whole <ul> is new, not just some of its items
