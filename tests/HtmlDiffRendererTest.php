@@ -234,6 +234,38 @@ class HtmlDiffRendererTest extends TestCase
         }
     }
 
+    #[Test]
+    public function it_returns_an_empty_before_array_when_the_field_had_no_prior_value()
+    {
+        // Given — the field never existed before (e.g. the initial revision), the after side is an array
+        $htmlDiff = $this->diffFor(null, ['apple', 'banana']);
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no blank placeholder lines on the before side, one per item on the after side
+        $this->assertSame([], $result['before']);
+        $this->assertCount(2, $result['after']);
+        $this->assertStringContainsString('<ins>', $result['after'][0]);
+        $this->assertStringContainsString('apple', $result['after'][0]);
+    }
+
+    #[Test]
+    public function it_returns_an_empty_after_array_when_the_field_no_longer_has_a_value()
+    {
+        // Given — the field existed before but is now entirely gone
+        $htmlDiff = $this->diffFor(['apple', 'banana'], null);
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no blank placeholder lines on the after side, one per item on the before side
+        $this->assertSame([], $result['after']);
+        $this->assertCount(2, $result['before']);
+        $this->assertStringContainsString('<del>', $result['before'][0]);
+        $this->assertStringContainsString('apple', $result['before'][0]);
+    }
+
     // Multiline
 
     #[Test]
@@ -437,6 +469,38 @@ class HtmlDiffRendererTest extends TestCase
         $this->assertSame(1, preg_match_all('/<tr[^>]*>/', $result['before']));
         $this->assertSame(1, preg_match_all('/<td[^>]*>/', $result['before']));
         $this->assertStringContainsString('two', $result['after']);
+    }
+
+    #[Test]
+    public function it_omits_a_wholly_new_list_from_the_before_view()
+    {
+        // Given — the whole <ul> is new, not just some of its items
+        $htmlDiff = $this->diffFor('', '<ul><li>one</li><li>two</li></ul>');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no dangling empty <ul></ul> left behind
+        $this->assertSame('', $result['before']);
+        $this->assertStringContainsString('<ins>', $result['after']);
+    }
+
+    #[Test]
+    public function it_omits_a_wholly_new_table_with_a_tbody_from_the_before_view()
+    {
+        // Given — removing the new rows would otherwise leave an empty <tbody></tbody>
+        // inside an empty <table></table>
+        $htmlDiff = $this->diffFor(
+            '',
+            '<table><tbody><tr><td>a</td></tr><tr><td>b</td></tr></tbody></table>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — both the table and its now-empty tbody wrapper are gone
+        $this->assertSame('', $result['before']);
+        $this->assertStringContainsString('<ins>', $result['after']);
     }
 
     #[Test]

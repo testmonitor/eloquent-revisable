@@ -40,7 +40,16 @@ class HtmlDiff
         $before = $this->normalize($value['before'] ?? '');
         $after = $this->normalize($value['after'] ?? '');
 
-        // If either value is an array, diff each pair in parallel and return arrays of before/after diffs.
+        // No prior value at all: don't pad the before side with a blank line per new item.
+        if (is_array($after) && ($value['before'] ?? null) === null) {
+            return $this->diffNewArray($after);
+        }
+
+        // No value anymore: don't pad the after side with a blank line per removed item.
+        if (is_array($before) && ($value['after'] ?? null) === null) {
+            return $this->diffRemovedArray($before);
+        }
+
         if (is_array($before) || is_array($after)) {
             return $this->diffArray((array) $before, (array) $after);
         }
@@ -87,6 +96,36 @@ class HtmlDiff
             'before' => $diffs->pluck('before')->all(),
             'after' => $diffs->pluck('after')->all(),
         ];
+    }
+
+    /**
+     * Build the after view for an array field that had no prior value at all.
+     *
+     * @return array{before: list<string>, after: list<string>}
+     */
+    protected function diffNewArray(array $after): array
+    {
+        $after = collect($after)
+            ->map(fn (mixed $item) => $this->diffValue('', (string) $item)['after'])
+            ->reject(fn (string $item) => blank(strip_tags($item)))
+            ->values();
+
+        return ['before' => [], 'after' => $after->all()];
+    }
+
+    /**
+     * Build the before view for an array field that no longer has any value.
+     *
+     * @return array{before: list<string>, after: list<string>}
+     */
+    protected function diffRemovedArray(array $before): array
+    {
+        $before = collect($before)
+            ->map(fn (mixed $item) => $this->diffValue((string) $item, '')['before'])
+            ->reject(fn (string $item) => blank(strip_tags($item)))
+            ->values();
+
+        return ['before' => $before->all(), 'after' => []];
     }
 
     /**
@@ -180,6 +219,9 @@ class HtmlDiff
             )
             // Any other inserted text didn't exist yet, so drop it.
             ->replaceMatches('/<ins[^>]*>.*?<\/ins>/s', '')
+            // A wholly new list/table leaves an empty wrapper behind once its rows/items are
+            // gone; drop those too, repeating since removing one can empty its own parent.
+            ->pipe(fn ($html) => $this->stripEmptyContainers((string) $html))
             // Normalise the differ's diff-specific <del> classes.
             ->replaceMatches('/<del(?! class="mod")[^>]*>/', '<del>')
             ->toString();
@@ -196,5 +238,19 @@ class HtmlDiff
             // Normalise diff-specific <ins> classes, but keep the "mod" marker.
             ->replaceMatches('/<ins(?! class="mod")[^>]*>/', '<ins>')
             ->toString();
+    }
+
+    /**
+     * Strip now-empty containers (e.g. <ul>, <table>) left behind by removed insertions.
+     */
+    protected function stripEmptyContainers(string $html): string
+    {
+        $pattern = '/<(ul|ol|table|tbody|thead)(?:\s[^>]*)?>\s*<\/\1>/is';
+
+        do {
+            $html = preg_replace($pattern, '', $html, -1, $count);
+        } while ($count > 0);
+
+        return $html;
     }
 }
