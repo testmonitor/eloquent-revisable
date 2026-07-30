@@ -266,7 +266,13 @@ class Revisioner
             ],
         ]);
 
-        return (new Diff($previous, $current))->changed() ?: null;
+        $changed = (new Diff($previous, $current))->changed() ?: null;
+
+        if (method_exists($this->model, 'filterRevisionChanges') && filled($changed)) {
+            return $this->model->filterRevisionChanges($changed);
+        }
+
+        return $changed;
     }
 
     /**
