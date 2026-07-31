@@ -234,6 +234,8 @@ class HtmlDiffRendererTest extends TestCase
         }
     }
 
+    // Array lifecycle
+
     #[Test]
     public function it_returns_an_empty_before_array_when_the_field_had_no_prior_value()
     {
@@ -338,7 +340,7 @@ class HtmlDiffRendererTest extends TestCase
         $this->assertStringNotContainsString('<br>', $result['before']);
     }
 
-    // HTML-aware diffing
+    // HTML-aware diffing — formatting changes
 
     #[Test]
     public function it_retains_content_in_before_view_when_formatting_is_removed()
@@ -416,6 +418,8 @@ class HtmlDiffRendererTest extends TestCase
         $this->assertStringContainsString('<ins class="mod">Hello world</ins>', $result['after']);
     }
 
+    // HTML-aware diffing — preexisting content
+
     #[Test]
     public function it_keeps_preexisting_empty_elements_when_html_is_identical()
     {
@@ -433,6 +437,8 @@ class HtmlDiffRendererTest extends TestCase
         $this->assertStringContainsString('<p></p>', $result['before']);
         $this->assertStringContainsString('<li></li>', $result['before']);
     }
+
+    // HTML-aware diffing — wholly changed elements
 
     #[Test]
     public function it_omits_a_newly_added_list_item_from_the_before_view()
@@ -541,6 +547,8 @@ class HtmlDiffRendererTest extends TestCase
         $this->assertStringContainsString('<ins>', $result['after']);
     }
 
+    // HTML-aware diffing — structural mismatch (full swap)
+
     #[Test]
     public function it_treats_a_list_replaced_by_plain_text_as_a_full_swap()
     {
@@ -598,7 +606,7 @@ class HtmlDiffRendererTest extends TestCase
     #[Test]
     public function it_handles_plain_text_before_and_html_after()
     {
-        // Given
+        // Given — inline HTML on only one side must NOT degrade to a full swap either
         $htmlDiff = $this->diffFor('Hello world', '<strong>Hello</strong> universe');
 
         // When
