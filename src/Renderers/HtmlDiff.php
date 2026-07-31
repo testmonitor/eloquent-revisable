@@ -181,6 +181,14 @@ class HtmlDiff
     }
 
     /**
+     * Return true when the string contains list/table block structure (<ul>, <ol>, <table>).
+     */
+    protected function containsBlockStructure(string $value): bool
+    {
+        return Str::of($value)->test('/<(ul|ol|table)[\s>]/i');
+    }
+
+    /**
      * Build an HTML diff for values where at least one contains HTML markup.
      *
      * Delegates to ssddanbrown/htmldiff for DOM-aware diffing, then splits the
@@ -194,12 +202,32 @@ class HtmlDiff
             return ['before' => $before, 'after' => $after];
         }
 
+        if ($this->hasMismatchedBlockStructure($before, $after)) {
+            return [
+                'before' => $this->diffValue($before, '')['before'],
+                'after' => $this->diffValue('', $after)['after'],
+            ];
+        }
+
         $merged = (new HtmlDiffer($before, $after))->build();
 
         return [
             'before' => $this->beforeView($merged),
             'after' => $this->afterView($merged),
         ];
+    }
+
+    /**
+     * Return true when exactly one side has list/table block structure, which can't merge
+     * word-by-word without fragments of the plain side getting trapped inside a <li>/<td>.
+     */
+    protected function hasMismatchedBlockStructure(string $before, string $after): bool
+    {
+        if ($before === '' || $after === '') {
+            return false;
+        }
+
+        return $this->containsBlockStructure($before) !== $this->containsBlockStructure($after);
     }
 
     /**
