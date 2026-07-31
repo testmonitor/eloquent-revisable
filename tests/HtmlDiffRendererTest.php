@@ -542,6 +542,60 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_treats_a_list_replaced_by_plain_text_as_a_full_swap()
+    {
+        // Given — shared words ("Quia dolore") would otherwise get trapped inside the old
+        // <li> by the differ's positional word-pairing, splitting the plain text in two
+        $htmlDiff = $this->diffFor(
+            '<ul><li>Quia dolore non ut recusandae.</li></ul>',
+            'Quia dolore is different now.',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the whole list is marked deleted, the whole plain text marked inserted,
+        // with no plain-text fragments left dangling inside the old <li>
+        $this->assertStringContainsString('<del>Quia dolore non ut recusandae.</del>', $result['before']);
+        $this->assertSame('<ins>Quia dolore is different now.</ins>', $result['after']);
+    }
+
+    #[Test]
+    public function it_treats_plain_text_replaced_by_a_list_as_a_full_swap()
+    {
+        // Given — the mirror direction of the list-to-plain-text swap
+        $htmlDiff = $this->diffFor(
+            'Quia dolore non ut recusandae.',
+            '<ul><li>Quia dolore is different now.</li></ul>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no fragments of the old plain text left dangling inside the new <li>
+        $this->assertSame('<del>Quia dolore non ut recusandae.</del>', $result['before']);
+        $this->assertStringContainsString('<ins>Quia dolore is different now.</ins>', $result['after']);
+    }
+
+    #[Test]
+    public function it_keeps_word_level_diffing_when_both_sides_are_lists()
+    {
+        // Given — both sides have list structure, so this must NOT degrade to a full swap
+        $htmlDiff = $this->diffFor(
+            '<ul><li>Alpha beta gamma.</li></ul>',
+            '<ul><li>Zzz yyy xxx.</li></ul>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — word-level markers inside a single shared <li>, not a wholesale replacement
+        $this->assertSame(1, preg_match_all('/<li[^>]*>/', $result['before']));
+        $this->assertStringContainsString('<del>Alpha</del>', $result['before']);
+        $this->assertStringContainsString('<ins>Zzz</ins>', $result['after']);
+    }
+
+    #[Test]
     public function it_handles_plain_text_before_and_html_after()
     {
         // Given

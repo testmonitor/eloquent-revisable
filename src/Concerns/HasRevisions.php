@@ -50,6 +50,12 @@ trait HasRevisions
     protected bool $revisionInitialCreated = false;
 
     /**
+     * Field names to omit from the 'changed' list of the revision created by the current rollback.
+     * Set via exceptChangedFieldsOnRollback(), typically from a rollingBack listener.
+     */
+    protected array $rollbackExceptChangedFields = [];
+
+    /**
      * Register the custom model events fired during revisioning and rollback.
      */
     public function initializeHasRevisions(): void
