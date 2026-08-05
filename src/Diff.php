@@ -112,7 +112,7 @@ class Diff
     /**
      * Return only the fields and relations that changed between the two revisions.
      *
-     * @param  array<string, \Closure>  $except  Predicates keyed by relation name; a record failing on both sides counts as unchanged.
+     * @param  array<string, \Closure>  $except
      */
     public function changes(array $except = []): array
     {
