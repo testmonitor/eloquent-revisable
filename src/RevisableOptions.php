@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable;
 
+use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -73,6 +74,11 @@ class RevisableOptions
      * An empty array means all tracked relations are restored. A null value means no relations are restored.
      */
     public ?array $exceptRestoringRelations = [];
+
+    /**
+     * @var array<string, Closure> Predicates keyed by relation name; see filterRelation().
+     */
+    public array $relationFilters = [];
 
     /**
      * Start configuring model with the default options.
@@ -208,6 +214,16 @@ class RevisableOptions
     public function withoutRestoringRelations(string ...$relations): self
     {
         $this->exceptRestoringRelations = empty($relations) ? null : $relations;
+
+        return $this;
+    }
+
+    /**
+     * Register a predicate deciding whether a captured record for the given relation is still valid.
+     */
+    public function filterRelation(string $relation, Closure $predicate): self
+    {
+        $this->relationFilters[$relation] = $predicate;
 
         return $this;
     }

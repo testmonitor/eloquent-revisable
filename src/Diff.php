@@ -89,32 +89,6 @@ class Diff
     }
 
     /**
-     * Return only the fields and relations that changed between the two revisions.
-     */
-    public function changes(): array
-    {
-        $fieldChanges = Arr::where(
-            $this->fields,
-            fn ($entry) => $this->valuesAreDifferent($entry['before'], $entry['after'])
-        );
-
-        $relationChanges = Arr::where(
-            $this->relations,
-            fn ($entry) => ! empty($entry['added']) || ! empty($entry['removed']) || ! empty($entry['changed']),
-        );
-
-        return [...$fieldChanges, ...$relationChanges];
-    }
-
-    /**
-     * Return the names of the fields and relations that changed between the two revisions.
-     */
-    public function changed(): array
-    {
-        return array_keys($this->changes());
-    }
-
-    /**
      * Wrap this diff in an HTML renderer.
      *
      * @param  string  $detailLevel  Granularity of inline highlighting: 'none'|'line'|'word'|'char'
@@ -123,6 +97,41 @@ class Diff
     public function asHtml(string $detailLevel = 'word', string $lineSeparator = '<br>'): HtmlDiff
     {
         return new HtmlDiff($this, $detailLevel, $lineSeparator);
+    }
+
+    /**
+     * Return the names of the fields and relations that changed between the two revisions.
+     *
+     * @param  array<string, \Closure>  $except
+     */
+    public function changed(array $except = []): array
+    {
+        return array_keys($this->changes($except));
+    }
+
+    /**
+     * Return only the fields and relations that changed between the two revisions.
+     *
+     * @param  array<string, \Closure>  $except  Predicates keyed by relation name; a record failing on both sides counts as unchanged.
+     */
+    public function changes(array $except = []): array
+    {
+        $relations = empty($except) ? $this->relations : $this->diffRelations(
+            $this->stripExceptRecords($this->before?->metadata()['relations'] ?? [], $except),
+            $this->stripExceptRecords($this->after?->metadata()['relations'] ?? [], $except)
+        );
+
+        $fieldChanges = Arr::where(
+            $this->fields,
+            fn ($entry) => $this->valuesAreDifferent($entry['before'], $entry['after'])
+        );
+
+        $relationChanges = Arr::where(
+            $relations,
+            fn ($entry) => ! empty($entry['added']) || ! empty($entry['removed']) || ! empty($entry['changed']),
+        );
+
+        return [...$fieldChanges, ...$relationChanges];
     }
 
     /**
@@ -139,6 +148,39 @@ class Diff
         }
 
         return true;
+    }
+
+    /**
+     * Drop relation records that are stale per their predicate in $except, returning a filtered copy.
+     *
+     * @param  array<string, mixed>  $relations
+     * @param  array<string, \Closure>  $except
+     * @return array<string, mixed>
+     */
+    protected function stripExceptRecords(array $relations, array $except): array
+    {
+        foreach ($relations as $name => &$attributes) {
+            if (! isset($except[$name], $attributes['records']['items'])) {
+                continue;
+            }
+
+            $primaryKey = $attributes['records']['primary_key'];
+
+            $attributes['records']['items'] = array_values(
+                array_filter($attributes['records']['items'], $except[$name])
+            );
+
+            if (isset($attributes['pivots']['items'])) {
+                $keptKeys = array_column($attributes['records']['items'], $primaryKey);
+
+                $attributes['pivots']['items'] = array_values(array_filter(
+                    $attributes['pivots']['items'],
+                    fn ($item) => in_array($item[$attributes['pivots']['related_key']], $keptKeys)
+                ));
+            }
+        }
+
+        return $relations;
     }
 
     /**
@@ -223,8 +265,7 @@ class Diff
     }
 
     /**
-     * Diff two lists of associative arrays keyed by an identifying column, reporting which
-     * identifiers were added, removed, and which retained identifiers had column-level changes.
+     * Diff two lists of associative arrays keyed by an identifying column.
      *
      * @param  list<array<string, mixed>>  $beforeItems
      * @param  list<array<string, mixed>>  $afterItems

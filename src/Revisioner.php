@@ -33,6 +33,8 @@ class Revisioner
 
     protected ?array $exceptRestoringRelations = [];
 
+    protected array $relationFilters = [];
+
     protected RevisionType $revisionType = RevisionType::Default;
 
     public function __construct(protected UserResolver $userResolver) {}
@@ -96,6 +98,13 @@ class Revisioner
     public function withoutRestoringRelations(?array $relations): static
     {
         $this->exceptRestoringRelations = $relations;
+
+        return $this;
+    }
+
+    public function withRelationFilters(array $filters): static
+    {
+        $this->relationFilters = $filters;
 
         return $this;
     }
@@ -266,7 +275,8 @@ class Revisioner
             ],
         ]);
 
-        return (new Diff($previous, $current))->changed() ?: null;
+        return (new Diff($previous, $current))
+            ->changed(except: $this->relationFilters) ?: null;
     }
 
     /**
@@ -476,7 +486,7 @@ class Revisioner
     protected function restoreDirectRelation(string $relation, array $attributes): void
     {
         $relatedPrimaryKey = $attributes['records']['primary_key'];
-        $relatedRecords = $attributes['records']['items'];
+        [$relatedRecords] = $this->filterRelationRecords($relation, $attributes['records']);
 
         if (RelationType::isChild($attributes['type'])) {
             $oldRelated = $this->model->{$relation}()->pluck($relatedPrimaryKey)->toArray();
@@ -516,7 +526,9 @@ class Revisioner
      */
     protected function restorePivotedRelation(string $relation, array $attributes): void
     {
-        foreach ($attributes['records']['items'] as $item) {
+        [$relatedRecords, $keptKeys] = $this->filterRelationRecords($relation, $attributes['records']);
+
+        foreach ($relatedRecords as $item) {
             $related = $this->model->{$relation}()->getRelated();
 
             if (array_key_exists(SoftDeletes::class, class_uses($related))) {
@@ -539,6 +551,10 @@ class Revisioner
         $this->model->{$relation}()->detach();
 
         foreach ($attributes['pivots']['items'] as $item) {
+            if (! in_array($item[$attributes['pivots']['related_key']], $keptKeys)) {
+                continue;
+            }
+
             $this->model->{$relation}()->attach(
                 $item[$attributes['pivots']['related_key']],
                 Arr::except((array) $item, [
@@ -559,5 +575,17 @@ class Revisioner
         }
 
         return in_array($relation, $this->exceptRestoringRelations);
+    }
+
+    /**
+     * Drop records that fail the relation's configured filter, if any.
+     */
+    protected function filterRelationRecords(string $relation, array $records): array
+    {
+        $items = isset($this->relationFilters[$relation])
+            ? array_values(array_filter($records['items'], $this->relationFilters[$relation]))
+            : $records['items'];
+
+        return [$items, array_column($items, $records['primary_key'])];
     }
 }

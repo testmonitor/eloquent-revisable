@@ -217,6 +217,7 @@ trait HasRevisions
             ->onlyFields($options->fields)
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
+            ->withRelationFilters($options->relationFilters)
             ->limit($options->limit)
             ->when($this->isInitialRevision(), fn ($revisioner) => $revisioner->type(RevisionType::Initial))
             ->when(
@@ -252,6 +253,7 @@ trait HasRevisions
             ->onlyFields($options->fields)
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
+            ->withRelationFilters($options->relationFilters)
             ->limit($options->limit)
             ->when(
                 $existing,
@@ -290,6 +292,7 @@ trait HasRevisions
             ->onlyFields($options->fields)
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
+            ->withRelationFilters($options->relationFilters)
             ->withoutRestoringRelations($options->exceptRestoringRelations)
             ->limit($options->limit)
             ->rollback($revision);
@@ -492,6 +495,7 @@ trait HasRevisions
             ->onlyFields($options->fields)
             ->exceptFields($options->exceptFields)
             ->withRelations($options->relations)
+            ->withRelationFilters($options->relationFilters)
             ->limit($options->limit)
             ->type(RevisionType::Rollback)
             ->properties([
