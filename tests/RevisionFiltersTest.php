@@ -218,6 +218,29 @@ class RevisionFiltersTest extends TestCase
     }
 
     #[Test]
+    public function it_leaves_a_relation_without_a_registered_predicate_untouched()
+    {
+        // Given
+        $before = new Revision(['metadata' => ['relations' => [
+            'tags' => ['records' => ['primary_key' => 'id', 'items' => [['id' => 1, 'name' => 'Tag 1']]]],
+            'comments' => ['records' => ['primary_key' => 'id', 'items' => [['id' => 1, 'title' => 'Comment 1']]]],
+        ]]]);
+        $after = new Revision(['metadata' => ['relations' => [
+            'tags' => ['records' => ['primary_key' => 'id', 'items' => []]],
+            'comments' => ['records' => ['primary_key' => 'id', 'items' => [['id' => 1, 'title' => 'Comment 1 updated']]]],
+        ]]]);
+
+        $diff = new Diff($before, $after);
+
+        // When: only 'tags' has a registered predicate — 'comments' has none.
+        $changed = $diff->changed(['tags' => fn (array $item) => false]);
+
+        // Then
+        $this->assertNotContains('tags', $changed);
+        $this->assertContains('comments', $changed);
+    }
+
+    #[Test]
     public function it_does_not_report_an_unchanged_relation_record_as_a_change_when_it_fails_the_given_predicate_on_both_sides()
     {
         // Given
