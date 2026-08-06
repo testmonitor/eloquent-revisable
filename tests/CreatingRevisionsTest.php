@@ -331,6 +331,28 @@ class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_ignores_a_captured_field_that_no_longer_exists_on_the_model_when_rolling_back()
+    {
+        // Given
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        $revision = $post->revisions()->firstOrFail();
+
+        // Simulate metadata captured before a column was dropped from the schema.
+        $metadata = $revision->metadata;
+        $metadata['attributes']['legacy_field'] = 'stale value';
+        $revision->metadata = $metadata;
+        $revision->save();
+
+        // When
+        $post->rollbackToRevision($revision->fresh());
+
+        // Then
+        $this->assertArrayNotHasKey('legacy_field', $post->fresh()->getAttributes());
+    }
+
+    #[Test]
     public function it_can_rollback_to_the_latest_revision()
     {
         // Given

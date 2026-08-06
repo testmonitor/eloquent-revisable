@@ -152,6 +152,21 @@ public function getRevisionOptions(): RevisableOptions
 
 Excluded relations are still snapshotted and visible in diffs — only the restoration step is skipped.
 
+#### Filtering stale relation values
+
+A captured relation record can become stale by the time you roll back — e.g. it references a row that has since been deleted. Register a predicate with `filterRelation()` to skip restoring any record that no longer passes it. The revision's stored metadata is never altered, so it stays intact for auditing:
+
+```php
+public function getRevisionOptions(): RevisableOptions
+{
+    return RevisableOptions::defaults()
+        ->withRelations('customFields')
+        ->filterRelation('customFields', fn (array $item) => CustomField::whereKey($item['custom_field_id'])->exists());
+}
+```
+
+These filters affect restoring and the persisted `changed` column on newly created revisions. They never affect `diff()`, `Revision::diff()`, or `Revision::diffFromPrevious()` — all three always report the honest historical record, never hiding a real change just because a referenced row is gone.
+
 #### Tracking relation changes (optional)
 
 Laravel does not fire model events for certain relation operations, so the package provides two optional traits to fill those gaps. Both respect `withoutRevisioning()` and the `revisioning` event, and only trigger when the relation is listed in `withRelations()`.
