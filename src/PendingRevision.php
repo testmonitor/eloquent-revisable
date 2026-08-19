@@ -106,14 +106,14 @@ class PendingRevision implements Revision
 
     public function toModel(): Model
     {
-        return $this->revision->toModel();
+        $this->unavailableWhilePending();
     }
 
     /**
-     * A pending revision has not been persisted yet, so it has no position in the revision history.
+     * A pending revision has not been persisted yet, so it has no identity or position in history.
      */
     protected function unavailableWhilePending(): never
     {
-        throw new LogicException('Cannot determine the history position of a pending, unsaved revision.');
+        throw new LogicException('Cannot use this on a pending, unsaved revision.');
     }
 }
