@@ -10,10 +10,10 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
-use TestMonitor\Revisable\Contracts\Revision;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Enums\RevisionType;
+use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\PendingRevision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\RevisableServiceProvider;
@@ -191,7 +191,7 @@ trait HasRevisions
     /**
      * Create a new revision record for the model instance.
      */
-    public function createNewRevision(): Revision|bool
+    public function createNewRevision(): RevisionContract|bool
     {
         $options = $this->getRevisionOptions();
 
@@ -205,7 +205,7 @@ trait HasRevisions
     /**
      * Create a new revision record for the model instance, bypassing the tracked-field dirty check.
      */
-    protected function forceCreateNewRevision(): Revision|bool
+    protected function forceCreateNewRevision(): RevisionContract|bool
     {
         $options = $this->getRevisionOptions();
 
@@ -220,8 +220,11 @@ trait HasRevisions
      * Manually save a revision, or queue it for later while batching; returns null when disabled
      * for this instance or when the revisioning event aborts it.
      */
-    public function saveAsRevision(?string $name = null, array $properties = [], ?bool $replace = null): ?Revision
-    {
+    public function saveAsRevision(
+        ?string $name = null,
+        array $properties = [],
+        ?bool $replace = null
+    ): ?RevisionContract {
         if ($this->isRevisioningDisabled()) {
             return null;
         }
@@ -486,7 +489,7 @@ trait HasRevisions
         ?string $name = null,
         array $properties = [],
         ?bool $replace = null
-    ): ?Revision {
+    ): ?RevisionContract {
         if ($this->fireModelEvent('revisioning') === false) {
             return null;
         }
@@ -570,7 +573,7 @@ trait HasRevisions
     /**
      * Save a rollback revision, always as a new record and marked as a rollback.
      */
-    protected function saveAsRollbackRevision(RevisableOptions $options, RevisionContract $revision): Revision
+    protected function saveAsRollbackRevision(RevisableOptions $options, Revision $revision): Revision
     {
         return app(Revisioner::class)
             ->for($this)

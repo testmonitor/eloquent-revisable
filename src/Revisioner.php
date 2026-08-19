@@ -129,7 +129,7 @@ class Revisioner
     /**
      * Persist a new revision record for the model and prune old ones if a limit is set.
      */
-    public function save(): RevisionContract
+    public function save(): Revision
     {
         return DB::transaction(function () {
             $revision = $this->build();
@@ -146,7 +146,7 @@ class Revisioner
     /**
      * Overwrite an existing revision with the current model state, keeping its identity intact.
      */
-    public function replace(Revision $existing): RevisionContract
+    public function replace(Revision $existing): Revision
     {
         return DB::transaction(function () use ($existing) {
             $snapshot = $this->build();

@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use LogicException;
-use TestMonitor\Revisable\Contracts\Revision;
+use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 
-class PendingRevision implements Revision
+class PendingRevision implements RevisionContract
 {
     public function __construct(
-        protected Revision $revision,
+        protected RevisionContract $revision,
     ) {}
 
     public function revisionable(): MorphTo
@@ -44,7 +44,7 @@ class PendingRevision implements Revision
         $this->unavailableWhilePending();
     }
 
-    public function is(Revision $model)
+    public function is(RevisionContract $model)
     {
         $this->unavailableWhilePending();
     }
@@ -74,12 +74,12 @@ class PendingRevision implements Revision
         $this->unavailableWhilePending();
     }
 
-    public function isNewerThan(?Revision $revision): bool
+    public function isNewerThan(?RevisionContract $revision): bool
     {
         $this->unavailableWhilePending();
     }
 
-    public function isOlderThan(?Revision $revision): bool
+    public function isOlderThan(?RevisionContract $revision): bool
     {
         $this->unavailableWhilePending();
     }
@@ -94,7 +94,7 @@ class PendingRevision implements Revision
         $this->unavailableWhilePending();
     }
 
-    public function diff(?Revision $target = null): Diff
+    public function diff(?RevisionContract $target = null): Diff
     {
         return $this->revision->diff($target);
     }
