@@ -324,6 +324,40 @@ class WithSingleRevisionTest extends TestCase
     }
 
     #[Test]
+    public function it_does_not_leak_a_queued_revision_into_a_later_batch_when_the_callback_throws()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions();
+            }
+        };
+
+        $post = $this->createPost($postClass);
+
+        // When
+        try {
+            $post->withSingleRevision(function () use ($post) {
+                $post->saveAsRevision('discarded by the exception below');
+
+                throw new \RuntimeException('Something went wrong');
+            });
+        } catch (\RuntimeException) {
+            // expected
+        }
+
+        $post->withSingleRevision(function () {
+            // No changes and no explicit save; a leaked entry from the aborted batch above
+            // would incorrectly force a revision here.
+        });
+
+        // Then
+        $this->assertEquals(0, Revision::count());
+    }
+
+    #[Test]
     public function it_captures_the_full_diff_across_multiple_updates_inside_the_callback()
     {
         // Given

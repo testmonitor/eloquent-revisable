@@ -314,24 +314,26 @@ trait HasRevisions
 
         try {
             $result = $callback();
-        } finally {
+
             static::$revisioningSuspended = false;
+
+            if (! $result instanceof static) {
+                throw new InvalidArgumentException(
+                    'createWithSingleRevision() callback must return an instance of ' . static::class . '.'
+                );
+            }
+
+            $result->forceCreateNewRevision();
+
+            $result->revisionOriginal = [];
+
+            return $result;
+        } finally {
+            // Runs on every exit path, so queued entries can never leak into a later batch.
+            static::$revisioningSuspended = false;
+
+            static::clearPendingRevisions();
         }
-
-        if (! $result instanceof static) {
-            throw new InvalidArgumentException(
-                'createWithSingleRevision() callback must return an instance of ' . static::class . '.'
-            );
-        }
-
-        // Drain so queued entries can't leak into a later batch; they don't affect what gets created here.
-        $result->pullPendingRevisions();
-
-        $result->forceCreateNewRevision();
-
-        $result->revisionOriginal = [];
-
-        return $result;
     }
 
     /**
@@ -344,17 +346,22 @@ trait HasRevisions
 
         try {
             $callback($this);
-        } finally {
+
             static::$revisioningSuspended = false;
+
+            if (! empty($this->pullPendingRevisions())) {
+                $this->forceCreateNewRevision();
+            }
+
+            $this->revisionOriginal = [];
+
+            return $this;
+        } finally {
+            // Runs on every exit path, so queued entries can never leak into a later batch.
+            static::$revisioningSuspended = false;
+
+            static::clearPendingRevisions();
         }
-
-        if (! empty($this->pullPendingRevisions())) {
-            $this->forceCreateNewRevision();
-        }
-
-        $this->revisionOriginal = [];
-
-        return $this;
     }
 
     /**
@@ -405,6 +412,14 @@ trait HasRevisions
         unset(static::$pendingRevisions[static::class][$key]);
 
         return $pending;
+    }
+
+    /**
+     * Discard every revision queued for this class, e.g. when a batch ends without using them.
+     */
+    protected static function clearPendingRevisions(): void
+    {
+        unset(static::$pendingRevisions[static::class]);
     }
 
     /**
