@@ -101,7 +101,7 @@ class PendingRevision implements Revision
 
     public function diffFromPrevious(): Diff
     {
-        return $this->revision->diffFromPrevious();
+        $this->unavailableWhilePending();
     }
 
     public function toModel(): Model

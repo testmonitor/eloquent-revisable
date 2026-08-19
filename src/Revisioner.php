@@ -114,7 +114,7 @@ class Revisioner
      */
     public function build(): Revision
     {
-        $revision = new Revision;
+        $revision = $this->newRevisionInstance();
 
         $revision->user_id = $this->userResolver->resolve();
         $revision->name = $this->name;
@@ -129,7 +129,7 @@ class Revisioner
     /**
      * Persist a new revision record for the model and prune old ones if a limit is set.
      */
-    public function save(): Revision
+    public function save(): RevisionContract
     {
         return DB::transaction(function () {
             $revision = $this->build();
@@ -146,7 +146,7 @@ class Revisioner
     /**
      * Overwrite an existing revision with the current model state, keeping its identity intact.
      */
-    public function replace(Revision $existing): Revision
+    public function replace(Revision $existing): RevisionContract
     {
         return DB::transaction(function () use ($existing) {
             $snapshot = $this->build();
@@ -223,6 +223,16 @@ class Revisioner
     }
 
     /**
+     * Instantiate the configured revision model, so a custom class set via revisable.revision_model is honored.
+     */
+    protected function newRevisionInstance(array $attributes = []): Revision
+    {
+        $class = RevisableServiceProvider::determineRevisionModel();
+
+        return new $class($attributes);
+    }
+
+    /**
      * Build the full revision data array, including relations.
      */
     protected function buildData(): array
@@ -247,7 +257,7 @@ class Revisioner
      * to the model's raw original attributes when no prior revision exists. When a baseline revision
      * is provided, it replaces the most recent stored revision to capture accumulated changes.
      */
-    protected function buildChanges(Revision $revision, ?Revision $baseline = null): ?array
+    protected function buildChanges(RevisionContract $revision, ?RevisionContract $baseline = null): ?array
     {
         if ($this->model->wasRecentlyCreated) {
             return null;
@@ -255,7 +265,7 @@ class Revisioner
 
         $previousRevision = $baseline ?? $this->model->latestRevision()->first();
 
-        $previous = new Revision([
+        $previous = $this->newRevisionInstance([
             'metadata' => [
                 'attributes' => $previousRevision !== null
                     ? $previousRevision->metadata()['attributes'] ?? []
@@ -266,7 +276,7 @@ class Revisioner
             ],
         ]);
 
-        $current = new Revision([
+        $current = $this->newRevisionInstance([
             'metadata' => [
                 'attributes' => $revision->metadata()['attributes'] ?? [],
                 'relations' => ! empty($this->relations)

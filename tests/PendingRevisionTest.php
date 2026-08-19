@@ -2,9 +2,12 @@
 
 namespace TestMonitor\Revisable\Tests;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use LogicException;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Tests\Models\Author;
 
 class PendingRevisionTest extends TestCase
 {
@@ -42,6 +45,29 @@ class PendingRevisionTest extends TestCase
     }
 
     #[Test]
+    public function it_builds_the_revisionable_relation()
+    {
+        // Given / When
+        $pending = $this->pendingRevision();
+
+        // Then
+        $this->assertInstanceOf(MorphTo::class, $pending->revisionable());
+    }
+
+    #[Test]
+    public function it_builds_the_user_relation()
+    {
+        // Given
+        config()->set('revisable.user_model', Author::class);
+
+        // When
+        $pending = $this->pendingRevision();
+
+        // Then
+        $this->assertInstanceOf(BelongsTo::class, $pending->user());
+    }
+
+    #[Test]
     public function it_diffs_against_nothing_by_default()
     {
         // Given / When
@@ -58,7 +84,9 @@ class PendingRevisionTest extends TestCase
         $pending = $this->pendingRevision();
 
         // When / Then
-        foreach (['previous', 'next', 'isFirstRevision', 'isLastRevision', 'version', 'toModel'] as $method) {
+        $methods = ['previous', 'next', 'isFirstRevision', 'isLastRevision', 'version', 'toModel', 'diffFromPrevious'];
+
+        foreach ($methods as $method) {
             try {
                 $pending->{$method}();
                 $this->fail("Expected {$method}() to throw a LogicException.");
