@@ -217,7 +217,8 @@ trait HasRevisions
     }
 
     /**
-     * Manually save a revision, or queue it for later while batching; returns null when disabled for this instance.
+     * Manually save a revision, or queue it for later while batching; returns null when disabled
+     * for this instance or when the revisioning event aborts it.
      */
     public function saveAsRevision(?string $name = null, array $properties = [], ?bool $replace = null): ?Revision
     {
