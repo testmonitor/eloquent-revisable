@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
+use TestMonitor\Revisable\Contracts\Revision;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Enums\RevisionType;
-use TestMonitor\Revisable\Models\Revision;
+use TestMonitor\Revisable\PendingRevision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\RevisableServiceProvider;
 use TestMonitor\Revisable\Revisioner;
@@ -34,8 +35,7 @@ trait HasRevisions
     protected bool $revisioningEnabled = true;
 
     /**
-     * Whether automatic revision creation is currently suspended for this model class,
-     * e.g. while creating a model and its relations inside withSingleRevision().
+     * Whether automatic revision creation is currently suspended for this model class.
      */
     protected static bool $revisioningSuspended = false;
 
@@ -48,6 +48,13 @@ trait HasRevisions
      * Whether this instance has already produced its Initial revision.
      */
     protected bool $revisionInitialCreated = false;
+
+    /**
+     * Revisions queued during a batch instead of persisted immediately, keyed by model class and primary key.
+     *
+     * @var array<class-string, array<array-key, list<PendingRevision>>>
+     */
+    protected static array $pendingRevisions = [];
 
     /**
      * Register the custom model events fired during revisioning and rollback.
@@ -90,8 +97,7 @@ trait HasRevisions
     }
 
     /**
-     * Register a listener for the revisioning event, which fires before a revision is created.
-     * Return false from the callback to abort revision creation.
+     * Register a listener for the revisioning event; return false to abort revision creation.
      */
     public static function revisioning(Closure $callback): void
     {
@@ -107,8 +113,7 @@ trait HasRevisions
     }
 
     /**
-     * Register a listener for the rollingBack event. Return false to abort the rollback;
-     * mutate the passed revision to change what gets restored.
+     * Register a listener for the rollingBack event; return false to abort, or mutate the revision to restore.
      */
     public static function rollingBack(Closure $callback): void
     {
@@ -188,7 +193,13 @@ trait HasRevisions
      */
     public function createNewRevision(): Revision|bool
     {
-        return $this->buildNewRevision($this->getRevisionOptions());
+        $options = $this->getRevisionOptions();
+
+        if (! $this->shouldCreateRevision($options)) {
+            return false;
+        }
+
+        return $this->buildNewRevision($options) ?? false;
     }
 
     /**
@@ -196,70 +207,25 @@ trait HasRevisions
      */
     protected function forceCreateNewRevision(): Revision|bool
     {
-        return $this->buildNewRevision($this->getRevisionOptions(), force: true);
-    }
+        $options = $this->getRevisionOptions();
 
-    /**
-     * Build and save a new revision record for the model instance.
-     */
-    protected function buildNewRevision(RevisableOptions $options, bool $force = false): Revision|bool
-    {
-        if (! $this->shouldCreateRevision($options, $force)) {
+        if (! $this->shouldCreateRevision($options, force: true)) {
             return false;
         }
 
-        if ($this->fireModelEvent('revisioning') === false) {
-            return false;
-        }
-
-        $revision = app(Revisioner::class)
-            ->for($this)
-            ->onlyFields($options->fields)
-            ->exceptFields($options->exceptFields)
-            ->withRelations($options->relations)
-            ->withRelationFilters($options->relationFilters)
-            ->limit($options->limit)
-            ->when($this->isInitialRevision(), fn ($revisioner) => $revisioner->type(RevisionType::Initial))
-            ->when(
-                $this->shouldReplaceRevision($options) ? $this->revisionToReplace() : null,
-                fn ($revisioner, $existing) => $revisioner->replace($existing),
-                fn ($revisioner) => $revisioner->save()
-            );
-
-        $this->fireModelEvent('revisioned', false);
-
-        return $revision;
+        return $this->buildNewRevision($options) ?? false;
     }
 
     /**
-     * Manually save a revision for a model instance. Returns null when revisioning is suppressed.
+     * Manually save a revision, or queue it for later while batching; returns null when disabled for this instance.
      */
     public function saveAsRevision(?string $name = null, array $properties = [], ?bool $replace = null): ?Revision
     {
-        if ($this->isRevisioningSuppressed()) {
+        if ($this->isRevisioningDisabled()) {
             return null;
         }
 
-        $options = $this->getRevisionOptions();
-
-        $existing = $replace ?? $this->shouldReplaceRevision($options)
-            ? $this->revisionToReplace()
-            : null;
-
-        return app(Revisioner::class)
-            ->for($this)
-            ->name($name)
-            ->properties($properties)
-            ->onlyFields($options->fields)
-            ->exceptFields($options->exceptFields)
-            ->withRelations($options->relations)
-            ->withRelationFilters($options->relationFilters)
-            ->limit($options->limit)
-            ->when(
-                $existing,
-                fn ($revisioner, $existing) => $revisioner->replace($existing),
-                fn ($revisioner) => $revisioner->save()
-            );
+        return $this->buildNewRevision($this->getRevisionOptions(), $name, $properties, $replace);
     }
 
     /**
@@ -315,8 +281,7 @@ trait HasRevisions
     }
 
     /**
-     * If a revision record limit is set on the model and that limit is exceeded,
-     * remove the oldest revisions until the limit is met.
+     * Remove the oldest revisions once the configured limit is exceeded.
      */
     public function clearOldRevisions(): void
     {
@@ -340,11 +305,10 @@ trait HasRevisions
     }
 
     /**
-     * Execute a callback with automatic revisioning suspended for this model class,
-     * then create a single revision from the final state. The callback must return
-     * the model to be revisioned.
+     * Suspend revisioning while the callback creates a model (and its relations), then persist one
+     * revision; the callback must return the model, and enableRevisionOnCreate() still applies.
      */
-    public static function withSingleRevision(Closure $callback): mixed
+    public static function createWithSingleRevision(Closure $callback): mixed
     {
         static::$revisioningSuspended = true;
 
@@ -356,9 +320,12 @@ trait HasRevisions
 
         if (! $result instanceof static) {
             throw new InvalidArgumentException(
-                'withSingleRevision() callback must return an instance of ' . static::class . '.'
+                'createWithSingleRevision() callback must return an instance of ' . static::class . '.'
             );
         }
+
+        // Drain so queued entries can't leak into a later batch; they don't affect what gets created here.
+        $result->pullPendingRevisions();
 
         $result->forceCreateNewRevision();
 
@@ -368,8 +335,30 @@ trait HasRevisions
     }
 
     /**
-     * Return the model attributes as they were before the most recent update.
-     * Falls back to getRawOriginal() when called outside an update lifecycle (e.g. saveAsRevision).
+     * Suspend revisioning while the callback runs, then persist one revision if anything tracked
+     * changed; the callback receives this model instance.
+     */
+    public function withSingleRevision(Closure $callback): static
+    {
+        static::$revisioningSuspended = true;
+
+        try {
+            $callback($this);
+        } finally {
+            static::$revisioningSuspended = false;
+        }
+
+        if (! empty($this->pullPendingRevisions())) {
+            $this->forceCreateNewRevision();
+        }
+
+        $this->revisionOriginal = [];
+
+        return $this;
+    }
+
+    /**
+     * Return the model attributes before the most recent update, falling back to getRawOriginal() otherwise.
      */
     public function getRevisionOriginal(): array
     {
@@ -377,17 +366,49 @@ trait HasRevisions
     }
 
     /**
-     * Determine whether revisioning is currently suppressed, either for this instance
-     * (via withoutRevisioning()) or for the whole class (via withSingleRevision()).
+     * Determine whether revisioning has been turned off for this instance via withoutRevisioning().
      */
-    protected function isRevisioningSuppressed(): bool
+    protected function isRevisioningDisabled(): bool
     {
-        return ! $this->revisioningEnabled || static::$revisioningSuspended;
+        return ! $this->revisioningEnabled;
     }
 
     /**
-     * Determine whether the next revision should be tagged as Initial, consuming that state
-     * so later revisions on the same instance are tagged Default.
+     * Determine whether revisioning is suspended for batching but would otherwise be enabled.
+     */
+    protected function isBatchingSuspended(): bool
+    {
+        return $this->revisioningEnabled && static::$revisioningSuspended;
+    }
+
+    /**
+     * Queue a revision to persist once the current batch completes.
+     */
+    protected function queuePendingRevision(PendingRevision $revision): PendingRevision
+    {
+        static::$pendingRevisions[static::class][$this->getKey()][] = $revision;
+
+        return $revision;
+    }
+
+    /**
+     * Remove and return the revisions queued for this model during the current batch.
+     *
+     * @return list<PendingRevision>
+     */
+    protected function pullPendingRevisions(): array
+    {
+        $key = $this->getKey();
+
+        $pending = static::$pendingRevisions[static::class][$key] ?? [];
+
+        unset(static::$pendingRevisions[static::class][$key]);
+
+        return $pending;
+    }
+
+    /**
+     * Determine whether the next revision should be tagged Initial, consuming that state so it only happens once.
      */
     protected function isInitialRevision(): bool
     {
@@ -403,7 +424,7 @@ trait HasRevisions
      */
     protected function shouldCreateRevision(RevisableOptions $options, bool $force = false): bool
     {
-        if (! $options->isEnabled() || $this->isRevisioningSuppressed()) {
+        if (! $options->isEnabled() || $this->isRevisioningDisabled()) {
             return false;
         }
 
@@ -422,6 +443,14 @@ trait HasRevisions
             return true;
         }
 
+        return $this->hasDirtyTrackedFields($options);
+    }
+
+    /**
+     * Determine whether a field tracked by the given options is currently dirty.
+     */
+    protected function hasDirtyTrackedFields(RevisableOptions $options): bool
+    {
         if (! empty($options->fields)) {
             return $this->isDirty($options->fields);
         }
@@ -431,6 +460,44 @@ trait HasRevisions
         }
 
         return true;
+    }
+
+    /**
+     * Build and persist (or queue, while batching) a revision; callers that need a dirty-check gate it themselves.
+     */
+    protected function buildNewRevision(
+        RevisableOptions $options,
+        ?string $name = null,
+        array $properties = [],
+        ?bool $replace = null
+    ): ?Revision {
+        if ($this->fireModelEvent('revisioning') === false) {
+            return null;
+        }
+
+        $revisioner = app(Revisioner::class)
+            ->for($this)
+            ->name($name)
+            ->properties($properties)
+            ->onlyFields($options->fields)
+            ->exceptFields($options->exceptFields)
+            ->withRelations($options->relations)
+            ->withRelationFilters($options->relationFilters)
+            ->limit($options->limit);
+
+        if ($this->isBatchingSuspended()) {
+            return $this->queuePendingRevision(new PendingRevision($revisioner->build()));
+        }
+
+        $revisioner->when($this->isInitialRevision(), fn ($revisioner) => $revisioner->type(RevisionType::Initial));
+
+        $revision = ($replace ?? $this->shouldReplaceRevision($options))
+            ? $revisioner->replace($this->revisionToReplace())
+            : $revisioner->save();
+
+        $this->fireModelEvent('revisioned', false);
+
+        return $revision;
     }
 
     /**
@@ -468,8 +535,7 @@ trait HasRevisions
     }
 
     /**
-     * Fire an event with the model and revision, bypassing fireModelEvent() so overrides of it
-     * (e.g. laravel-pivot-events) can't interfere.
+     * Fire an event bypassing fireModelEvent(), so overrides like laravel-pivot-events can't interfere.
      */
     protected function fireRevisionEvent(string $event, bool $halt, RevisionContract $revision): mixed
     {
