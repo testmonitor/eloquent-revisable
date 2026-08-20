@@ -535,6 +535,15 @@ class PostObserver
 Post::observe(PostObserver::class);
 ```
 
+You can also map `rollingBack` and `rolledBack` to dedicated event classes via `$dispatchesEvents`. Unlike Eloquent's own lifecycle events, these two are instantiated with both the model and the revision, so the event class constructor must accept `($model, $revision)`:
+
+```php
+protected $dispatchesEvents = [
+    'rollingBack' => PostRollingBack::class,
+    'rolledBack' => PostRolledBack::class,
+];
+```
+
 #### Suppressing revisioning
 
 To run an operation without creating a revision:
