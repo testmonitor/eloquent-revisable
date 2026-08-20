@@ -171,7 +171,7 @@ class RevisionEventsTest extends TestCase
     }
 
     #[Test]
-    public function it_dispatches_the_mapped_rolled_back_event_class_after_a_rollback()
+    public function it_dispatches_the_mapped_rolled_back_event_class_with_the_target_revision()
     {
         // Given
         Event::fake([PostRolledBack::class]);
@@ -183,7 +183,10 @@ class RevisionEventsTest extends TestCase
         $post->rollbackToRevision($revision);
 
         // Then
-        Event::assertDispatched(PostRolledBack::class, fn (PostRolledBack $event) => $event->post->is($post));
+        Event::assertDispatched(
+            PostRolledBack::class,
+            fn (PostRolledBack $event) => $event->post->is($post) && $event->revision->is($revision)
+        );
     }
 
     #[Test]

@@ -554,7 +554,8 @@ trait HasRevisions
     }
 
     /**
-     * Fire an event bypassing fireModelEvent(), so overrides like laravel-pivot-events can't interfere.
+     * Fire an event bypassing fireModelEvent(), which only supports a single argument and
+     * could be overridden by other traits.
      */
     protected function fireRevisionEvent(string $event, bool $halt, RevisionContract $revision): mixed
     {
@@ -567,7 +568,7 @@ trait HasRevisions
         $method = $halt ? 'until' : 'dispatch';
 
         if ($eventClass = $this->dispatchesEvents[$event] ?? null) {
-            if ($dispatcher->$method(new $eventClass($this)) === false && $halt) {
+            if ($dispatcher->$method(new $eventClass($this, $revision)) === false && $halt) {
                 return false;
             }
         }
