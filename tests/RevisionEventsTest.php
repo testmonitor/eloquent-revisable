@@ -2,8 +2,11 @@
 
 namespace TestMonitor\Revisable\Tests;
 
+use Illuminate\Support\Facades\Event;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Models\Revision;
+use TestMonitor\Revisable\Tests\Events\PostRolledBack;
+use TestMonitor\Revisable\Tests\Events\PostRollingBack;
 use TestMonitor\Revisable\Tests\Models\Post;
 
 class RevisionEventsTest extends TestCase
@@ -165,5 +168,37 @@ class RevisionEventsTest extends TestCase
 
         // Then
         $this->assertTrue($revision->is($capturedRevision));
+    }
+
+    #[Test]
+    public function it_dispatches_the_mapped_rolled_back_event_class_after_a_rollback()
+    {
+        // Given
+        Event::fake([PostRolledBack::class]);
+        $post = $this->createPost();
+        $this->modifyPost($post);
+        $revision = $post->revisions()->firstOrFail();
+
+        // When
+        $post->rollbackToRevision($revision);
+
+        // Then
+        Event::assertDispatched(PostRolledBack::class, fn (PostRolledBack $event) => $event->post->is($post));
+    }
+
+    #[Test]
+    public function it_does_not_roll_back_when_the_mapped_rolling_back_event_class_returns_false()
+    {
+        // Given
+        Event::listen(PostRollingBack::class, fn () => false);
+        $post = $this->createPost();
+        $this->modifyPost($post);
+
+        // When
+        $result = $post->rollbackToRevision($post->revisions()->firstOrFail());
+
+        // Then
+        $this->assertFalse($result);
+        $this->assertEquals('Another post name', $post->fresh()->name);
     }
 }

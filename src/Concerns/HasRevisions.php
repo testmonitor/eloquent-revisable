@@ -564,7 +564,15 @@ trait HasRevisions
             return true;
         }
 
-        return $dispatcher->{$halt ? 'until' : 'dispatch'}(
+        $method = $halt ? 'until' : 'dispatch';
+
+        if ($eventClass = $this->dispatchesEvents[$event] ?? null) {
+            if ($dispatcher->$method(new $eventClass($this)) === false && $halt) {
+                return false;
+            }
+        }
+
+        return $dispatcher->$method(
             "eloquent.{$event}: " . static::class,
             [$this, $revision]
         );

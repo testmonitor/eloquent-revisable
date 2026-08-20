@@ -11,12 +11,19 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use TestMonitor\Revisable\Concerns\HasRevisionableChildren;
 use TestMonitor\Revisable\Concerns\HasRevisions;
 use TestMonitor\Revisable\RevisableOptions;
+use TestMonitor\Revisable\Tests\Events\PostRolledBack;
+use TestMonitor\Revisable\Tests\Events\PostRollingBack;
 
 class Post extends Model
 {
     use HasRevisionableChildren, HasRevisions;
 
     protected $table = 'posts';
+
+    protected $dispatchesEvents = [
+        'rollingBack' => PostRollingBack::class,
+        'rolledBack' => PostRolledBack::class,
+    ];
 
     protected $fillable = [
         'author_id',
