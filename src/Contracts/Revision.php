@@ -13,9 +13,25 @@ interface Revision
 
     public function user(): BelongsTo;
 
+    public function getCreatedAtColumn();
+
+    public function getUpdatedAtColumn();
+
     public function previous(): ?static;
 
     public function next(): ?static;
+
+    public function is(self $model);
+
+    public function isDefault(): bool;
+
+    public function isInitial(): bool;
+
+    public function isRollback(): bool;
+
+    public function isFirstRevision(): bool;
+
+    public function isLastRevision(): bool;
 
     public function isNewerThan(?self $revision): bool;
 

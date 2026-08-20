@@ -5,6 +5,8 @@ namespace TestMonitor\Revisable\Tests;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Orchestra\Testbench\TestCase as Orchestra;
+use TestMonitor\Revisable\Models\Revision;
+use TestMonitor\Revisable\PendingRevision;
 use TestMonitor\Revisable\RevisableServiceProvider;
 use TestMonitor\Revisable\Tests\Models\Author;
 use TestMonitor\Revisable\Tests\Models\Post;
@@ -102,5 +104,21 @@ abstract class TestCase extends Orchestra
             'votes' => 20,
             'views' => 200,
         ], $overrides));
+    }
+
+    /**
+     * Queue (but never persist) a revision by calling saveAsRevision() inside a batch.
+     */
+    protected function pendingRevision(?Post $post = null): PendingRevision
+    {
+        $post ??= $this->createPost();
+
+        $pending = null;
+
+        $post->withSingleRevision(function () use ($post, &$pending) {
+            $pending = $post->saveAsRevision('manual snapshot', ['reason' => 'audit']);
+        });
+
+        return $pending ?? new PendingRevision(new Revision);
     }
 }

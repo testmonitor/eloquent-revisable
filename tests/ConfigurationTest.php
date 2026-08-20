@@ -46,6 +46,23 @@ class ConfigurationTest extends TestCase
         RevisableServiceProvider::determineRevisionModel();
     }
 
+    #[Test]
+    public function it_builds_revisions_as_instances_of_the_configured_revision_model()
+    {
+        // Given
+        $revisionModel = new class extends Revision {};
+
+        config()->set('revisable.revision_model', $revisionModel::class);
+
+        $post = $this->createPost();
+
+        // When
+        $revision = $post->createNewRevision();
+
+        // Then
+        $this->assertInstanceOf($revisionModel::class, $revision);
+    }
+
     // User model
 
     #[Test]

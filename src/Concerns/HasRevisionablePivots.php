@@ -31,19 +31,17 @@ trait HasRevisionablePivots
             return;
         }
 
-        if (! $options->isEnabled() || $this->isRevisioningSuppressed()) {
+        if (! $options->isEnabled()) {
             return;
         }
 
-        if ($this->fireModelEvent('revisioning') === false) {
+        if ($this->isRevisioningDisabled()) {
             return;
         }
 
         $this->unsetRelation($relationName);
 
         $this->saveAsRevision();
-
-        $this->fireModelEvent('revisioned', false);
     }
 
     protected function newBelongsToMany(
