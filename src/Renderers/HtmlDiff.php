@@ -97,7 +97,6 @@ class HtmlDiff
 
         // Each block is a run of items considered aligned between before and after.
         foreach ((new ArrayAligner($before, $after))->align() as $block) {
-
             // Zip the block's two sides pairwise, padding the shorter side with null.
             foreach (array_map(null, $block->before, $block->after) as [$blockBefore, $blockAfter]) {
                 $pair = $this->diffArrayItem($blockBefore, $blockAfter);

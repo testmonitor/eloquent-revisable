@@ -58,10 +58,12 @@ class ArrayAligner
 
         // A trailing anchor at the very end of both arrays covers the final gap.
         foreach ([...$anchors, new AnchorPair(count($before), count($after))] as $anchor) {
-            foreach ($this->alignSlice(
+            $gapBlocks = $this->alignSlice(
                 array_slice($before, $beforeCursor, $anchor->beforeIndex - $beforeCursor),
                 array_slice($after, $afterCursor, $anchor->afterIndex - $afterCursor),
-            ) as $block) {
+            );
+
+            foreach ($gapBlocks as $block) {
                 $blocks[] = $block;
             }
 
