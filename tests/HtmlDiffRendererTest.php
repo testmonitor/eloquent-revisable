@@ -256,28 +256,29 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
-    public function it_uses_unique_items_as_anchors_around_a_duplicated_item()
+    public function it_uses_a_unique_item_as_an_anchor_around_a_duplicated_item()
     {
         // Given
         $htmlDiff = $this->diffFor(
-            ['Setup', 'Click submit', 'Verify result'],
-            ['Setup', 'Click cancel', 'Verify result'],
+            ['Log in as admin', 'Divider', 'Verify dashboard loads', 'Log in as admin'],
+            ['Divider', 'Verify dashboard loads correctly', 'Log in as admin'],
         );
 
         // When
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertSame('Setup', $result['before'][0]);
-        $this->assertSame('Setup', $result['after'][0]);
+        $this->assertStringContainsString('<del>', $result['before'][0]);
+        $this->assertStringContainsString('Log in as admin', $result['before'][0]);
 
-        $this->assertStringContainsString('<del>', $result['before'][1]);
-        $this->assertStringContainsString('submit', $result['before'][1]);
+        $this->assertSame('Divider', $result['before'][1]);
+        $this->assertSame('Divider', $result['after'][0]);
+
         $this->assertStringContainsString('<ins>', $result['after'][1]);
-        $this->assertStringContainsString('cancel', $result['after'][1]);
+        $this->assertStringContainsString('correctly', $result['after'][1]);
 
-        $this->assertSame('Verify result', end($result['before']));
-        $this->assertSame('Verify result', end($result['after']));
+        $this->assertSame('Log in as admin', end($result['before']));
+        $this->assertSame('Log in as admin', end($result['after']));
     }
 
     // Array lifecycle
