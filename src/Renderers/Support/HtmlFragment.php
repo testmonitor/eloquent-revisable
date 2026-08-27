@@ -79,7 +79,9 @@ class HtmlFragment
     public function removeAttribute(string $query, string $attribute): static
     {
         foreach ($this->xpath->query($query) as $element) {
-            $element->removeAttribute($attribute);
+            if ($element instanceof DOMElement) {
+                $element->removeAttribute($attribute);
+            }
         }
 
         return $this;

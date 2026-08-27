@@ -6,6 +6,7 @@ use Illuminate\Support\Str;
 use Jfcherng\Diff\DiffHelper;
 use Ssddanbrown\HtmlDiff\Diff as HtmlDiffer;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Renderers\Support\ArrayAligner;
 use TestMonitor\Revisable\Renderers\Support\HtmlFragment;
 
 class HtmlDiff
@@ -82,21 +83,54 @@ class HtmlDiff
     }
 
     /**
-     * Build HTML diffs for each pair in parallel before/after arrays.
+     * Build HTML diffs for a before/after array pair, aligning items by content via `ArrayAligner`.
      *
      * @return array{before: list<string>, after: list<string>}
      */
     protected function diffArray(array $before, array $after): array
     {
-        $diffs = collect(array_map(null, $before, $after))
-            ->map(fn (array $pair) => $this->diffValue((string) ($pair[0] ?? ''), (string) ($pair[1] ?? '')))
-            ->reject(fn (array $pair) => blank(strip_tags($pair['before'])) && blank(strip_tags($pair['after'])))
-            ->values();
+        $before = array_map(fn (mixed $item) => (string) $item, array_values($before));
+        $after = array_map(fn (mixed $item) => (string) $item, array_values($after));
+
+        $beforeOut = collect();
+        $afterOut = collect();
+
+        foreach ((new ArrayAligner($before, $after))->align() as $block) {
+            foreach (array_map(null, $block->before, $block->after) as [$blockBefore, $blockAfter]) {
+                $pair = $this->diffArrayItem($blockBefore, $blockAfter);
+
+                if ($pair['before'] !== null) {
+                    $beforeOut->push($pair['before']);
+                }
+
+                if ($pair['after'] !== null) {
+                    $afterOut->push($pair['after']);
+                }
+            }
+        }
 
         return [
-            'before' => $diffs->pluck('before')->all(),
-            'after' => $diffs->pluck('after')->all(),
+            'before' => $beforeOut->reject(fn (string $item) => blank(strip_tags($item)))->values()->all(),
+            'after' => $afterOut->reject(fn (string $item) => blank(strip_tags($item)))->values()->all(),
         ];
+    }
+
+    /**
+     * Diff a single item pair from an aligned block. A null side means a pure insertion or deletion.
+     *
+     * @return array{before: ?string, after: ?string}
+     */
+    protected function diffArrayItem(?string $before, ?string $after): array
+    {
+        if ($before !== null && $after !== null) {
+            return $this->diffValue($before, $after);
+        }
+
+        if ($before !== null) {
+            return ['before' => $this->diffValue($before, '')['before'], 'after' => null];
+        }
+
+        return ['before' => null, 'after' => $this->diffValue('', $after)['after']];
     }
 
     /**
