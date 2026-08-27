@@ -21,6 +21,8 @@ class ArrayAligner
     ) {}
 
     /**
+     * Align the two arrays using anchors to guide the alignment.
+     *
      * @return list<AlignedBlock>
      */
     public function align(): array
@@ -29,6 +31,8 @@ class ArrayAligner
     }
 
     /**
+     * Recursively align a slice of the before and after arrays, using anchors to guide the alignment.
+     *
      * @return list<AlignedBlock>
      */
     protected function alignSlice(array $before, array $after): array
@@ -54,13 +58,12 @@ class ArrayAligner
 
         // A trailing anchor at the very end of both arrays covers the final gap.
         foreach ([...$anchors, new AnchorPair(count($before), count($after))] as $anchor) {
-            $blocks = [
-                ...$blocks,
-                ...$this->alignSlice(
-                    array_slice($before, $beforeCursor, $anchor->beforeIndex - $beforeCursor),
-                    array_slice($after, $afterCursor, $anchor->afterIndex - $afterCursor),
-                ),
-            ];
+            foreach ($this->alignSlice(
+                array_slice($before, $beforeCursor, $anchor->beforeIndex - $beforeCursor),
+                array_slice($after, $afterCursor, $anchor->afterIndex - $afterCursor),
+            ) as $block) {
+                $blocks[] = $block;
+            }
 
             // Skip the synthetic trailing anchor added above — it has no content of its own.
             if ($anchor->beforeIndex < count($before)) {

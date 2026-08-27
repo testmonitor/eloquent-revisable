@@ -95,14 +95,17 @@ class HtmlDiff
         $beforeOut = collect();
         $afterOut = collect();
 
+        // Each block is a run of items considered aligned between before and after.
         foreach ((new ArrayAligner($before, $after))->align() as $block) {
+
+            // Zip the block's two sides pairwise, padding the shorter side with null.
             foreach (array_map(null, $block->before, $block->after) as [$blockBefore, $blockAfter]) {
                 $pair = $this->diffArrayItem($blockBefore, $blockAfter);
 
+                // Only push non-null sides to the output collections.
                 if ($pair['before'] !== null) {
                     $beforeOut->push($pair['before']);
                 }
-
                 if ($pair['after'] !== null) {
                     $afterOut->push($pair['after']);
                 }
@@ -122,15 +125,18 @@ class HtmlDiff
      */
     protected function diffArrayItem(?string $before, ?string $after): array
     {
-        if ($before !== null && $after !== null) {
-            return $this->diffValue($before, $after);
-        }
-
-        if ($before !== null) {
+        // If before is non-null and after is null, it's a deletion.
+        if ($before !== null && $after === null) {
             return ['before' => $this->diffValue($before, '')['before'], 'after' => null];
         }
 
-        return ['before' => null, 'after' => $this->diffValue('', $after)['after']];
+        // If before is null and after is non-null, it's an insertion.
+        if ($before === null && $after !== null) {
+            return ['before' => null, 'after' => $this->diffValue('', $after)['after']];
+        }
+
+        // If both sides are non-null, delegate to diffValue.
+        return $this->diffValue($before, $after);
     }
 
     /**
