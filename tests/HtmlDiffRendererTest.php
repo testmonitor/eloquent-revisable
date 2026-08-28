@@ -216,22 +216,69 @@ class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
-    public function it_keeps_before_and_after_arrays_aligned_after_filtering()
+    public function it_never_leaves_blank_entries_in_either_array()
     {
-        // Given — second pair has empty after, which under independent filtering would remove it from
-        // after but keep it in before (due to the strip_tags difference), shifting subsequent indexes
+        // Given
         $htmlDiff = $this->diffFor(['apple', 'banana', 'cherry'], ['apple', '', 'grape']);
 
         // When
         $result = $htmlDiff->field('value');
 
-        // Then — both arrays must have the same length
-        $this->assertCount(count($result['before']), $result['after']);
-
-        // And corresponding entries must be the same pair
-        foreach (array_keys($result['before']) as $i) {
-            $this->assertArrayHasKey($i, $result['after']);
+        // Then
+        foreach ($result['before'] as $item) {
+            $this->assertNotSame('', trim(strip_tags($item)));
         }
+
+        foreach ($result['after'] as $item) {
+            $this->assertNotSame('', trim(strip_tags($item)));
+        }
+    }
+
+    #[Test]
+    public function it_does_not_misdiff_the_surviving_neighbor_after_a_mid_array_removal()
+    {
+        // Given
+        $htmlDiff = $this->diffFor(['apple', 'banana', 'cherry'], ['apple', 'cherry']);
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertCount(3, $result['before']);
+        $this->assertSame('apple', $result['before'][0]);
+        $this->assertStringContainsString('<del>', $result['before'][1]);
+        $this->assertStringContainsString('banana', $result['before'][1]);
+        $this->assertSame('cherry', $result['before'][2]);
+
+        $this->assertCount(2, $result['after']);
+        $this->assertSame('apple', $result['after'][0]);
+        $this->assertSame('cherry', $result['after'][1]);
+    }
+
+    #[Test]
+    public function it_uses_a_unique_item_as_an_anchor_around_a_duplicated_item()
+    {
+        // Given
+        $htmlDiff = $this->diffFor(
+            ['Log in as admin', 'Divider', 'Verify dashboard loads', 'Log in as admin'],
+            ['Divider', 'Verify dashboard loads correctly', 'Log in as admin'],
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertStringContainsString('<del>', $result['before'][0]);
+        $this->assertStringContainsString('Log in as admin', $result['before'][0]);
+
+        $this->assertSame('Divider', $result['before'][1]);
+        $this->assertSame('Divider', $result['after'][0]);
+
+        $this->assertStringContainsString('<ins>', $result['after'][1]);
+        $this->assertStringContainsString('correctly', $result['after'][1]);
+
+        $this->assertSame('Log in as admin', end($result['before']));
+        $this->assertSame('Log in as admin', end($result['after']));
     }
 
     // Array lifecycle
