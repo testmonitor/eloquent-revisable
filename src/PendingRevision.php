@@ -44,7 +44,7 @@ class PendingRevision implements RevisionContract
         $this->unavailableWhilePending();
     }
 
-    public function is(RevisionContract $model)
+    public function is(RevisionContract $model): never
     {
         $this->unavailableWhilePending();
     }

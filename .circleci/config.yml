@@ -42,6 +42,11 @@ jobs:
           command: |
             mkdir -p ./logs/phpcs
             vendor/bin/phpcs -v --report=junit --report-file=logs/phpcs/junit.xml src/
+      - run:
+          name: Rector
+          command: |
+            mkdir -p ./logs/rector
+            vendor/bin/rector process --dry-run --no-ansi --no-progress-bar --rules-summary > logs/rector/rector.log
 
       - store_artifacts:
           path: ./logs/pint
@@ -49,6 +54,9 @@ jobs:
       - store_artifacts:
           path: ./logs/phpcs
           destination: phpcs
+      - store_artifacts:
+          path: ./logs/rector
+          destination: rector
       - store_test_results:
           path: ./logs
 

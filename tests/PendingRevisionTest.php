@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Tests\Models\Author;
 
-class PendingRevisionTest extends TestCase
+final class PendingRevisionTest extends TestCase
 {
     #[Test]
     public function it_reports_the_metadata_captured_at_queue_time()

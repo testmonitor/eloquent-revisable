@@ -3,12 +3,13 @@
 namespace TestMonitor\Revisable\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
+use stdClass;
 use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableServiceProvider;
 use TestMonitor\Revisable\Tests\Models\Author;
 
-class ConfigurationTest extends TestCase
+final class ConfigurationTest extends TestCase
 {
     // Revision model
 
@@ -19,14 +20,14 @@ class ConfigurationTest extends TestCase
         $revisionModel = RevisableServiceProvider::determineRevisionModel();
 
         // Then
-        $this->assertEquals(Revision::class, $revisionModel);
+        $this->assertSame(Revision::class, $revisionModel);
     }
 
     #[Test]
     public function it_throws_when_the_configured_revision_model_does_not_extend_the_base_revision()
     {
         // Given
-        config()->set('revisable.revision_model', \stdClass::class);
+        config()->set('revisable.revision_model', stdClass::class);
 
         // When / Then
         $this->expectException(InvalidConfiguration::class);
@@ -75,14 +76,14 @@ class ConfigurationTest extends TestCase
         $userModel = RevisableServiceProvider::determineUserModel();
 
         // Then
-        $this->assertEquals(Author::class, $userModel);
+        $this->assertSame(Author::class, $userModel);
     }
 
     #[Test]
     public function it_throws_when_the_user_model_is_not_a_valid_model_class()
     {
         // Given
-        config()->set('revisable.user_model', \stdClass::class);
+        config()->set('revisable.user_model', stdClass::class);
 
         // When / Then
         $this->expectException(InvalidConfiguration::class);

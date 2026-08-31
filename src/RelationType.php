@@ -63,12 +63,6 @@ class RelationType
 
     protected static function isInstanceOf(string $relation, array $types): bool
     {
-        foreach ($types as $type) {
-            if (is_a($relation, $type, true)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($types, fn ($type) => is_a($relation, $type, true));
     }
 }

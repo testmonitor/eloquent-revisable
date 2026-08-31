@@ -7,7 +7,7 @@ use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class RevisionNamingTest extends TestCase
+final class RevisionNamingTest extends TestCase
 {
     #[Test]
     public function it_stores_no_name_by_default()

@@ -9,7 +9,7 @@ use TestMonitor\Revisable\Tests\Events\PostRolledBack;
 use TestMonitor\Revisable\Tests\Events\PostRollingBack;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class RevisionEventsTest extends TestCase
+final class RevisionEventsTest extends TestCase
 {
     #[Test]
     public function it_fires_the_revisioning_event_before_a_revision_is_created()

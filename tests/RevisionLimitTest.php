@@ -7,7 +7,7 @@ use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class RevisionLimitTest extends TestCase
+final class RevisionLimitTest extends TestCase
 {
     #[Test]
     public function it_caps_the_number_of_stored_revisions_at_the_configured_limit()

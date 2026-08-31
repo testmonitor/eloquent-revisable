@@ -197,7 +197,7 @@ class HtmlFragment
     {
         $ancestor = $node->parentNode;
 
-        while ($ancestor !== null && $ancestor !== $boundary) {
+        while ($ancestor instanceof DOMNode && $ancestor !== $boundary) {
             if ($ancestor->nodeName === $tagName) {
                 return true;
             }

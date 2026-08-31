@@ -11,7 +11,7 @@ use TestMonitor\Revisable\Tests\Models\Comment;
 use TestMonitor\Revisable\Tests\Models\Post;
 use TestMonitor\Revisable\Tests\Models\Tag;
 
-class RevisionFiltersTest extends TestCase
+final class RevisionFiltersTest extends TestCase
 {
     #[Test]
     public function it_restores_a_relation_record_that_passes_the_configured_filter_when_rolling_back()

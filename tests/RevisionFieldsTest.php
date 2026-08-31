@@ -14,7 +14,7 @@ use TestMonitor\Revisable\Tests\Models\Post;
 use TestMonitor\Revisable\Tests\Models\Reply;
 use TestMonitor\Revisable\Tests\Models\Tag;
 
-class RevisionFieldsTest extends TestCase
+final class RevisionFieldsTest extends TestCase
 {
     #[Test]
     public function it_only_stores_the_specified_fields_in_a_revision()

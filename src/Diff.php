@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable;
 
+use Closure;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
@@ -102,7 +103,7 @@ class Diff
     /**
      * Return the names of the fields and relations that changed between the two revisions.
      *
-     * @param  array<string, \Closure>  $except
+     * @param  array<string, Closure>  $except
      */
     public function changed(array $except = []): array
     {
@@ -112,7 +113,7 @@ class Diff
     /**
      * Return only the fields and relations that changed between the two revisions.
      *
-     * @param  array<string, \Closure>  $except
+     * @param  array<string, Closure>  $except
      */
     public function changes(array $except = []): array
     {
@@ -154,7 +155,7 @@ class Diff
      * Drop relation records that are stale per their predicate in $except, returning a filtered copy.
      *
      * @param  array<string, mixed>  $relations
-     * @param  array<string, \Closure>  $except
+     * @param  array<string, Closure>  $except
      * @return array<string, mixed>
      */
     protected function stripExceptRecords(array $relations, array $except): array

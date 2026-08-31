@@ -6,7 +6,7 @@ use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class RevisionNavigationTest extends TestCase
+final class RevisionNavigationTest extends TestCase
 {
     #[Test]
     public function it_returns_the_previous_revision()

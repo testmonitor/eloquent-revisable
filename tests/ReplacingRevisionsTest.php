@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Tests;
 
+use DateInterval;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
 use TestMonitor\Revisable\Enums\RevisionType;
@@ -9,7 +10,7 @@ use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 use TestMonitor\Revisable\UserResolver;
 
-class ReplacingRevisionsTest extends TestCase
+final class ReplacingRevisionsTest extends TestCase
 {
     #[Test]
     public function it_creates_a_new_revision_when_none_exists_yet()
@@ -445,6 +446,7 @@ class ReplacingRevisionsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags(3);
 
         // First pivot change creates the revision
@@ -476,7 +478,7 @@ class ReplacingRevisionsTest extends TestCase
             {
                 return parent::getRevisionOptions()
                     ->replaceWhen(true)
-                    ->replaceWithin(new \DateInterval('PT1H'));
+                    ->replaceWithin(new DateInterval('PT1H'));
             }
         };
 
@@ -500,7 +502,7 @@ class ReplacingRevisionsTest extends TestCase
             {
                 return parent::getRevisionOptions()
                     ->replaceWhen(true)
-                    ->replaceWithin(new \DateInterval('PT1H'));
+                    ->replaceWithin(new DateInterval('PT1H'));
             }
         };
 

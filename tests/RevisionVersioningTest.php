@@ -8,7 +8,7 @@ use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class RevisionVersioningTest extends TestCase
+final class RevisionVersioningTest extends TestCase
 {
     #[Test]
     public function it_assigns_sequential_version_numbers()
@@ -106,7 +106,7 @@ class RevisionVersioningTest extends TestCase
         // When
         (new Revision)->forceFill([
             'revisionable_id' => $post->id,
-            'revisionable_type' => get_class($post),
+            'revisionable_type' => $post::class,
             'version' => $post->revisions()->firstOrFail()->version,
             'metadata' => [],
         ])->save();
