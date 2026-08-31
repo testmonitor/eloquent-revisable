@@ -77,7 +77,7 @@ class Revision extends Model implements RevisionContract
     {
         $query->where([
             'revisionable_id' => $model->getKey(),
-            'revisionable_type' => get_class($model),
+            'revisionable_type' => $model::class,
         ]);
     }
 
@@ -258,7 +258,7 @@ class Revision extends Model implements RevisionContract
      */
     public function diff(?RevisionContract $target = null): Diff
     {
-        if ($target === null) {
+        if (! $target instanceof RevisionContract) {
             return Diff::fromNothing($this);
         }
 

@@ -95,7 +95,7 @@ trait BelongsToRevisable
     {
         $morphToMethod = null;
 
-        foreach ((new ReflectionClass($this))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+        foreach (new ReflectionClass($this)->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             if ($method->getNumberOfParameters() > 0 || $method->isStatic()) {
                 continue;
             }
@@ -123,7 +123,7 @@ trait BelongsToRevisable
             }
 
             if ($relation instanceof BelongsTo) {
-                $relatedClass = get_class($relation->getRelated());
+                $relatedClass = $relation->getRelated()::class;
 
                 if (in_array(HasRevisionableChildren::class, class_uses_recursive($relatedClass))) {
                     return [$method->getName(), false];
@@ -142,13 +142,13 @@ trait BelongsToRevisable
     {
         static $cache = [];
 
-        $cacheKey = get_class($parent) . ':' . static::class;
+        $cacheKey = $parent::class . ':' . static::class;
 
         if (array_key_exists($cacheKey, $cache)) {
             return $cache[$cacheKey];
         }
 
-        foreach ((new ReflectionClass($parent))->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+        foreach (new ReflectionClass($parent)->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             if ($method->getNumberOfParameters() > 0 || $method->isStatic()) {
                 continue;
             }
@@ -169,11 +169,11 @@ trait BelongsToRevisable
                 continue;
             }
 
-            if (! $relation instanceof Relation || ! RelationType::isChild(get_class($relation))) {
+            if (! $relation instanceof Relation || ! RelationType::isChild($relation::class)) {
                 continue;
             }
 
-            if (is_a($this, get_class($relation->getRelated()))) {
+            if (is_a($this, $relation->getRelated()::class)) {
                 return $cache[$cacheKey] = $method->getName();
             }
         }

@@ -6,7 +6,7 @@ use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class RevisionPropertiesTest extends TestCase
+final class RevisionPropertiesTest extends TestCase
 {
     #[Test]
     public function it_can_set_a_single_property_on_a_revision()
@@ -21,6 +21,7 @@ class RevisionPropertiesTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $revision = $post->latestRevision;
 
         // When
@@ -43,6 +44,7 @@ class RevisionPropertiesTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $revision = $post->latestRevision;
 
         // When
@@ -143,6 +145,7 @@ class RevisionPropertiesTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $revision = $post->latestRevision;
 
         // When / Then

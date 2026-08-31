@@ -14,7 +14,7 @@ use TestMonitor\Revisable\Tests\Models\Comment;
 use TestMonitor\Revisable\Tests\Models\Post;
 use TestMonitor\Revisable\Tests\Models\Tag;
 
-class RevisionRelationsTest extends TestCase
+final class RevisionRelationsTest extends TestCase
 {
     // BelongsTo
 

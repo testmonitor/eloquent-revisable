@@ -16,7 +16,7 @@ class UserResolver
 
     public function resolve(): int|string|null
     {
-        if ($this->resolver !== null) {
+        if ($this->resolver instanceof Closure) {
             return ($this->resolver)();
         }
 

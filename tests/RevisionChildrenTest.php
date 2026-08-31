@@ -11,7 +11,7 @@ use TestMonitor\Revisable\Tests\Models\Attachment;
 use TestMonitor\Revisable\Tests\Models\Comment;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class RevisionChildrenTest extends TestCase
+final class RevisionChildrenTest extends TestCase
 {
     #[Test]
     public function it_creates_a_revision_when_a_tracked_child_is_created()

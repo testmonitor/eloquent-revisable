@@ -12,7 +12,7 @@ use TestMonitor\Revisable\Tests\Models\Author;
 use TestMonitor\Revisable\Tests\Models\Post;
 use TestMonitor\Revisable\UserResolver;
 
-class CreatingRevisionsTest extends TestCase
+final class CreatingRevisionsTest extends TestCase
 {
     #[Test]
     public function it_automatically_creates_a_revision_when_the_record_changes()
@@ -572,9 +572,9 @@ class CreatingRevisionsTest extends TestCase
         $post = $this->createPost($post);
 
         DB::table('revisions')->insert([
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'version' => 1, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'version' => 2, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
-            ['revisionable_type' => get_class($post), 'revisionable_id' => $post->id, 'version' => 3, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => $post::class, 'revisionable_id' => $post->id, 'version' => 1, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => $post::class, 'revisionable_id' => $post->id, 'version' => 2, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
+            ['revisionable_type' => $post::class, 'revisionable_id' => $post->id, 'version' => 3, 'metadata' => json_encode([]), 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         $this->assertEquals(3, $post->revisions()->count());

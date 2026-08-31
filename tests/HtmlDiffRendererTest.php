@@ -7,14 +7,14 @@ use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\Renderers\HtmlDiff;
 
-class HtmlDiffRendererTest extends TestCase
+final class HtmlDiffRendererTest extends TestCase
 {
     protected function diffFor(mixed $old, mixed $new, string $field = 'value'): HtmlDiff
     {
         $before = new Revision(['metadata' => ['attributes' => [$field => $old]]]);
         $after = new Revision(['metadata' => ['attributes' => [$field => $new]]]);
 
-        return (new Diff($before, $after))->asHtml();
+        return new Diff($before, $after)->asHtml();
     }
 
     // Field access
@@ -69,10 +69,10 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringNotContainsString('<ins>', $result['before']);
-        $this->assertStringNotContainsString('<del>', $result['after']);
-        $this->assertStringContainsString('<del>', $result['before']);
-        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringNotContainsString('<ins>', (string) $result['before']);
+        $this->assertStringNotContainsString('<del>', (string) $result['after']);
+        $this->assertStringContainsString('<del>', (string) $result['before']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
     }
 
     #[Test]
@@ -85,9 +85,9 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<del>', $result['before']);
-        $this->assertStringContainsString('world', $result['before']);
-        $this->assertStringNotContainsString('<ins>', $result['before']);
+        $this->assertStringContainsString('<del>', (string) $result['before']);
+        $this->assertStringContainsString('world', (string) $result['before']);
+        $this->assertStringNotContainsString('<ins>', (string) $result['before']);
     }
 
     #[Test]
@@ -100,9 +100,9 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<ins>', $result['after']);
-        $this->assertStringContainsString('world', $result['after']);
-        $this->assertStringNotContainsString('<del>', $result['after']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
+        $this->assertStringContainsString('world', (string) $result['after']);
+        $this->assertStringNotContainsString('<del>', (string) $result['after']);
     }
 
     // Edge cases
@@ -117,8 +117,8 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<ins>', $result['after']);
-        $this->assertStringContainsString('new content', $result['after']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
+        $this->assertStringContainsString('new content', (string) $result['after']);
     }
 
     #[Test]
@@ -131,8 +131,8 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<del>', $result['before']);
-        $this->assertStringContainsString('old content', $result['before']);
+        $this->assertStringContainsString('<del>', (string) $result['before']);
+        $this->assertStringContainsString('old content', (string) $result['before']);
     }
 
     #[Test]
@@ -182,7 +182,7 @@ class HtmlDiffRendererTest extends TestCase
         $this->assertIsArray($result['before']);
         $this->assertIsArray($result['after']);
         $this->assertSame('apple', $result['before'][0]);
-        $this->assertStringContainsString('<ins>', $result['after'][1]);
+        $this->assertStringContainsString('<ins>', (string) $result['after'][1]);
     }
 
     #[Test]
@@ -212,7 +212,7 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — both elements are present
         $this->assertCount(2, $result['after']);
-        $this->assertStringContainsString('banana', $result['after'][1]);
+        $this->assertStringContainsString('banana', (string) $result['after'][1]);
     }
 
     #[Test]
@@ -246,8 +246,8 @@ class HtmlDiffRendererTest extends TestCase
         // Then
         $this->assertCount(3, $result['before']);
         $this->assertSame('apple', $result['before'][0]);
-        $this->assertStringContainsString('<del>', $result['before'][1]);
-        $this->assertStringContainsString('banana', $result['before'][1]);
+        $this->assertStringContainsString('<del>', (string) $result['before'][1]);
+        $this->assertStringContainsString('banana', (string) $result['before'][1]);
         $this->assertSame('cherry', $result['before'][2]);
 
         $this->assertCount(2, $result['after']);
@@ -268,14 +268,14 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<del>', $result['before'][0]);
-        $this->assertStringContainsString('Log in as admin', $result['before'][0]);
+        $this->assertStringContainsString('<del>', (string) $result['before'][0]);
+        $this->assertStringContainsString('Log in as admin', (string) $result['before'][0]);
 
         $this->assertSame('Divider', $result['before'][1]);
         $this->assertSame('Divider', $result['after'][0]);
 
-        $this->assertStringContainsString('<ins>', $result['after'][1]);
-        $this->assertStringContainsString('correctly', $result['after'][1]);
+        $this->assertStringContainsString('<ins>', (string) $result['after'][1]);
+        $this->assertStringContainsString('correctly', (string) $result['after'][1]);
 
         $this->assertSame('Log in as admin', end($result['before']));
         $this->assertSame('Log in as admin', end($result['after']));
@@ -295,8 +295,8 @@ class HtmlDiffRendererTest extends TestCase
         // Then — no blank placeholder lines on the before side, one per item on the after side
         $this->assertSame([], $result['before']);
         $this->assertCount(2, $result['after']);
-        $this->assertStringContainsString('<ins>', $result['after'][0]);
-        $this->assertStringContainsString('apple', $result['after'][0]);
+        $this->assertStringContainsString('<ins>', (string) $result['after'][0]);
+        $this->assertStringContainsString('apple', (string) $result['after'][0]);
     }
 
     #[Test]
@@ -311,8 +311,8 @@ class HtmlDiffRendererTest extends TestCase
         // Then — no blank placeholder lines on the after side, one per item on the before side
         $this->assertSame([], $result['after']);
         $this->assertCount(2, $result['before']);
-        $this->assertStringContainsString('<del>', $result['before'][0]);
-        $this->assertStringContainsString('apple', $result['before'][0]);
+        $this->assertStringContainsString('<del>', (string) $result['before'][0]);
+        $this->assertStringContainsString('apple', (string) $result['before'][0]);
     }
 
     // Multiline
@@ -327,9 +327,9 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<del>', $result['before']);
-        $this->assertStringContainsString('<ins>', $result['after']);
-        $this->assertStringContainsString('<br>', $result['before']);
+        $this->assertStringContainsString('<del>', (string) $result['before']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
+        $this->assertStringContainsString('<br>', (string) $result['before']);
     }
 
     // Configuration
@@ -338,17 +338,17 @@ class HtmlDiffRendererTest extends TestCase
     public function it_uses_char_level_detail_when_configured()
     {
         // Given
-        $htmlDiff = (new Diff(
+        $htmlDiff = new Diff(
             new Revision(['metadata' => ['attributes' => ['value' => 'abcde']]]),
             new Revision(['metadata' => ['attributes' => ['value' => 'abXde']]]),
-        ))->asHtml(detailLevel: 'char');
+        )->asHtml(detailLevel: 'char');
 
         // When
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<del>', $result['before']);
-        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('<del>', (string) $result['before']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
     }
 
     #[Test]
@@ -357,10 +357,10 @@ class HtmlDiffRendererTest extends TestCase
         // Given
         $before = '<p>Hello <strong>world</strong></p>';
         $after = '<p>Hello <strong>universe</strong></p>';
-        $htmlDiff = (new Diff(
+        $htmlDiff = new Diff(
             new Revision(['metadata' => ['attributes' => ['value' => $before]]]),
             new Revision(['metadata' => ['attributes' => ['value' => $after]]]),
-        ))->asHtml(detailLevel: 'none');
+        )->asHtml(detailLevel: 'none');
 
         // When
         $result = $htmlDiff->field('value');
@@ -374,17 +374,17 @@ class HtmlDiffRendererTest extends TestCase
     public function it_uses_the_configured_line_separator_for_multiline_values()
     {
         // Given
-        $htmlDiff = (new Diff(
+        $htmlDiff = new Diff(
             new Revision(['metadata' => ['attributes' => ['value' => "Line one\nLine two"]]]),
             new Revision(['metadata' => ['attributes' => ['value' => "Line one\nLine changed"]]]),
-        ))->asHtml(lineSeparator: '<p>');
+        )->asHtml(lineSeparator: '<p>');
 
         // When
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<p>', $result['before']);
-        $this->assertStringNotContainsString('<br>', $result['before']);
+        $this->assertStringContainsString('<p>', (string) $result['before']);
+        $this->assertStringNotContainsString('<br>', (string) $result['before']);
     }
 
     // HTML-aware diffing — formatting changes
@@ -403,8 +403,8 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — the word must appear in both views, not just the after view,
         // and the before view marks it as a formatting change (not a deletion)
-        $this->assertStringContainsString('<del class="mod">Consequatur</del>', $result['before']);
-        $this->assertStringContainsString('Consequatur', $result['after']);
+        $this->assertStringContainsString('<del class="mod">Consequatur</del>', (string) $result['before']);
+        $this->assertStringContainsString('Consequatur', (string) $result['after']);
     }
 
     #[Test]
@@ -420,11 +420,11 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringNotContainsString('&lt;', $result['before']);
-        $this->assertStringNotContainsString('&lt;', $result['after']);
-        $this->assertStringContainsString('<strong>', $result['after']);
-        $this->assertStringContainsString('<ins class="mod">', $result['after']);
-        $this->assertStringContainsString('Consequatur', $result['after']);
+        $this->assertStringNotContainsString('&lt;', (string) $result['before']);
+        $this->assertStringNotContainsString('&lt;', (string) $result['after']);
+        $this->assertStringContainsString('<strong>', (string) $result['after']);
+        $this->assertStringContainsString('<ins class="mod">', (string) $result['after']);
+        $this->assertStringContainsString('Consequatur', (string) $result['after']);
     }
 
     #[Test]
@@ -440,12 +440,12 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<del>', $result['before']);
-        $this->assertStringContainsString('world', $result['before']);
-        $this->assertStringContainsString('<ins>', $result['after']);
-        $this->assertStringContainsString('<strong>', $result['after']);
-        $this->assertStringContainsString('universe', $result['after']);
-        $this->assertStringNotContainsString('&lt;', $result['after']);
+        $this->assertStringContainsString('<del>', (string) $result['before']);
+        $this->assertStringContainsString('world', (string) $result['before']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
+        $this->assertStringContainsString('<strong>', (string) $result['after']);
+        $this->assertStringContainsString('universe', (string) $result['after']);
+        $this->assertStringNotContainsString('&lt;', (string) $result['after']);
     }
 
     #[Test]
@@ -462,7 +462,7 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then
         $this->assertSame(1, substr_count($result['after'], '<ins class="mod">'));
-        $this->assertStringContainsString('<ins class="mod">Hello world</ins>', $result['after']);
+        $this->assertStringContainsString('<ins class="mod">Hello world</ins>', (string) $result['after']);
     }
 
     // HTML-aware diffing — preexisting content
@@ -481,8 +481,8 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — both views stay identical to the input, nothing is stripped
         $this->assertSame($result['before'], $result['after']);
-        $this->assertStringContainsString('<p></p>', $result['before']);
-        $this->assertStringContainsString('<li></li>', $result['before']);
+        $this->assertStringContainsString('<p></p>', (string) $result['before']);
+        $this->assertStringContainsString('<li></li>', (string) $result['before']);
     }
 
     // HTML-aware diffing — wholly changed elements
@@ -501,8 +501,8 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — the before view still has exactly its original two bullets, no dangling empty one
         $this->assertSame(2, preg_match_all('/<li[^>]*>/', $result['before']));
-        $this->assertStringContainsString('<ins>', $result['after']);
-        $this->assertStringContainsString('three', $result['after']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
+        $this->assertStringContainsString('three', (string) $result['after']);
     }
 
     #[Test]
@@ -521,7 +521,7 @@ class HtmlDiffRendererTest extends TestCase
         // Then — the before view still has exactly its original single row, no dangling empty one
         $this->assertSame(1, preg_match_all('/<tr[^>]*>/', $result['before']));
         $this->assertSame(1, preg_match_all('/<td[^>]*>/', $result['before']));
-        $this->assertStringContainsString('two', $result['after']);
+        $this->assertStringContainsString('two', (string) $result['after']);
     }
 
     #[Test]
@@ -538,9 +538,9 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — the whole <li> is gone, not left behind as an empty <li><p></p></li>
         $this->assertSame(1, preg_match_all('/<li[^>]*>/', $result['before']));
-        $this->assertStringNotContainsString('<p></p>', $result['before']);
-        $this->assertStringContainsString('<ins>', $result['after']);
-        $this->assertStringContainsString('two', $result['after']);
+        $this->assertStringNotContainsString('<p></p>', (string) $result['before']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
+        $this->assertStringContainsString('two', (string) $result['after']);
     }
 
     #[Test]
@@ -557,9 +557,9 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — the whole <li> is gone from the after view, not left behind as <li><p></p></li>
         $this->assertSame(1, preg_match_all('/<li[^>]*>/', $result['after']));
-        $this->assertStringNotContainsString('<p></p>', $result['after']);
-        $this->assertStringContainsString('<del>', $result['before']);
-        $this->assertStringContainsString('two', $result['before']);
+        $this->assertStringNotContainsString('<p></p>', (string) $result['after']);
+        $this->assertStringContainsString('<del>', (string) $result['before']);
+        $this->assertStringContainsString('two', (string) $result['before']);
     }
 
     #[Test]
@@ -573,7 +573,7 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — no dangling empty <ul></ul> left behind
         $this->assertSame('', $result['before']);
-        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
     }
 
     #[Test]
@@ -591,7 +591,7 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — both the table and its now-empty tbody wrapper are gone
         $this->assertSame('', $result['before']);
-        $this->assertStringContainsString('<ins>', $result['after']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
     }
 
     // HTML-aware diffing — structural mismatch (full swap)
@@ -611,7 +611,7 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — the whole list is marked deleted, the whole plain text marked inserted,
         // with no plain-text fragments left dangling inside the old <li>
-        $this->assertStringContainsString('<del>Quia dolore non ut recusandae.</del>', $result['before']);
+        $this->assertStringContainsString('<del>Quia dolore non ut recusandae.</del>', (string) $result['before']);
         $this->assertSame('<ins>Quia dolore is different now.</ins>', $result['after']);
     }
 
@@ -629,7 +629,7 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — no fragments of the old plain text left dangling inside the new <li>
         $this->assertSame('<del>Quia dolore non ut recusandae.</del>', $result['before']);
-        $this->assertStringContainsString('<ins>Quia dolore is different now.</ins>', $result['after']);
+        $this->assertStringContainsString('<ins>Quia dolore is different now.</ins>', (string) $result['after']);
     }
 
     #[Test]
@@ -646,8 +646,8 @@ class HtmlDiffRendererTest extends TestCase
 
         // Then — word-level markers inside a single shared <li>, not a wholesale replacement
         $this->assertSame(1, preg_match_all('/<li[^>]*>/', $result['before']));
-        $this->assertStringContainsString('<del>Alpha</del>', $result['before']);
-        $this->assertStringContainsString('<ins>Zzz</ins>', $result['after']);
+        $this->assertStringContainsString('<del>Alpha</del>', (string) $result['before']);
+        $this->assertStringContainsString('<ins>Zzz</ins>', (string) $result['after']);
     }
 
     #[Test]
@@ -660,10 +660,10 @@ class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertStringContainsString('<del>', $result['before']);
-        $this->assertStringContainsString('world', $result['before']);
-        $this->assertStringContainsString('<ins>', $result['after']);
-        $this->assertStringContainsString('<strong>', $result['after']);
-        $this->assertStringContainsString('universe', $result['after']);
+        $this->assertStringContainsString('<del>', (string) $result['before']);
+        $this->assertStringContainsString('world', (string) $result['before']);
+        $this->assertStringContainsString('<ins>', (string) $result['after']);
+        $this->assertStringContainsString('<strong>', (string) $result['after']);
+        $this->assertStringContainsString('universe', (string) $result['after']);
     }
 }

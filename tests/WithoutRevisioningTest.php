@@ -3,11 +3,12 @@
 namespace TestMonitor\Revisable\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class WithoutRevisioningTest extends TestCase
+final class WithoutRevisioningTest extends TestCase
 {
     #[Test]
     public function it_does_not_create_a_revision_when_disabled_via_boolean()
@@ -104,9 +105,9 @@ class WithoutRevisioningTest extends TestCase
         try {
             $post->withoutRevisioning(function () use ($post) {
                 $this->modifyPost($post);
-                throw new \RuntimeException('Something went wrong');
+                throw new RuntimeException('Something went wrong');
             });
-        } catch (\RuntimeException) {
+        } catch (RuntimeException) {
             // expected
         }
 

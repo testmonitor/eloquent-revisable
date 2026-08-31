@@ -10,7 +10,7 @@ use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class RevisionDiffTest extends TestCase
+final class RevisionDiffTest extends TestCase
 {
     // vs nothing (default)
 
@@ -302,6 +302,7 @@ class RevisionDiffTest extends TestCase
 
         // When
         $post->votes = 999;
+
         $diff = $post->diff();
 
         // Then
@@ -325,6 +326,7 @@ class RevisionDiffTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags(3);
 
         // Revision 1: tags 1 and 2
@@ -362,6 +364,7 @@ class RevisionDiffTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags(3);
 
         // Revision 1: tags 1 and 2
@@ -398,6 +401,7 @@ class RevisionDiffTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags(2);
 
         // Revision 1: tags 1 and 2
@@ -431,6 +435,7 @@ class RevisionDiffTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags(1);
 
         // Revision 1: tag attached with position 1
@@ -468,6 +473,7 @@ class RevisionDiffTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags(3);
 
         // Revision: tags 1 and 2
@@ -685,7 +691,7 @@ class RevisionDiffTest extends TestCase
         $diff = Diff::fromNothing($revision);
 
         // Then
-        $this->assertNull($diff->before());
+        $this->assertNotInstanceOf(\TestMonitor\Revisable\Contracts\Revision::class, $diff->before());
         $this->assertSame($revision, $diff->after());
     }
 

@@ -3,6 +3,7 @@
 namespace TestMonitor\Revisable;
 
 use Closure;
+use DateInterval;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -43,7 +44,7 @@ class RevisableOptions
      * The maximum age of the latest revision for it to be eligible for replacement.
      * When set, a revision older than this interval will not be replaced — a new one is created instead.
      */
-    public ?\DateInterval $replaceWindow = null;
+    public ?DateInterval $replaceWindow = null;
 
     /**
      * The limit of revisions to be created for a model instance.
@@ -141,7 +142,7 @@ class RevisableOptions
      * Only replace the latest revision when it was last updated within the given interval.
      * A revision older than the interval always produces a new revision instead.
      */
-    public function replaceWithin(\DateInterval $interval): self
+    public function replaceWithin(DateInterval $interval): self
     {
         $this->replaceWindow = $interval;
 
@@ -154,7 +155,7 @@ class RevisableOptions
      */
     public function isWithinReplaceWindow(Carbon $updatedAt): bool
     {
-        return $this->replaceWindow === null || $updatedAt->gte(now()->sub($this->replaceWindow));
+        return ! $this->replaceWindow instanceof DateInterval || $updatedAt->gte(now()->sub($this->replaceWindow));
     }
 
     /**
@@ -172,7 +173,7 @@ class RevisableOptions
      */
     public function limitRevisionsTo(int $limit): self
     {
-        $this->limit = (int) $limit;
+        $this->limit = $limit;
 
         return $this;
     }

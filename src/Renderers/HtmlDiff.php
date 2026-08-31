@@ -96,7 +96,7 @@ class HtmlDiff
         $afterOut = collect();
 
         // Each block is a run of items considered aligned between before and after.
-        foreach ((new ArrayAligner($before, $after))->align() as $block) {
+        foreach (new ArrayAligner($before, $after)->align() as $block) {
             // Zip the block's two sides pairwise, padding the shorter side with null.
             foreach (array_map(null, $block->before, $block->after) as [$blockBefore, $blockAfter]) {
                 $pair = $this->diffArrayItem($blockBefore, $blockAfter);
@@ -105,6 +105,7 @@ class HtmlDiff
                 if ($pair['before'] !== null) {
                     $beforeOut->push($pair['before']);
                 }
+
                 if ($pair['after'] !== null) {
                     $afterOut->push($pair['after']);
                 }
@@ -248,7 +249,7 @@ class HtmlDiff
             ];
         }
 
-        $merged = (new HtmlDiffer($before, $after))->build();
+        $merged = new HtmlDiffer($before, $after)->build();
 
         return [
             'before' => $this->beforeView($merged),
@@ -274,7 +275,7 @@ class HtmlDiff
      */
     protected function beforeView(string $merged): string
     {
-        return (new HtmlFragment($merged))
+        return new HtmlFragment($merged)
             // Formatting-only change: show the old formatting instead of dropping the text.
             ->renameElements('//ins[@class="mod"]', 'del')
             // Drop <li>/<p>/<td>/<th>/<tr> elements that only ever held new content.
@@ -294,7 +295,7 @@ class HtmlDiff
      */
     protected function afterView(string $merged): string
     {
-        return (new HtmlFragment($merged))
+        return new HtmlFragment($merged)
             // Drop <li>/<p>/<td>/<th>/<tr> elements that only ever held removed content.
             ->removeElementsEmptiedBy('//li | //p | //td | //th | //tr', 'del')
             // Deleted text no longer exists, so drop it.

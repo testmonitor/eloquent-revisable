@@ -285,7 +285,7 @@ class Revisioner
             ],
         ]);
 
-        return (new Diff($previous, $current))
+        return new Diff($previous, $current)
             ->changed(except: $this->relationFilters) ?: null;
     }
 
@@ -345,7 +345,7 @@ class Revisioner
 
             if ($instance instanceof Relation) {
                 $relations[$relation] = [
-                    'type' => get_class($instance),
+                    'type' => $instance::class,
                     'model' => $instance->getRelated(),
                     'original' => $instance->getParent(),
                 ];
@@ -367,7 +367,7 @@ class Revisioner
 
         $data = [
             'type' => $attributes['type'],
-            'class' => get_class($attributes['model']),
+            'class' => $attributes['model']::class,
             'records' => [
                 'primary_key' => $relationInstance->getRelated()->getKeyName(),
                 'foreign_key' => $this->model->getForeignKey(),
@@ -404,7 +404,7 @@ class Revisioner
 
         $data = [
             'type' => $attributes['type'],
-            'class' => get_class($attributes['model']),
+            'class' => $attributes['model']::class,
             'records' => [
                 'primary_key' => $relationInstance->getRelated()->getKeyName(),
                 'foreign_key' => $this->model->getForeignKey(),

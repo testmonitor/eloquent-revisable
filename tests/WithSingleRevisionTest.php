@@ -2,14 +2,16 @@
 
 namespace TestMonitor\Revisable\Tests;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use TestMonitor\Revisable\Concerns\HasRevisionablePivots;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\PendingRevision;
 use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 
-class WithSingleRevisionTest extends TestCase
+final class WithSingleRevisionTest extends TestCase
 {
     #[Test]
     public function it_creates_a_single_revision_when_creating_a_model_and_a_child_relation()
@@ -124,9 +126,9 @@ class WithSingleRevisionTest extends TestCase
                     'views' => 100,
                 ]);
 
-                throw new \RuntimeException('Something went wrong');
+                throw new RuntimeException('Something went wrong');
             });
-        } catch (\RuntimeException) {
+        } catch (RuntimeException) {
             // expected
         }
 
@@ -149,7 +151,7 @@ class WithSingleRevisionTest extends TestCase
         $author = $this->createAuthor();
 
         // When
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
 
         $postClass::createWithSingleRevision(function () use ($postClass, $author) {
             $postClass::create([
@@ -301,13 +303,7 @@ class WithSingleRevisionTest extends TestCase
     public function it_queues_a_pending_revision_when_saving_a_revision_during_a_batch()
     {
         // Given
-        $postClass = new class extends Post
-        {
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions();
-            }
-        };
+        $postClass = new class extends Post {};
 
         $post = $this->createPost($postClass);
 
@@ -327,13 +323,7 @@ class WithSingleRevisionTest extends TestCase
     public function it_does_not_leak_a_queued_revision_into_a_later_batch_when_the_callback_throws()
     {
         // Given
-        $postClass = new class extends Post
-        {
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions();
-            }
-        };
+        $postClass = new class extends Post {};
 
         $post = $this->createPost($postClass);
 
@@ -342,9 +332,9 @@ class WithSingleRevisionTest extends TestCase
             $post->withSingleRevision(function () use ($post) {
                 $post->saveAsRevision('discarded by the exception below');
 
-                throw new \RuntimeException('Something went wrong');
+                throw new RuntimeException('Something went wrong');
             });
-        } catch (\RuntimeException) {
+        } catch (RuntimeException) {
             // expected
         }
 
@@ -361,13 +351,7 @@ class WithSingleRevisionTest extends TestCase
     public function it_captures_the_full_diff_across_multiple_updates_inside_the_callback()
     {
         // Given
-        $postClass = new class extends Post
-        {
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions();
-            }
-        };
+        $postClass = new class extends Post {};
 
         $post = $this->createPost($postClass);
 

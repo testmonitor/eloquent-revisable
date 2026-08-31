@@ -10,7 +10,7 @@ use TestMonitor\Revisable\RevisableOptions;
 use TestMonitor\Revisable\Tests\Models\Post;
 use TestMonitor\Revisable\Tests\Models\Tag;
 
-class RevisionPivotsTest extends TestCase
+final class RevisionPivotsTest extends TestCase
 {
     #[Test]
     public function it_creates_a_revision_when_attaching_to_a_tracked_relation()
@@ -27,6 +27,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         // When
@@ -51,6 +52,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         $post->withoutRevisioning(fn () => $post->tags()->attach($tags->pluck('id')->toArray()));
@@ -77,6 +79,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         // When
@@ -101,6 +104,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags(5);
 
         // When
@@ -125,6 +129,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         $post->withoutRevisioning(fn () => $post->tags()->sync($tags->pluck('id')->toArray()));
@@ -151,6 +156,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         // When
@@ -175,6 +181,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         $post->withoutRevisioning(fn () => $post->tags()->syncWithoutDetaching($tags->pluck('id')->toArray()));
@@ -201,6 +208,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         // When
@@ -225,6 +233,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         $post->withoutRevisioning(fn () => $post->tags()->attach($tags->first()->id));
@@ -256,6 +265,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         // When
@@ -272,14 +282,10 @@ class RevisionPivotsTest extends TestCase
         $post = new class extends Post
         {
             use HasRevisionablePivots;
-
-            public function getRevisionOptions(): RevisableOptions
-            {
-                return parent::getRevisionOptions();
-            }
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         // When
@@ -304,6 +310,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         // When
@@ -330,6 +337,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         // When
@@ -354,6 +362,7 @@ class RevisionPivotsTest extends TestCase
         };
 
         $post = $this->createPost($post);
+
         $tags = $this->createTags();
 
         $post::revisioning(fn () => false);
