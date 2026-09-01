@@ -12,10 +12,10 @@ use TestMonitor\Revisable\Renderers\Support\HtmlFragment;
 class HtmlDiff
 {
     /**
-     * @param  string  $detailLevel  Granularity of inline highlighting: 'none'|'line'|'word'|'char'
-     *                               For HTML fields, only 'none' is mapped; all other levels resolve to word-level
-     *                               because the underlying HTML differ does not support finer granularity.
-     * @param  string  $lineSeparator  String placed between cells when a multi-line value is joined
+     * @param string $detailLevel Granularity of inline highlighting: 'none'|'line'|'word'|'char'
+     *                            For HTML fields, only 'none' is mapped; all other levels resolve to word-level
+     *                            because the underlying HTML differ does not support finer granularity.
+     * @param string $lineSeparator String placed between cells when a multi-line value is joined
      */
     public function __construct(
         protected Diff $diff,
@@ -85,8 +85,8 @@ class HtmlDiff
     /**
      * Build HTML diffs for a before/after array pair, aligning items by content via `ArrayAligner`.
      *
-     * @param  array<array-key, mixed>  $before
-     * @param  array<array-key, mixed>  $after
+     * @param array<array-key, mixed> $before
+     * @param array<array-key, mixed> $after
      * @return array{before: list<string>, after: list<string>}
      */
     protected function diffArray(array $before, array $after): array
@@ -144,7 +144,7 @@ class HtmlDiff
     /**
      * Build the after view for an array field that had no prior value at all.
      *
-     * @param  array<array-key, mixed>  $after
+     * @param array<array-key, mixed> $after
      * @return array{before: list<string>, after: list<string>}
      */
     protected function diffNewArray(array $after): array
@@ -160,7 +160,7 @@ class HtmlDiff
     /**
      * Build the before view for an array field that no longer has any value.
      *
-     * @param  array<array-key, mixed>  $before
+     * @param array<array-key, mixed> $before
      * @return array{before: list<string>, after: list<string>}
      */
     protected function diffRemovedArray(array $before): array

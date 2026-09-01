@@ -106,8 +106,8 @@ final class Diff
     /**
      * Wrap this diff in an HTML renderer.
      *
-     * @param  string  $detailLevel  Granularity of inline highlighting: 'none'|'line'|'word'|'char'
-     * @param  string  $lineSeparator  String placed between cells when a multi-line value is joined
+     * @param string $detailLevel Granularity of inline highlighting: 'none'|'line'|'word'|'char'
+     * @param string $lineSeparator String placed between cells when a multi-line value is joined
      */
     public function asHtml(string $detailLevel = 'word', string $lineSeparator = '<br>'): HtmlDiff
     {
@@ -117,7 +117,7 @@ final class Diff
     /**
      * Return the names of the fields and relations that changed between the two revisions.
      *
-     * @param  array<string, Closure>  $except
+     * @param array<string, Closure> $except
      * @return list<string>
      */
     public function changed(array $except = []): array
@@ -128,7 +128,7 @@ final class Diff
     /**
      * Return only the fields and relations that changed between the two revisions.
      *
-     * @param  array<string, Closure>  $except
+     * @param array<string, Closure> $except
      * @return array<string, array{before: mixed, after: mixed}|array{
      *     added: list<mixed>,
      *     removed: list<mixed>,
@@ -175,8 +175,8 @@ final class Diff
     /**
      * Drop relation records that are stale per their predicate in $except, returning a filtered copy.
      *
-     * @param  array<string, mixed>  $relations
-     * @param  array<string, Closure>  $except
+     * @param array<string, mixed> $relations
+     * @param array<string, Closure> $except
      * @return array<string, mixed>
      */
     protected function stripExceptRecords(array $relations, array $except): array
@@ -206,8 +206,8 @@ final class Diff
     }
 
     /**
-     * @param  array<string, mixed>  $before
-     * @param  array<string, mixed>  $after
+     * @param array<string, mixed> $before
+     * @param array<string, mixed> $after
      * @return array<string, array{before: mixed, after: mixed}>
      */
     protected function diffFields(array $before, array $after): array
@@ -225,8 +225,8 @@ final class Diff
     }
 
     /**
-     * @param  array<string, mixed>  $before
-     * @param  array<string, mixed>  $after
+     * @param array<string, mixed> $before
+     * @param array<string, mixed> $after
      * @return array<string, array{
      *     added: list<mixed>,
      *     removed: list<mixed>,
@@ -246,8 +246,8 @@ final class Diff
     }
 
     /**
-     * @param  array<string, mixed>  $before
-     * @param  array<string, mixed>  $after
+     * @param array<string, mixed> $before
+     * @param array<string, mixed> $after
      * @return array{
      *     added: list<mixed>,
      *     removed: list<mixed>,
@@ -265,8 +265,8 @@ final class Diff
     }
 
     /**
-     * @param  array<string, mixed>  $before
-     * @param  array<string, mixed>  $after
+     * @param array<string, mixed> $before
+     * @param array<string, mixed> $after
      * @return array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}
      */
     protected function diffPivotedRelation(array $before, array $after, string $relatedKey): array
@@ -279,8 +279,8 @@ final class Diff
     }
 
     /**
-     * @param  array<string, mixed>  $before
-     * @param  array<string, mixed>  $after
+     * @param array<string, mixed> $before
+     * @param array<string, mixed> $after
      * @return array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}
      */
     protected function diffDirectRelation(array $before, array $after): array
@@ -301,8 +301,8 @@ final class Diff
     /**
      * Diff two lists of associative arrays keyed by an identifying column.
      *
-     * @param  list<array<string, mixed>>  $beforeItems
-     * @param  list<array<string, mixed>>  $afterItems
+     * @param list<array<string, mixed>> $beforeItems
+     * @param list<array<string, mixed>> $afterItems
      * @return array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}
      */
     protected function diffItemsByKey(array $beforeItems, array $afterItems, string $key): array

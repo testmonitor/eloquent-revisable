@@ -147,7 +147,7 @@ class Revision extends Model implements RevisionContract
     /**
      * Merge one or more key/value pairs into the properties column and save.
      *
-     * @param  array<string, mixed>  $properties
+     * @param array<string, mixed> $properties
      */
     public function setProperties(array $properties): static
     {

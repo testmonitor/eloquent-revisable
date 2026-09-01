@@ -12,8 +12,8 @@ use Jfcherng\Diff\SequenceMatcher;
 class ArrayAligner
 {
     /**
-     * @param  list<string>  $before
-     * @param  list<string>  $after
+     * @param list<string> $before
+     * @param list<string> $after
      */
     public function __construct(
         protected array $before,
@@ -33,8 +33,8 @@ class ArrayAligner
     /**
      * Recursively align a slice of the before and after arrays, using anchors to guide the alignment.
      *
-     * @param  list<string>  $before
-     * @param  list<string>  $after
+     * @param list<string> $before
+     * @param list<string> $after
      * @return list<AlignedBlock>
      */
     protected function alignSlice(array $before, array $after): array
@@ -49,9 +49,9 @@ class ArrayAligner
     /**
      * Split before/after around each anchor, recursively aligning the gaps between them.
      *
-     * @param  list<string>  $before
-     * @param  list<string>  $after
-     * @param  list<AnchorPair>  $anchors
+     * @param list<string> $before
+     * @param list<string> $after
+     * @param list<AnchorPair> $anchors
      * @return list<AlignedBlock>
      */
     protected function splitAroundAnchors(array $before, array $after, array $anchors): array
@@ -86,8 +86,8 @@ class ArrayAligner
     /**
      * Find items that occur exactly once in both arrays, in the order they're matched.
      *
-     * @param  list<string>  $before
-     * @param  list<string>  $after
+     * @param list<string> $before
+     * @param list<string> $after
      * @return list<AnchorPair>
      */
     protected function findAnchors(array $before, array $after): array
@@ -127,8 +127,8 @@ class ArrayAligner
     /**
      * Align two arrays with no shared anchors using SequenceMatcher's opcodes.
      *
-     * @param  list<string>  $before
-     * @param  list<string>  $after
+     * @param list<string> $before
+     * @param list<string> $after
      * @return list<AlignedBlock>
      */
     protected function matchByContent(array $before, array $after): array

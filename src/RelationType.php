@@ -74,7 +74,7 @@ class RelationType
     }
 
     /**
-     * @param  list<class-string>  $types
+     * @param list<class-string> $types
      */
     protected static function isInstanceOf(string $relation, array $types): bool
     {
