@@ -189,7 +189,7 @@ final class RevisableOptions
     /**
      * Set the fields to include when creating a revision.
      *
-     * @param  string|array<int, string>  ...$fields
+     * @param string|array<int, string> ...$fields
      */
     public function onlyFields(...$fields): self
     {
@@ -201,7 +201,7 @@ final class RevisableOptions
     /**
      * Set the fields to exclude when creating a revision.
      *
-     * @param  string|array<int, string>  ...$fields
+     * @param string|array<int, string> ...$fields
      */
     public function exceptFields(...$fields): self
     {
@@ -213,7 +213,7 @@ final class RevisableOptions
     /**
      * Set the relations to include when creating a revision.
      *
-     * @param  string|array<int, string>  ...$relations
+     * @param string|array<int, string> ...$relations
      */
     public function withRelations(...$relations): self
     {

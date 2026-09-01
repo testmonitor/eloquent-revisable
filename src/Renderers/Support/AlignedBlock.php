@@ -9,8 +9,8 @@ namespace TestMonitor\Revisable\Renderers\Support;
 readonly class AlignedBlock
 {
     /**
-     * @param  list<string>  $before
-     * @param  list<string>  $after
+     * @param list<string> $before
+     * @param list<string> $after
      */
     public function __construct(
         public array $before,

@@ -19,8 +19,8 @@ trait PivotEventsTrait
     private bool $isBulkPivotOperation = false;
 
     /**
-     * @param  array<string, mixed>  $attributes
-     * @param  bool  $touch
+     * @param array<string, mixed> $attributes
+     * @param bool $touch
      */
     public function attach(mixed $ids, array $attributes = [], $touch = true): void
     {
@@ -32,7 +32,7 @@ trait PivotEventsTrait
     }
 
     /**
-     * @param  bool  $touch
+     * @param bool $touch
      */
     public function detach(mixed $ids = null, $touch = true): int
     {
@@ -46,8 +46,8 @@ trait PivotEventsTrait
     }
 
     /**
-     * @param  Collection<array-key, Model>|Model|array<array-key, mixed>|int|string  $ids
-     * @param  bool  $detaching
+     * @param Collection<array-key, Model>|Model|array<array-key, mixed>|int|string $ids
+     * @param bool $detaching
      * @return array{
      *     attached: array<array-key, int|string>,
      *     detached: array<array-key, int|string>,
@@ -72,7 +72,7 @@ trait PivotEventsTrait
     }
 
     /**
-     * @param  bool  $touch
+     * @param bool $touch
      * @return array{
      *     attached: array<array-key, int|string>,
      *     detached: array<array-key, int|string>,
@@ -96,8 +96,8 @@ trait PivotEventsTrait
     }
 
     /**
-     * @param  array<string, mixed>  $attributes
-     * @param  bool  $touch
+     * @param array<string, mixed> $attributes
+     * @param bool $touch
      */
     public function updateExistingPivot(mixed $id, array $attributes, $touch = true): int
     {

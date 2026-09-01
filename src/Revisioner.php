@@ -65,7 +65,7 @@ class Revisioner
     ) {}
 
     /**
-     * @param  Model&Revisable  $model
+     * @param Model&Revisable $model
      */
     public function for(Model $model): static
     {
@@ -75,7 +75,7 @@ class Revisioner
     }
 
     /**
-     * @param  list<string>  $fields
+     * @param list<string> $fields
      */
     public function exceptFields(array $fields): static
     {
@@ -99,7 +99,7 @@ class Revisioner
     }
 
     /**
-     * @param  list<string>  $fields
+     * @param list<string> $fields
      */
     public function onlyFields(array $fields): static
     {
@@ -109,7 +109,7 @@ class Revisioner
     }
 
     /**
-     * @param  array<string, mixed>  $properties
+     * @param array<string, mixed> $properties
      */
     public function properties(array $properties): static
     {
@@ -126,7 +126,7 @@ class Revisioner
     }
 
     /**
-     * @param  list<string>  $relations
+     * @param list<string> $relations
      */
     public function withRelations(array $relations): static
     {
@@ -136,7 +136,7 @@ class Revisioner
     }
 
     /**
-     * @param  list<string>|null  $relations
+     * @param list<string>|null $relations
      */
     public function withoutRestoringRelations(?array $relations): static
     {
@@ -146,7 +146,7 @@ class Revisioner
     }
 
     /**
-     * @param  array<string, Closure>  $filters
+     * @param array<string, Closure> $filters
      */
     public function withRelationFilters(array $filters): static
     {
@@ -271,7 +271,7 @@ class Revisioner
     /**
      * Instantiate the configured revision model, so a custom class set via revisable.revision_model is honored.
      *
-     * @param  array<string, mixed>  $attributes
+     * @param array<string, mixed> $attributes
      */
     protected function newRevisionInstance(array $attributes = []): Revision
     {
@@ -359,7 +359,7 @@ class Revisioner
     /**
      * Strip the primary key, timestamps, and unconfigured fields from a model data array.
      *
-     * @param  array<string, mixed>  $data
+     * @param array<string, mixed> $data
      * @return array<string, mixed>
      */
     protected function filterModelData(array $data): array
@@ -501,7 +501,7 @@ class Revisioner
     }
 
     /**
-     * @param  string|int|null  $value
+     * @param string|int|null $value
      */
     protected function withAttributeValue(
         array $data,
@@ -518,7 +518,7 @@ class Revisioner
     }
 
     /**
-     * @param  string|int|null  $value
+     * @param string|int|null $value
      */
     protected function withPivotAttributeValue(
         array $data,
