@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable;
 
+use Closure;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Traits\Conditionable;
+use TestMonitor\Revisable\Contracts\Revisable;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\Models\Revision;
@@ -17,28 +19,54 @@ class Revisioner
 {
     use Conditionable;
 
+    /**
+     * @var Model&Revisable
+     */
     protected Model $model;
 
     protected ?int $limit = null;
 
     protected ?string $name = null;
 
+    /**
+     * @var array<string, mixed>
+     */
     protected array $properties = [];
 
+    /**
+     * @var list<string>
+     */
     protected array $fields = [];
 
+    /**
+     * @var list<string>
+     */
     protected array $exceptFields = [];
 
+    /**
+     * @var list<string>
+     */
     protected array $relations = [];
 
+    /**
+     * @var list<string>|null
+     */
     protected ?array $exceptRestoringRelations = [];
 
+    /**
+     * @var array<string, Closure>
+     */
     protected array $relationFilters = [];
 
     protected RevisionType $revisionType = RevisionType::Default;
 
-    public function __construct(protected UserResolver $userResolver) {}
+    public function __construct(
+        protected UserResolver $userResolver
+    ) {}
 
+    /**
+     * @param  Model&Revisable  $model
+     */
     public function for(Model $model): static
     {
         $this->model = $model;
@@ -46,6 +74,9 @@ class Revisioner
         return $this;
     }
 
+    /**
+     * @param  list<string>  $fields
+     */
     public function exceptFields(array $fields): static
     {
         $this->exceptFields = $fields;
@@ -67,6 +98,9 @@ class Revisioner
         return $this;
     }
 
+    /**
+     * @param  list<string>  $fields
+     */
     public function onlyFields(array $fields): static
     {
         $this->fields = $fields;
@@ -74,6 +108,9 @@ class Revisioner
         return $this;
     }
 
+    /**
+     * @param  array<string, mixed>  $properties
+     */
     public function properties(array $properties): static
     {
         $this->properties = $properties;
@@ -88,6 +125,9 @@ class Revisioner
         return $this;
     }
 
+    /**
+     * @param  list<string>  $relations
+     */
     public function withRelations(array $relations): static
     {
         $this->relations = $relations;
@@ -95,6 +135,9 @@ class Revisioner
         return $this;
     }
 
+    /**
+     * @param  list<string>|null  $relations
+     */
     public function withoutRestoringRelations(?array $relations): static
     {
         $this->exceptRestoringRelations = $relations;
@@ -102,6 +145,9 @@ class Revisioner
         return $this;
     }
 
+    /**
+     * @param  array<string, Closure>  $filters
+     */
     public function withRelationFilters(array $filters): static
     {
         $this->relationFilters = $filters;
@@ -224,6 +270,8 @@ class Revisioner
 
     /**
      * Instantiate the configured revision model, so a custom class set via revisable.revision_model is honored.
+     *
+     * @param  array<string, mixed>  $attributes
      */
     protected function newRevisionInstance(array $attributes = []): Revision
     {
@@ -256,6 +304,8 @@ class Revisioner
      * Build the changes by diffing the previous state against the new revision's snapshot. Falls back
      * to the model's raw original attributes when no prior revision exists. When a baseline revision
      * is provided, it replaces the most recent stored revision to capture accumulated changes.
+     *
+     * @return list<string>|null
      */
     protected function buildChanges(RevisionContract $revision, ?RevisionContract $baseline = null): ?array
     {
@@ -291,6 +341,8 @@ class Revisioner
 
     /**
      * Extract the model's own attributes, stripping keys and optionally timestamps.
+     *
+     * @return array<string, mixed>
      */
     protected function buildModelData(): array
     {
@@ -306,6 +358,9 @@ class Revisioner
 
     /**
      * Strip the primary key, timestamps, and unconfigured fields from a model data array.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
      */
     protected function filterModelData(array $data): array
     {
@@ -335,6 +390,12 @@ class Revisioner
 
     /**
      * Resolve the configured relations into their type/model attributes.
+     *
+     * @return array<string, array{
+     *     type: class-string<Relation<Model, Model, mixed>>,
+     *     model: Model,
+     *     original: Model,
+     * }>
      */
     protected function getRelationsForRevision(): array
     {

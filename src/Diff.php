@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Renderers\HtmlDiff;
 
-class Diff
+final class Diff
 {
     /**
      * @var array<string, array{before: mixed, after: mixed}>
@@ -38,7 +38,7 @@ class Diff
      */
     public static function fromNothing(RevisionContract $revision): static
     {
-        return new static(null, $revision);
+        return new self(null, $revision);
     }
 
     /**
@@ -75,6 +75,13 @@ class Diff
 
     /**
      * Return all tracked fields and relations, including those that are unchanged.
+     *
+     * @return array<string, array{before: mixed, after: mixed}|array{
+     *     added: list<mixed>,
+     *     removed: list<mixed>,
+     *     changed: array<mixed, mixed>,
+     *     kept: list<mixed>,
+     * }>
      */
     public function all(): array
     {
@@ -83,6 +90,13 @@ class Diff
 
     /**
      * Get the diff for a specific field or relation.
+     *
+     * @return array{before: mixed, after: mixed}|array{
+     *     added: list<mixed>,
+     *     removed: list<mixed>,
+     *     changed: array<mixed, mixed>,
+     *     kept: list<mixed>,
+     * }|null
      */
     public function get(string $field): ?array
     {
@@ -104,6 +118,7 @@ class Diff
      * Return the names of the fields and relations that changed between the two revisions.
      *
      * @param  array<string, Closure>  $except
+     * @return list<string>
      */
     public function changed(array $except = []): array
     {
@@ -114,6 +129,12 @@ class Diff
      * Return only the fields and relations that changed between the two revisions.
      *
      * @param  array<string, Closure>  $except
+     * @return array<string, array{before: mixed, after: mixed}|array{
+     *     added: list<mixed>,
+     *     removed: list<mixed>,
+     *     changed: array<mixed, mixed>,
+     *     kept: list<mixed>,
+     * }>
      */
     public function changes(array $except = []): array
     {
@@ -206,6 +227,12 @@ class Diff
     /**
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
+     * @return array<string, array{
+     *     added: list<mixed>,
+     *     removed: list<mixed>,
+     *     changed: array<mixed, mixed>,
+     *     kept: list<mixed>,
+     * }>
      */
     protected function diffRelations(array $before, array $after): array
     {
@@ -221,6 +248,12 @@ class Diff
     /**
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
+     * @return array{
+     *     added: list<mixed>,
+     *     removed: list<mixed>,
+     *     changed: array<mixed, mixed>,
+     *     kept: list<mixed>,
+     * }
      */
     protected function diffRelation(array $before, array $after): array
     {
@@ -248,14 +281,14 @@ class Diff
     /**
      * @param  array<string, mixed>  $before
      * @param  array<string, mixed>  $after
-     * @return array{added: list<mixed>, removed: list<mixed>, changed: array<mixed, mixed>}
+     * @return array{added: list<mixed>, removed: list<mixed>, kept: list<mixed>, changed: array<mixed, mixed>}
      */
     protected function diffDirectRelation(array $before, array $after): array
     {
         $primaryKey = $after['records']['primary_key'] ?? $before['records']['primary_key'] ?? null;
 
         if (! $primaryKey) {
-            return ['added' => [], 'removed' => [], 'changed' => []];
+            return ['added' => [], 'removed' => [], 'kept' => [], 'changed' => []];
         }
 
         return $this->diffItemsByKey(

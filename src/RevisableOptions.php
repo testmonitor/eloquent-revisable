@@ -9,7 +9,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 
-class RevisableOptions
+final class RevisableOptions
 {
     /**
      * Controls whether revisioning is active for this model.
@@ -55,24 +55,32 @@ class RevisableOptions
     /**
      * The fields that should be revisionable.
      * By default all fields are revisionable.
+     *
+     * @var list<string>
      */
     public array $fields = [];
 
     /**
      * The fields that should be excluded from revisioning.
      * By default no fields are excluded from revisioning.
+     *
+     * @var list<string>
      */
     public array $exceptFields = [];
 
     /**
      * The model's relations that should be revisionable.
      * By default none of the model's relations are revisionable.
+     *
+     * @var list<string>
      */
     public array $relations = [];
 
     /**
      * The relations that should be excluded from restoration when rolling back.
      * An empty array means all tracked relations are restored. A null value means no relations are restored.
+     *
+     * @var list<string>|null
      */
     public ?array $exceptRestoringRelations = [];
 
@@ -86,7 +94,7 @@ class RevisableOptions
      */
     public static function defaults(): self
     {
-        return new static;
+        return new self;
     }
 
     /**
@@ -180,6 +188,8 @@ class RevisableOptions
 
     /**
      * Set the fields to include when creating a revision.
+     *
+     * @param  string|array<int, string>  ...$fields
      */
     public function onlyFields(...$fields): self
     {
@@ -190,6 +200,8 @@ class RevisableOptions
 
     /**
      * Set the fields to exclude when creating a revision.
+     *
+     * @param  string|array<int, string>  ...$fields
      */
     public function exceptFields(...$fields): self
     {
@@ -200,6 +212,8 @@ class RevisableOptions
 
     /**
      * Set the relations to include when creating a revision.
+     *
+     * @param  string|array<int, string>  ...$relations
      */
     public function withRelations(...$relations): self
     {

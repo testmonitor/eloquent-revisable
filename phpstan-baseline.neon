@@ -1,0 +1,247 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Class App\\Models\\User not found\.$#'
+			identifier: class.notFound
+			count: 1
+			path: config/revisionable.php
+
+		-
+			message: '#^Trait TestMonitor\\Revisable\\Concerns\\BelongsToRevisable is used zero times and is not analysed\.$#'
+			identifier: trait.unused
+			count: 1
+			path: src/Concerns/BelongsToRevisable.php
+
+		-
+			message: '#^Trait TestMonitor\\Revisable\\Concerns\\HasRevisionableChildren is used zero times and is not analysed\.$#'
+			identifier: trait.unused
+			count: 1
+			path: src/Concerns/HasRevisionableChildren.php
+
+		-
+			message: '#^Trait TestMonitor\\Revisable\\Concerns\\HasRevisionablePivots is used zero times and is not analysed\.$#'
+			identifier: trait.unused
+			count: 1
+			path: src/Concerns/HasRevisionablePivots.php
+
+		-
+			message: '#^Trait TestMonitor\\Revisable\\Concerns\\HasRevisions is used zero times and is not analysed\.$#'
+			identifier: trait.unused
+			count: 1
+			path: src/Concerns/HasRevisions.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Contracts\\Revision\:\:getCreatedAtColumn\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Contracts/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Contracts\\Revision\:\:getUpdatedAtColumn\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Contracts/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Contracts\\Revision\:\:is\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/Contracts/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Contracts\\Revision\:\:metadata\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Contracts/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Contracts\\Revision\:\:revisionable\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\MorphTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Contracts/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Contracts\\Revision\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Contracts/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Models\\Revision\:\:forModel\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Models/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Models\\Revision\:\:forUser\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Models/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Models\\Revision\:\:notRollback\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Models/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Models\\Revision\:\:onlyInitial\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Models/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Models\\Revision\:\:onlyRollbacks\(\) has parameter \$query with generic class Illuminate\\Database\\Eloquent\\Builder but does not specify its types\: TModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Models/Revision.php
+
+		-
+			message: '#^Unable to resolve the template type TRelatedModel in call to method Illuminate\\Database\\Eloquent\\Model\:\:belongsTo\(\)$#'
+			identifier: argument.templateType
+			count: 1
+			path: src/Models/Revision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\PendingRevision\:\:getCreatedAtColumn\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/PendingRevision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\PendingRevision\:\:getUpdatedAtColumn\(\) has no return type specified\.$#'
+			identifier: missingType.return
+			count: 1
+			path: src/PendingRevision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\PendingRevision\:\:metadata\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/PendingRevision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\PendingRevision\:\:revisionable\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\MorphTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/PendingRevision.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\PendingRevision\:\:user\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/PendingRevision.php
+
+		-
+			message: '#^Class TestMonitor\\Revisable\\Relations\\BelongsToMany extends generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsToMany but does not specify its types\: TRelatedModel, TDeclaringModel, TPivotModel, TAccessor \(2\-4 required\)$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Relations/BelongsToMany.php
+
+		-
+			message: '#^Class TestMonitor\\Revisable\\Relations\\MorphToMany extends generic class Illuminate\\Database\\Eloquent\\Relations\\MorphToMany but does not specify its types\: TRelatedModel, TDeclaringModel, TPivotModel, TAccessor \(2\-4 required\)$#'
+			identifier: missingType.generics
+			count: 1
+			path: src/Relations/MorphToMany.php
+
+		-
+			message: '#^Property TestMonitor\\Revisable\\Renderers\\Support\\HtmlFragment\:\:\$root \(DOMElement\) does not accept DOMNameSpaceNode\|DOMNode\|null\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: src/Renderers/Support/HtmlFragment.php
+
+		-
+			message: '#^Call to function is_a\(\) with arguments class\-string\<TestMonitor\\Revisable\\Models\\Revision\>\|TestMonitor\\Revisable\\Models\\Revision, ''Illuminate\\\\Database\\\\Eloquent\\\\Model'' and true will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: src/RevisableServiceProvider.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:buildData\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:buildDirectRelationData\(\) has parameter \$attributes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:buildDirectRelationData\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:buildPivotedRelationData\(\) has parameter \$attributes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:buildPivotedRelationData\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:filterRelationRecords\(\) has parameter \$records with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:filterRelationRecords\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:restoreDirectRelation\(\) has parameter \$attributes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:restorePivotedRelation\(\) has parameter \$attributes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:withAttributeValue\(\) has parameter \$attributes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:withAttributeValue\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:withAttributeValue\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:withPivotAttributeValue\(\) has parameter \$attributes with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:withPivotAttributeValue\(\) has parameter \$data with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php
+
+		-
+			message: '#^Method TestMonitor\\Revisable\\Revisioner\:\:withPivotAttributeValue\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Revisioner.php

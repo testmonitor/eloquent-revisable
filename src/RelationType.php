@@ -13,6 +13,9 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class RelationType
 {
+    /**
+     * @var list<class-string>
+     */
     protected static array $directRelations = [
         HasOne::class,
         MorphOne::class,
@@ -22,11 +25,17 @@ class RelationType
         MorphTo::class,
     ];
 
+    /**
+     * @var list<class-string>
+     */
     protected static array $pivotedRelations = [
         BelongsToMany::class,
         MorphToMany::class,
     ];
 
+    /**
+     * @var list<class-string>
+     */
     protected static array $childRelations = [
         HasOne::class,
         MorphOne::class,
@@ -34,6 +43,9 @@ class RelationType
         MorphMany::class,
     ];
 
+    /**
+     * @var list<class-string>
+     */
     protected static array $singularRelations = [
         HasOne::class,
         MorphOne::class,
@@ -61,6 +73,9 @@ class RelationType
         return static::isInstanceOf($relation, static::$singularRelations);
     }
 
+    /**
+     * @param  list<class-string>  $types
+     */
     protected static function isInstanceOf(string $relation, array $types): bool
     {
         return array_any($types, fn ($type) => is_a($relation, $type, true));
