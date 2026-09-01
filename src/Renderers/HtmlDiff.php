@@ -3,6 +3,7 @@
 namespace TestMonitor\Revisable\Renderers;
 
 use Illuminate\Support\Str;
+use Jfcherng\Diff\Differ;
 use Jfcherng\Diff\DiffHelper;
 use Ssddanbrown\HtmlDiff\Diff as HtmlDiffer;
 use TestMonitor\Revisable\Diff;
@@ -11,6 +12,14 @@ use TestMonitor\Revisable\Renderers\Support\HtmlFragment;
 
 class HtmlDiff
 {
+    /**
+     * Block-level elements whose surrounding newlines are cosmetic source formatting
+     * rather than authored line breaks.
+     */
+    protected const BLOCK_ELEMENTS = 'address|article|aside|blockquote|div|dd|dl|dt|fieldset'
+        . '|figcaption|figure|footer|form|h[1-6]|header|hr|li|main|nav|ol|p|pre|section'
+        . '|table|tbody|td|tfoot|th|thead|tr|ul';
+
     /**
      * @param string $detailLevel Granularity of inline highlighting: 'none'|'line'|'word'|'char'
      *                            For HTML fields, only 'none' is mapped; all other levels resolve to word-level
@@ -181,14 +190,16 @@ class HtmlDiff
     protected function diffPlainValue(string $before, string $after): array
     {
         if ($before === $after) {
-            return ['before' => $this->escape($before), 'after' => $this->escape($after)];
+            return ['before' => $this->escapeLines($before), 'after' => $this->escapeLines($after)];
         }
 
         $diff = DiffHelper::calculate(
             old: $before,
             new: $after,
             renderer: 'SideBySide',
-            differOptions: [],
+            // Render every line: the default context of 3 collapses distant unchanged lines
+            // into skipped blocks, which extractCells() would silently drop from the output.
+            differOptions: ['context' => Differ::CONTEXT_ALL],
             rendererOptions: ['showHeader' => false, 'lineNumbers' => false, 'detailLevel' => $this->detailLevel],
         );
 
@@ -207,13 +218,50 @@ class HtmlDiff
     }
 
     /**
+     * HTML-encode a string, turning its newlines into line separators so an unchanged
+     * multi-line value keeps the same shape as a changed one.
+     */
+    protected function escapeLines(string $value): string
+    {
+        return str_replace(["\r\n", "\r", "\n"], $this->lineSeparator, $this->escape($value));
+    }
+
+    /**
      * Extract the inner HTML of all <td class="$side"> cells from SideBySide output.
+     *
+     * Wholly inserted or deleted lines carry their marker on the surrounding <tbody> rather
+     * than inline, so those cells are wrapped here — without it, a line that has no
+     * counterpart on the other side would come out looking unchanged.
      */
     protected function extractCells(string $diff, string $side): string
     {
-        return Str::of($diff)
-            ->matchAll('/<td class="' . $side . '">(.*?)<\/td>/s')
+        $markedType = $side === 'old' ? 'del' : 'ins';
+
+        preg_match_all('/<tbody class="[^"]*?change-(\w+)[^"]*">(.*?)<\/tbody>/s', $diff, $blocks, PREG_SET_ORDER);
+
+        return collect($blocks)
+            ->flatMap(fn (array $block) => $this->extractBlockCells(
+                $block[2],
+                $side,
+                $block[1] === $markedType ? $markedType : null,
+            ))
             ->implode($this->lineSeparator);
+    }
+
+    /**
+     * Extract the <td class="$side"> cells from a single SideBySide <tbody>, wrapping every
+     * non-empty cell in $marker when the block as a whole represents that change.
+     *
+     * @return list<string>
+     */
+    protected function extractBlockCells(string $block, string $side, ?string $marker): array
+    {
+        preg_match_all('/<td class="' . $side . '">(.*?)<\/td>/s', $block, $cells);
+
+        return array_map(
+            fn (string $cell) => $marker === null || trim($cell) === '' ? $cell : "<{$marker}>{$cell}</{$marker}>",
+            $cells[1],
+        );
     }
 
     /**
@@ -225,11 +273,34 @@ class HtmlDiff
     }
 
     /**
-     * Return true when the string contains list/table block structure (<ul>, <ol>, <table>).
+     * Return true when the string contains block structure (a list, table, paragraph, heading
+     * or other block-level wrapper) rather than being plain text with inline markup only.
      */
     protected function containsBlockStructure(string $value): bool
     {
-        return Str::of($value)->test('/<(ul|ol|table)[\s>]/i');
+        return Str::of($value)->test('/<(ul|ol|table|p|div|h[1-6]|blockquote|pre)[\s>]/i');
+    }
+
+    /**
+     * Prepare a value for DOM-aware diffing by resolving its newlines: those that merely
+     * separate block-level tags in the source are dropped, and the ones that remain are
+     * authored line breaks, so they become explicit line separators. Without this, raw
+     * newlines survive into the rendered diff, where the browser collapses them.
+     */
+    protected function resolveNewlines(string $value): string
+    {
+        $value = str_replace(["\r\n", "\r"], "\n", $value);
+
+        if (! str_contains($value, "\n")) {
+            return $value;
+        }
+
+        $block = static::BLOCK_ELEMENTS;
+
+        $value = (string) preg_replace('/\s*\n\s*(?=<\s*\/?\s*(?:' . $block . ')[\s>\/])/i', '', $value);
+        $value = (string) preg_replace('/(<\s*\/?\s*(?:' . $block . ')[^>]*>)\s*\n\s*/i', '$1', $value);
+
+        return str_replace("\n", $this->lineSeparator, $value);
     }
 
     /**
@@ -245,6 +316,9 @@ class HtmlDiff
         if ($this->detailLevel === 'none') {
             return ['before' => $before, 'after' => $after];
         }
+
+        $before = $this->resolveNewlines($before);
+        $after = $this->resolveNewlines($after);
 
         if ($this->hasMismatchedBlockStructure($before, $after)) {
             return [

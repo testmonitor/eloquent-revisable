@@ -17,6 +17,11 @@ final class HtmlDiffRendererTest extends TestCase
         return new Diff($before, $after)->asHtml();
     }
 
+    protected function diffFromNothingFor(mixed $new, string $field = 'value'): HtmlDiff
+    {
+        return Diff::fromNothing(new Revision(['metadata' => ['attributes' => [$field => $new]]]))->asHtml();
+    }
+
     // Field access
 
     #[Test]
@@ -330,6 +335,158 @@ final class HtmlDiffRendererTest extends TestCase
         $this->assertStringContainsString('<del>', (string) $result['before']);
         $this->assertStringContainsString('<ins>', (string) $result['after']);
         $this->assertStringContainsString('<br>', (string) $result['before']);
+    }
+
+    #[Test]
+    public function it_keeps_unchanged_lines_that_sit_far_from_a_change()
+    {
+        // Given — only the first line changes, leaving the rest well beyond the differ's
+        // default context window
+        $tail = "\n\nSecond paragraph.\n\nThird paragraph.\n\nFourth paragraph.\n";
+        $htmlDiff = $this->diffFor('The status is online.' . $tail, 'The status is offline.' . $tail);
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — every line survives on both sides, rather than being silently skipped
+        $this->assertStringContainsString('Fourth paragraph.', (string) $result['before']);
+        $this->assertStringContainsString('Fourth paragraph.', (string) $result['after']);
+    }
+
+    #[Test]
+    public function it_keeps_line_breaks_on_an_unchanged_multiline_value()
+    {
+        // Given
+        $htmlDiff = $this->diffFor("Line one\nLine two", "Line one\nLine two");
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — an unchanged value keeps the same shape as a changed one
+        $this->assertSame('Line one<br>Line two', $result['before']);
+        $this->assertSame('Line one<br>Line two', $result['after']);
+    }
+
+    #[Test]
+    public function it_turns_authored_newlines_into_line_breaks_when_a_value_contains_html()
+    {
+        // Given — inline markup routes this through the HTML differ, where a raw newline
+        // would otherwise be collapsed to a space by the browser
+        $htmlDiff = $this->diffFor(
+            "First line\nSecond <b>line</b>\nThird line",
+            "First line\nSecond <b>lines</b>\nThird line",
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame('First line<br>Second <b><del>line</del></b><br>Third line', $result['before']);
+        $this->assertSame('First line<br>Second <b><ins>lines</ins></b><br>Third line', $result['after']);
+    }
+
+    #[Test]
+    public function it_ignores_newlines_that_only_separate_block_level_tags()
+    {
+        // Given — newlines between block tags are source formatting, not authored breaks
+        $htmlDiff = $this->diffFor("<p>one</p>\n\n<p>two</p>", "<p>one</p>\n\n<p>three</p>");
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no stray line breaks or raw newlines are introduced between the paragraphs
+        $this->assertSame('<p>one</p><p><del>two</del></p>', $result['before']);
+        $this->assertSame('<p>one</p><p><ins>three</ins></p>', $result['after']);
+    }
+
+    #[Test]
+    public function it_ignores_newlines_that_only_separate_list_items()
+    {
+        // Given
+        $htmlDiff = $this->diffFor(
+            "<ul>\n    <li>alpha</li>\n    <li>beta</li>\n</ul>",
+            "<ul>\n    <li>alpha</li>\n    <li>gamma</li>\n</ul>",
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertStringNotContainsString('<br>', (string) $result['before']);
+        $this->assertStringNotContainsString('<br>', (string) $result['after']);
+        $this->assertStringContainsString('<del>beta</del>', (string) $result['before']);
+        $this->assertStringContainsString('<ins>gamma</ins>', (string) $result['after']);
+    }
+
+    #[Test]
+    public function it_marks_every_line_of_a_wholly_inserted_multiline_value()
+    {
+        // Given — a line with no counterpart carries its marker on the surrounding block
+        // rather than inline, so it would otherwise come out looking unchanged
+        $htmlDiff = $this->diffFor('', "Alpha.\n\nBravo.");
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame('', $result['before']);
+        $this->assertSame('<ins>Alpha.</ins><br><br><ins>Bravo.</ins>', $result['after']);
+    }
+
+    #[Test]
+    public function it_marks_every_line_of_a_wholly_deleted_multiline_value()
+    {
+        // Given — the mirror direction of a wholly inserted value
+        $htmlDiff = $this->diffFor("Alpha.\n\nBravo.", '');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame('<del>Alpha.</del><br><br><del>Bravo.</del>', $result['before']);
+        $this->assertSame('', $result['after']);
+    }
+
+    #[Test]
+    public function it_marks_a_line_inserted_between_unchanged_lines()
+    {
+        // Given
+        $htmlDiff = $this->diffFor("Alpha.\nCharlie.", "Alpha.\nBravo.\nCharlie.");
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — only the new line is marked, the surrounding lines stay untouched
+        $this->assertSame('Alpha.<br>Charlie.', $result['before']);
+        $this->assertSame('Alpha.<br><ins>Bravo.</ins><br>Charlie.', $result['after']);
+    }
+
+    #[Test]
+    public function it_marks_a_line_deleted_between_unchanged_lines()
+    {
+        // Given
+        $htmlDiff = $this->diffFor("Alpha.\nBravo.\nCharlie.", "Alpha.\nCharlie.");
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame('Alpha.<br><del>Bravo.</del><br>Charlie.', $result['before']);
+        $this->assertSame('Alpha.<br>Charlie.', $result['after']);
+    }
+
+    #[Test]
+    public function it_marks_a_whole_multiline_value_as_inserted_when_diffing_from_nothing()
+    {
+        // Given — the shape of an initial revision, which has nothing to diff against
+        $htmlDiff = $this->diffFromNothingFor("Alpha.\n\nBravo.\n");
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame('', $result['before']);
+        $this->assertSame('<ins>Alpha.</ins><br><br><ins>Bravo.</ins><br>', $result['after']);
     }
 
     // Configuration
@@ -646,6 +803,42 @@ final class HtmlDiffRendererTest extends TestCase
 
         // Then — word-level markers inside a single shared <li>, not a wholesale replacement
         $this->assertSame(1, preg_match_all('/<li[^>]*>/', $result['before']));
+        $this->assertStringContainsString('<del>Alpha</del>', (string) $result['before']);
+        $this->assertStringContainsString('<ins>Zzz</ins>', (string) $result['after']);
+    }
+
+    #[Test]
+    public function it_treats_plain_text_replaced_by_paragraphs_as_a_full_swap()
+    {
+        // Given — a legacy plain-text value rewritten through a rich-text editor: word-pairing
+        // the two would trap the old value's line breaks inside the new <p> elements
+        $htmlDiff = $this->diffFor(
+            "Quia dolore non ut recusandae.\n\nSecond paragraph.",
+            '<p>Quia dolore is different now.</p><p>Second paragraph.</p>',
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the whole old value is marked deleted with its breaks intact, the whole new
+        // value marked inserted
+        $this->assertStringContainsString('<del>Quia dolore non ut recusandae.</del>', (string) $result['before']);
+        $this->assertStringContainsString('<br>', (string) $result['before']);
+        $this->assertStringNotContainsString('<p>', (string) $result['before']);
+        $this->assertStringContainsString('<p><ins>Quia dolore is different now.</ins></p>', (string) $result['after']);
+    }
+
+    #[Test]
+    public function it_keeps_word_level_diffing_when_both_sides_are_paragraphs()
+    {
+        // Given — both sides have paragraph structure, so this must NOT degrade to a full swap
+        $htmlDiff = $this->diffFor('<p>Alpha beta gamma.</p>', '<p>Zzz beta gamma.</p>');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — word-level markers inside a single shared <p>, not a wholesale replacement
+        $this->assertSame(1, preg_match_all('/<p[^>]*>/', $result['before']));
         $this->assertStringContainsString('<del>Alpha</del>', (string) $result['before']);
         $this->assertStringContainsString('<ins>Zzz</ins>', (string) $result['after']);
     }
