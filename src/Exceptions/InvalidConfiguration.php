@@ -6,11 +6,11 @@ use Exception;
 use Illuminate\Database\Eloquent\Model;
 use TestMonitor\Revisable\Models\Revision;
 
-class InvalidConfiguration extends Exception
+final class InvalidConfiguration extends Exception
 {
     public static function invalidRevisionModel(string $className): self
     {
-        return new static(
+        return new self(
             "The given model class `{$className}` does not implement `"
             . Revision::class
             . '` or it does not extend `'
@@ -20,6 +20,6 @@ class InvalidConfiguration extends Exception
 
     public static function invalidUserModel(string $className): self
     {
-        return new static("The given model class `{$className}` does not extend `" . Model::class . '`');
+        return new self("The given model class `{$className}` does not extend `" . Model::class . '`');
     }
 }

@@ -16,6 +16,18 @@ use TestMonitor\Revisable\Enums\RevisionType;
 use TestMonitor\Revisable\RelationType;
 use TestMonitor\Revisable\RevisableServiceProvider;
 
+/**
+ * @property int $id
+ * @property string $revisionable_type
+ * @property int|string $revisionable_id
+ * @property string|null $name
+ * @property int $version
+ * @property array<string, mixed>|null $metadata
+ * @property array<string, mixed>|null $properties
+ * @property list<string>|null $changed
+ * @property RevisionType $type
+ * @property int|null $user_id
+ */
 class Revision extends Model implements RevisionContract
 {
     protected $table = 'revisions';
@@ -66,7 +78,7 @@ class Revision extends Model implements RevisionContract
     #[Scope]
     protected function forUser(Builder $query, Model $user): void
     {
-        $query->where('user_id', $user->id);
+        $query->where('user_id', $user->getKey());
     }
 
     /**
@@ -134,6 +146,8 @@ class Revision extends Model implements RevisionContract
 
     /**
      * Merge one or more key/value pairs into the properties column and save.
+     *
+     * @param  array<string, mixed>  $properties
      */
     public function setProperties(array $properties): static
     {
@@ -305,11 +319,24 @@ class Revision extends Model implements RevisionContract
 
     /**
      * Reconstruct related models from stored revision data, returning a single model or collection.
+     *
+     * @param  array{
+     *     type: string,
+     *     class: class-string<Model>,
+     *     records: array{primary_key: string, foreign_key: string, items: array<int, array<string, mixed>>},
+     *     pivots?: array{
+     *         primary_key: string,
+     *         foreign_key: string,
+     *         related_key: string,
+     *         items: array<int, array<string, mixed>>,
+     *     },
+     * }  $data
+     * @return Model|EloquentCollection<int, Model>|null
      */
     protected function buildRelatedModels(array $data): Model|EloquentCollection|null
     {
         $relatedClass = $data['class'];
-        $items = $data['records']['items'] ?? [];
+        $items = $data['records']['items'];
 
         $collection = new EloquentCollection;
 

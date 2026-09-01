@@ -3,6 +3,7 @@
 namespace TestMonitor\Revisable\Relations;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 /**
  * Overrides mutating BelongsToMany/MorphToMany methods so that the parent model
@@ -18,6 +19,7 @@ trait PivotEventsTrait
     private bool $isBulkPivotOperation = false;
 
     /**
+     * @param  array<string, mixed>  $attributes
      * @param  bool  $touch
      */
     public function attach(mixed $ids, array $attributes = [], $touch = true): void
@@ -44,7 +46,13 @@ trait PivotEventsTrait
     }
 
     /**
+     * @param  Collection<array-key, Model>|Model|array<array-key, mixed>|int|string  $ids
      * @param  bool  $detaching
+     * @return array{
+     *     attached: array<array-key, int|string>,
+     *     detached: array<array-key, int|string>,
+     *     updated: array<array-key, int|string>,
+     * }
      */
     public function sync(mixed $ids, $detaching = true): array
     {
@@ -65,6 +73,10 @@ trait PivotEventsTrait
 
     /**
      * @param  bool  $touch
+     * @return array{
+     *     attached: array<array-key, int|string>,
+     *     detached: array<array-key, int|string>,
+     * }
      */
     public function toggle(mixed $ids, $touch = true): array
     {
@@ -84,6 +96,7 @@ trait PivotEventsTrait
     }
 
     /**
+     * @param  array<string, mixed>  $attributes
      * @param  bool  $touch
      */
     public function updateExistingPivot(mixed $id, array $attributes, $touch = true): int
@@ -97,6 +110,13 @@ trait PivotEventsTrait
         return $result;
     }
 
+    /**
+     * @param  array{
+     *     attached: array<array-key, int|string>,
+     *     detached: array<array-key, int|string>,
+     *     updated?: array<array-key, int|string>,
+     * }  $changes
+     */
     private function hasPivotChanges(array $changes): bool
     {
         return ! empty($changes['attached'])

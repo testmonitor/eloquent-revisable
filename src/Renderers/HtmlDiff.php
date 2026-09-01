@@ -28,7 +28,7 @@ class HtmlDiff
      *
      * Returns null when the field is not tracked in the diff.
      *
-     * @return array{before: string|array, after: string|array}|null
+     * @return array{before: string, after: string}|array{before: list<string>, after: list<string>}|null
      */
     public function field(string $field): ?array
     {
@@ -85,6 +85,8 @@ class HtmlDiff
     /**
      * Build HTML diffs for a before/after array pair, aligning items by content via `ArrayAligner`.
      *
+     * @param  array<array-key, mixed>  $before
+     * @param  array<array-key, mixed>  $after
      * @return array{before: list<string>, after: list<string>}
      */
     protected function diffArray(array $before, array $after): array
@@ -142,6 +144,7 @@ class HtmlDiff
     /**
      * Build the after view for an array field that had no prior value at all.
      *
+     * @param  array<array-key, mixed>  $after
      * @return array{before: list<string>, after: list<string>}
      */
     protected function diffNewArray(array $after): array
@@ -157,6 +160,7 @@ class HtmlDiff
     /**
      * Build the before view for an array field that no longer has any value.
      *
+     * @param  array<array-key, mixed>  $before
      * @return array{before: list<string>, after: list<string>}
      */
     protected function diffRemovedArray(array $before): array

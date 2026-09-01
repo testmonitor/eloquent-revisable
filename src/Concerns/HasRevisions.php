@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
+use TestMonitor\Revisable\Contracts\Revisable;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Enums\RevisionType;
@@ -26,6 +27,8 @@ use TestMonitor\Revisable\UserResolver;
  * @property-read Collection<int, Revision> $revisions
  * @property-read Revision|null $latestRevision
  * @property-read Revision|null $firstRevision
+ *
+ * @phpstan-require-implements Revisable
  */
 trait HasRevisions
 {
