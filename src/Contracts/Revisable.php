@@ -24,10 +24,10 @@ interface Revisable
      */
     public function latestRevision(): MorphOne;
 
-    public function withoutRevisioning(Closure $callback): mixed;
-
     /**
      * @return array<string, mixed>
      */
     public function getRevisionOriginal(): array;
+
+    public function withoutRevisioning(Closure $callback): mixed;
 }
