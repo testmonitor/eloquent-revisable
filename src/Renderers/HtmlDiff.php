@@ -398,7 +398,7 @@ class HtmlDiff
             ->removeElementsEmptiedBy('//li | //p | //td | //th | //tr', 'del')
             // Deleted text no longer exists, so drop it.
             ->removeElements('//del')
-            // A wholly new list/table/blockquote/pre/code/mark leaves an empty wrapper behind once its
+            // A wholly deleted list/table/blockquote/pre/code/mark leaves an empty wrapper behind once its
             // children are gone; drop those too.
             ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead | //blockquote | //pre | //code | //mark')
             // Normalise diff-specific <ins> classes, but keep the "mod" marker.
