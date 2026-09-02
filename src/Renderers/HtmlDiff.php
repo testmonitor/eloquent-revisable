@@ -228,13 +228,24 @@ class HtmlDiff
     protected function markWholeLineChanges(string $diff): string
     {
         return Str::of($diff)
+            ->pipe(fn ($diff) => $this->markWholeLineChangesForTag($diff, 'ins', 'new'))
+            ->pipe(fn ($diff) => $this->markWholeLineChangesForTag($diff, 'del', 'old'))
+            ->value();
+    }
+
+    /**
+     * Wrap the $side cell of every wholly-$tag <tbody> block in an inline <$tag> marker.
+     */
+    protected function markWholeLineChangesForTag(string $diff, string $tag, string $side): string
+    {
+        $tbody = 'change change-' . $tag;
+
+        return Str::of($diff)
             ->replaceMatches(
-                '/<tbody class="change change-ins">(.*?)<\/tbody>/s',
-                fn (array $match) => '<tbody class="change change-ins">' . $this->wrapCells($match[1], 'new', 'ins') . '</tbody>',
-            )
-            ->replaceMatches(
-                '/<tbody class="change change-del">(.*?)<\/tbody>/s',
-                fn (array $match) => '<tbody class="change change-del">' . $this->wrapCells($match[1], 'old', 'del') . '</tbody>',
+                '/<tbody class="' . $tbody . '">(.*?)<\/tbody>/s',
+                fn (array $match) => '<tbody class="' . $tbody . '">'
+                    . $this->wrapCells($match[1], $side, $tag)
+                    . '</tbody>',
             )
             ->value();
     }
