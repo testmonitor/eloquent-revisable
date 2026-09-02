@@ -380,9 +380,9 @@ class HtmlDiff
             ->removeElementsEmptiedBy('//li | //p | //td | //th | //tr', 'ins')
             // Any other inserted text didn't exist yet, so drop it.
             ->removeElements('//ins')
-            // A wholly new list/table leaves an empty wrapper behind once its rows/items are
-            // gone; drop those too, repeating since removing one can empty its own parent.
-            ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead')
+            // A wholly new list/table/blockquote/pre/code/mark leaves an empty wrapper behind once its
+            // children are gone; drop those too, repeating since removing one can empty its own parent.
+            ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead | //blockquote | //pre | //code | //mark')
             // Normalise the differ's diff-specific <del> classes.
             ->removeAttribute('//del[not(@class="mod")]', 'class')
             ->toHtml();
@@ -398,9 +398,9 @@ class HtmlDiff
             ->removeElementsEmptiedBy('//li | //p | //td | //th | //tr', 'del')
             // Deleted text no longer exists, so drop it.
             ->removeElements('//del')
-            // A wholly deleted list/table leaves an empty wrapper behind once its rows/items
-            // are gone; drop those too.
-            ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead')
+            // A wholly deleted list/table/blockquote/pre/code/mark leaves an empty wrapper behind once its
+            // children are gone; drop those too.
+            ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead | //blockquote | //pre | //code | //mark')
             // Normalise diff-specific <ins> classes, but keep the "mod" marker.
             ->removeAttribute('//ins[not(@class="mod")]', 'class')
             ->toHtml();

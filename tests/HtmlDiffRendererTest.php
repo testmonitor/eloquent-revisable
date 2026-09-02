@@ -769,6 +769,90 @@ final class HtmlDiffRendererTest extends TestCase
         $this->assertStringContainsString('<ins>', (string) $result['after']);
     }
 
+    #[Test]
+    public function it_omits_a_wholly_new_blockquote_from_the_before_view()
+    {
+        // Given — an entire quote was added below the existing paragraph
+        $htmlDiff = $this->diffFor('<p>one</p>', '<p>one</p><blockquote>quoted text</blockquote>');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no dangling empty <blockquote></blockquote> left behind
+        $this->assertSame('<p>one</p>', $result['before']);
+        $this->assertStringContainsString('<blockquote><ins>quoted text</ins></blockquote>', (string) $result['after']);
+    }
+
+    #[Test]
+    public function it_omits_a_wholly_deleted_blockquote_from_the_after_view()
+    {
+        // Given — the whole quote was removed
+        $htmlDiff = $this->diffFor('<p>one</p><blockquote>quoted text</blockquote>', '<p>one</p>');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — no dangling empty <blockquote></blockquote> left behind
+        $this->assertSame('<p>one</p>', $result['after']);
+        $this->assertStringContainsString('<blockquote><del>quoted text</del></blockquote>', (string) $result['before']);
+    }
+
+    #[Test]
+    public function it_omits_a_wholly_new_code_block_from_the_before_view()
+    {
+        // Given — a new <pre><code> block, where emptying the <code> also empties its <pre>
+        $htmlDiff = $this->diffFor('', '<pre><code>new code</code></pre>');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — both the <code> and its now-empty <pre> wrapper are gone
+        $this->assertSame('', $result['before']);
+        $this->assertStringContainsString('<pre><code><ins>new code</ins></code></pre>', (string) $result['after']);
+    }
+
+    #[Test]
+    public function it_omits_a_wholly_deleted_code_block_from_the_after_view()
+    {
+        // Given — the whole <pre><code> block was removed
+        $htmlDiff = $this->diffFor('<pre><code>old code</code></pre>', '');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — both the <code> and its now-empty <pre> wrapper are gone
+        $this->assertSame('', $result['after']);
+        $this->assertStringContainsString('<pre><code><del>old code</del></code></pre>', (string) $result['before']);
+    }
+
+    #[Test]
+    public function it_omits_newly_added_inline_code_from_the_before_view()
+    {
+        // Given — an inline <code> span added inside an otherwise unchanged paragraph
+        $htmlDiff = $this->diffFor('<p>one</p>', '<p>one <code>foo()</code></p>');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the <code> span is gone from the before view, not left behind as <code></code>
+        $this->assertStringNotContainsString('<code>', (string) $result['before']);
+        $this->assertStringContainsString('<code><ins>foo()</ins></code>', (string) $result['after']);
+    }
+
+    #[Test]
+    public function it_omits_a_wholly_deleted_inline_mark_from_the_after_view()
+    {
+        // Given — a highlighted span removed from an otherwise unchanged paragraph
+        $htmlDiff = $this->diffFor('<p>one <mark>hi</mark></p>', '<p>one</p>');
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then — the <mark> span is gone from the after view, not left behind as <mark></mark>
+        $this->assertStringNotContainsString('<mark>', (string) $result['after']);
+        $this->assertStringContainsString('<mark><del>hi</del></mark>', (string) $result['before']);
+    }
+
     // HTML-aware diffing — structural mismatch (full swap)
 
     #[Test]
