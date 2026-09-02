@@ -378,6 +378,19 @@ final class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_leaves_a_blank_line_unwrapped_within_a_wholly_inserted_value()
+    {
+        // Given — a blank line shouldn't be wrapped in a pointless empty <ins></ins>
+        $htmlDiff = $this->diffFor('', "Alpha.\n\nBravo.\n");
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame('<ins>Alpha.</ins><br><br><ins>Bravo.</ins><br>', (string) $result['after']);
+    }
+
+    #[Test]
     public function it_marks_every_line_of_a_wholly_deleted_multiline_value()
     {
         // Given — the mirror direction of a wholly inserted value
