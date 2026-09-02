@@ -596,6 +596,23 @@ final class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
+    public function it_collapses_a_newline_between_inline_tags_to_a_single_space()
+    {
+        // Given — unlike block tags, this whitespace renders as a space
+        $htmlDiff = $this->diffFor(
+            "<span>Hello</span>\n<span>world</span>",
+            "<span>Hello</span>\n<span>world!</span>",
+        );
+
+        // When
+        $result = $htmlDiff->field('value');
+
+        // Then
+        $this->assertSame('<span>Hello</span> <span><del>world</del></span>', (string) $result['before']);
+        $this->assertSame('<span>Hello</span> <span><ins>world!</ins></span>', (string) $result['after']);
+    }
+
+    #[Test]
     public function it_keeps_a_deletion_from_swallowing_the_line_break_that_follows_it()
     {
         // Given

@@ -13,6 +13,15 @@ use TestMonitor\Revisable\Renderers\Support\HtmlFragment;
 class HtmlDiff
 {
     /**
+     * @var string[] HTML block-level tags.
+     */
+    protected const array BLOCK_TAGS = [
+        'p', 'div', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'section', 'article', 'header',
+        'footer', 'aside', 'nav', 'figure', 'figcaption', 'pre', 'hr', 'form', 'fieldset', 'dl', 'dt', 'dd',
+    ];
+
+    /**
      * @param string $detailLevel Granularity of inline highlighting: 'none'|'line'|'word'|'char'
      *                            For HTML fields, only 'none' is mapped; all other levels resolve to word-level
      *                            because the underlying HTML differ does not support finer granularity.
@@ -332,14 +341,16 @@ class HtmlDiff
     }
 
     /**
-     * Turn literal newlines into explicit <br> tags so the differ can't relocate them across
-     * an <ins>/<del> boundary, dropping the ones that sit purely between two tags (formatting-only
-     * whitespace that browsers never render).
+     * Turn newlines into explicit <br> tags so the differ can't relocate them, except between
+     * block tags (dropped) or other tags (collapsed to a space) — matching how a browser renders that whitespace.
      */
     protected function normalizeNewlines(string $html): string
     {
+        $blockTag = '<\/?(?:' . implode('|', static::BLOCK_TAGS) . ')(?:\s[^>]*)?>';
+
         return Str::of($this->normalizeLineEndings($html))
-            ->replaceMatches('/(>)[ \t]*(?:\n[ \t]*)+(<)/', '$1$2')
+            ->replaceMatches('/(' . $blockTag . ')[ \t]*(?:\n[ \t]*)+(?=' . $blockTag . ')/i', '$1')
+            ->replaceMatches('/>[ \t]*(?:\n[ \t]*)+</', '> <')
             ->replace("\n", '<br>')
             ->toString();
     }
