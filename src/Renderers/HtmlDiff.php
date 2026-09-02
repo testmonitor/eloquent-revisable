@@ -3,6 +3,7 @@
 namespace TestMonitor\Revisable\Renderers;
 
 use Illuminate\Support\Str;
+use Jfcherng\Diff\Differ;
 use Jfcherng\Diff\DiffHelper;
 use Ssddanbrown\HtmlDiff\Diff as HtmlDiffer;
 use TestMonitor\Revisable\Diff;
@@ -181,16 +182,18 @@ class HtmlDiff
     protected function diffPlainValue(string $before, string $after): array
     {
         if ($before === $after) {
-            return ['before' => $this->escape($before), 'after' => $this->escape($after)];
+            return ['before' => $this->joinLines($before), 'after' => $this->joinLines($before)];
         }
 
         $diff = DiffHelper::calculate(
             old: $before,
             new: $after,
             renderer: 'SideBySide',
-            differOptions: [],
+            differOptions: ['context' => Differ::CONTEXT_ALL],
             rendererOptions: ['showHeader' => false, 'lineNumbers' => false, 'detailLevel' => $this->detailLevel],
         );
+
+        $diff = $this->markWholeLineChanges($diff);
 
         return [
             'before' => $this->extractCells($diff, 'old'),
@@ -207,6 +210,51 @@ class HtmlDiff
     }
 
     /**
+     * HTML-encode a value line by line, joined by the configured line separator, so an
+     * unchanged multiline value keeps the same shape as one rendered through the differ.
+     */
+    protected function joinLines(string $value): string
+    {
+        return Str::of($this->normalizeLineEndings($value))
+            ->explode("\n")
+            ->map(fn (string $line) => $this->escape($line))
+            ->implode($this->lineSeparator);
+    }
+
+    /**
+     * A wholly added/removed line has no inline <ins>/<del> of its own, only its <tbody>
+     * wrapper class — add the markup before that wrapper is discarded.
+     */
+    protected function markWholeLineChanges(string $diff): string
+    {
+        return Str::of($diff)
+            ->replaceMatches(
+                '/<tbody class="change change-ins">(.*?)<\/tbody>/s',
+                fn (array $match) => '<tbody class="change change-ins">' . $this->wrapCells($match[1], 'new', 'ins') . '</tbody>',
+            )
+            ->replaceMatches(
+                '/<tbody class="change change-del">(.*?)<\/tbody>/s',
+                fn (array $match) => '<tbody class="change change-del">' . $this->wrapCells($match[1], 'old', 'del') . '</tbody>',
+            )
+            ->value();
+    }
+
+    /**
+     * Wrap the content of every non-empty <td class="$side"> cell in $tag.
+     */
+    protected function wrapCells(string $html, string $side, string $tag): string
+    {
+        return Str::of($html)
+            ->replaceMatches(
+                '/<td class="' . $side . '">(.*?)<\/td>/s',
+                fn (array $match) => $match[1] === ''
+                    ? $match[0]
+                    : '<td class="' . $side . '"><' . $tag . '>' . $match[1] . '</' . $tag . '></td>',
+            )
+            ->value();
+    }
+
+    /**
      * Extract the inner HTML of all <td class="$side"> cells from SideBySide output.
      */
     protected function extractCells(string $diff, string $side): string
@@ -214,6 +262,14 @@ class HtmlDiff
         return Str::of($diff)
             ->matchAll('/<td class="' . $side . '">(.*?)<\/td>/s')
             ->implode($this->lineSeparator);
+    }
+
+    /**
+     * Collapse CRLF/CR line endings to a plain LF.
+     */
+    protected function normalizeLineEndings(string $value): string
+    {
+        return Str::of($value)->replace(["\r\n", "\r"], "\n")->value();
     }
 
     /**
@@ -246,6 +302,9 @@ class HtmlDiff
             return ['before' => $before, 'after' => $after];
         }
 
+        $before = $this->normalizeNewlines($before);
+        $after = $this->normalizeNewlines($after);
+
         if ($this->hasMismatchedBlockStructure($before, $after)) {
             return [
                 'before' => $this->diffValue($before, '')['before'],
@@ -259,6 +318,19 @@ class HtmlDiff
             'before' => $this->beforeView($merged),
             'after' => $this->afterView($merged),
         ];
+    }
+
+    /**
+     * Turn literal newlines into explicit <br> tags so the differ can't relocate them across
+     * an <ins>/<del> boundary, dropping the ones that sit purely between two tags (formatting-only
+     * whitespace that browsers never render).
+     */
+    protected function normalizeNewlines(string $html): string
+    {
+        return Str::of($this->normalizeLineEndings($html))
+            ->replaceMatches('/(>)[ \t]*(?:\n[ \t]*)+(<)/', '$1$2')
+            ->replace("\n", '<br>')
+            ->toString();
     }
 
     /**
