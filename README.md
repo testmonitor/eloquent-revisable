@@ -569,7 +569,7 @@ $article = Article::createWithSingleRevision(function () {
 });
 ```
 
-To batch changes to a model you already have, call `withSingleRevision()` on the instance instead. It only creates a revision if something tracked actually changed, and the callback receives the model as its argument:
+To combine changes to a model you already have, call `withSingleRevision()` on the instance instead. It only creates a revision if something tracked actually changed, and the callback receives the model as its argument:
 
 ```php
 $article->withSingleRevision(function ($article) {
@@ -577,6 +577,27 @@ $article->withSingleRevision(function ($article) {
 
     $article->tags()->sync($tagIds);
 });
+```
+
+#### Merging revisions across separate calls with a batch key
+
+The methods above combine changes made within a single callback. To merge revisions across several separate calls instead — for example, several rows processed one at a time by an import job — tag them with a shared batch key. A call whose latest revision already carries that key replaces it; otherwise a new revision is created:
+
+```php
+$article = Article::createWithBatchRevision('import-42', function () {
+    return Article::create(['title' => 'Title', 'body' => 'Body']);
+});
+
+// A later row in the same import merges into the revision above instead of adding a new one.
+$article->withBatchRevision('import-42', function ($article) {
+    $article->update(['body' => 'Body, amended by a later row']);
+});
+```
+
+Use `saveAsBatchRevision()` for a one-off manual save instead of a callback:
+
+```php
+$article->saveAsBatchRevision('import-42');
 ```
 
 ## Tests

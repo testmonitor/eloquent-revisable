@@ -208,7 +208,7 @@ trait HasRevisions
     /**
      * Create a new revision record for the model instance, bypassing the tracked-field dirty check.
      */
-    protected function forceCreateNewRevision(): RevisionContract|bool
+    protected function forceCreateNewRevision(array $properties = []): RevisionContract|bool
     {
         $options = $this->getRevisionOptions();
 
@@ -216,7 +216,7 @@ trait HasRevisions
             return false;
         }
 
-        return $this->buildNewRevision($options) ?? false;
+        return $this->buildNewRevision($options, properties: $properties) ?? false;
     }
 
     /**
@@ -233,6 +233,19 @@ trait HasRevisions
         }
 
         return $this->buildNewRevision($this->getRevisionOptions(), $name, $properties, $replace);
+    }
+
+    /**
+     * Save a revision tagged with the given batch key, merging into the latest revision when
+     * it belongs to the same batch.
+     */
+    public function saveAsBatchRevision(int|string $batch, ?string $name = null): ?RevisionContract
+    {
+        return $this->saveAsRevision(
+            name: $name,
+            properties: ['batch' => $batch],
+            replace: $this->latestRevision()->first()?->belongsToBatch($batch) ?? false,
+        );
     }
 
     /**
@@ -313,9 +326,10 @@ trait HasRevisions
 
     /**
      * Suspend revisioning while the callback creates a model (and its relations), then persist one
-     * revision; the callback must return the model, and enableRevisionOnCreate() still applies.
+     * revision, optionally tagged with properties; the callback must return the model, and
+     * enableRevisionOnCreate() still applies.
      */
-    public static function createWithSingleRevision(Closure $callback): mixed
+    public static function createWithSingleRevision(Closure $callback, array $properties = []): mixed
     {
         static::$revisioningSuspended = true;
 
@@ -330,7 +344,7 @@ trait HasRevisions
                 );
             }
 
-            $result->forceCreateNewRevision();
+            $result->forceCreateNewRevision($properties);
 
             $result->revisionOriginal = [];
 
@@ -341,6 +355,15 @@ trait HasRevisions
 
             static::clearPendingRevisions();
         }
+    }
+
+    /**
+     * Like createWithSingleRevision(), but tags the created revision with a batch key so a later
+     * saveAsBatchRevision()/withBatchRevision() call for the same batch merges into it.
+     */
+    public static function createWithBatchRevision(int|string $batch, Closure $callback): mixed
+    {
+        return static::createWithSingleRevision($callback, properties: ['batch' => $batch]);
     }
 
     /**
@@ -363,6 +386,34 @@ trait HasRevisions
             $this->revisionOriginal = [];
 
             return $this;
+        } finally {
+            // Runs on every exit path, so queued entries can never leak into a later batch.
+            static::$revisioningSuspended = false;
+
+            static::clearPendingRevisions();
+        }
+    }
+
+    /**
+     * Like withSingleRevision(), but tags the revision with a batch key so a later call for the
+     * same batch merges into it; returns the callback's return value.
+     */
+    public function withBatchRevision(int|string $batch, Closure $callback): mixed
+    {
+        static::$revisioningSuspended = true;
+
+        try {
+            $result = $callback($this);
+
+            static::$revisioningSuspended = false;
+
+            if (! empty($this->pullPendingRevisions())) {
+                $this->saveAsBatchRevision($batch);
+            }
+
+            $this->revisionOriginal = [];
+
+            return $result;
         } finally {
             // Runs on every exit path, so queued entries can never leak into a later batch.
             static::$revisioningSuspended = false;
