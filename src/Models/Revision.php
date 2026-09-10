@@ -145,6 +145,14 @@ class Revision extends Model implements RevisionContract
     }
 
     /**
+     * Determine whether this revision was tagged with the given batch key via saveAsBatchRevision().
+     */
+    public function belongsToBatch(int|string $batch): bool
+    {
+        return ($this->properties['batch'] ?? null) === $batch;
+    }
+
+    /**
      * Merge one or more key/value pairs into the properties column and save.
      *
      * @param array<string, mixed> $properties
