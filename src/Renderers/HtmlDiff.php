@@ -2,29 +2,18 @@
 
 namespace TestMonitor\Revisable\Renderers;
 
+use Closure;
 use Illuminate\Support\Str;
 use Jfcherng\Diff\Differ;
 use Jfcherng\Diff\DiffHelper;
-use Ssddanbrown\HtmlDiff\Diff as HtmlDiffer;
+use Ssddanbrown\HtmlDiff\Diff as HtmlWordDiff;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Renderers\Support\ArrayAligner;
-use TestMonitor\Revisable\Renderers\Support\HtmlFragment;
 
 class HtmlDiff
 {
     /**
-     * @var string[] HTML block-level tags.
-     */
-    protected const array BLOCK_TAGS = [
-        'p', 'div', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'section', 'article', 'header',
-        'footer', 'aside', 'nav', 'figure', 'figcaption', 'pre', 'hr', 'form', 'fieldset', 'dl', 'dt', 'dd',
-    ];
-
-    /**
      * @param string $detailLevel Granularity of inline highlighting: 'none'|'line'|'word'|'char'
-     *                            For HTML fields, only 'none' is mapped; all other levels resolve to word-level
-     *                            because the underlying HTML differ does not support finer granularity.
      * @param string $lineSeparator String placed between cells when a multi-line value is joined
      */
     public function __construct(
@@ -34,13 +23,12 @@ class HtmlDiff
     ) {}
 
     /**
-     * Render an HTML diff for a tracked field, returning separate before and after views.
+     * Diff a tracked field's before/after values per $type, rendering them via $renderer first if given.
      *
-     * Returns null when the field is not tracked in the diff.
-     *
+     * @param Closure(string):string|null $renderer
      * @return array{before: string, after: string}|array{before: list<string>, after: list<string>}|null
      */
-    public function field(string $field): ?array
+    public function field(string $field, FieldType $type = FieldType::Plain, ?Closure $renderer = null): ?array
     {
         $value = $this->diff->get($field);
 
@@ -48,37 +36,111 @@ class HtmlDiff
             return null;
         }
 
-        // Normalize the before/after values, then diff them.
-        $before = $this->normalize($value['before'] ?? '');
-        $after = $this->normalize($value['after'] ?? '');
+        return match (true) {
+            $type->isList() => $this->fieldAsList($value, $type, $renderer),
+            $type->isHtml() => $this->fieldAsHtml($value, $renderer),
+            default => $this->diffValue($value['before'] ?? '', $value['after'] ?? ''),
+        };
+    }
+
+    /**
+     * Diff a scalar field as HTML, rendering it via $renderer first if given.
+     *
+     * @param array{before: mixed, after: mixed} $value
+     * @return array{before: string, after: string}
+     */
+    protected function fieldAsHtml(array $value, ?Closure $renderer): array
+    {
+        $before = $value['before'] ?? '';
+        $after = $value['after'] ?? '';
+
+        if ($renderer instanceof Closure) {
+            $before = $renderer((string) $before);
+            $after = $renderer((string) $after);
+        }
+
+        return $this->diffHtmlValue((string) $before, (string) $after);
+    }
+
+    /**
+     * Diff a list field item by item, rendering items via $renderer first if given.
+     *
+     * @param array{before: mixed, after: mixed} $value
+     * @return array{before: list<string>, after: list<string>}
+     */
+    protected function fieldAsList(array $value, FieldType $type, ?Closure $renderer): array
+    {
+        $before = $this->decodeList($value['before'] ?? '');
+        $after = $this->decodeList($value['after'] ?? '');
+
+        if ($renderer instanceof Closure) {
+            $before = $this->render($before, $renderer);
+            $after = $this->render($after, $renderer);
+        }
+
+        // Array items are always aligned/compared as plain text, even when they're HTML.
+        if ($type->isHtml()) {
+            $before = $this->plainText($before);
+            $after = $this->plainText($after);
+        }
 
         // No prior value at all: don't pad the before side with a blank line per new item.
-        if (is_array($after) && ($value['before'] ?? null) === null) {
-            return $this->diffNewArray($after);
+        if (($value['before'] ?? null) === null) {
+            return $this->diffNewArray((array) $after);
         }
 
         // No value anymore: don't pad the after side with a blank line per removed item.
-        if (is_array($before) && ($value['after'] ?? null) === null) {
-            return $this->diffRemovedArray($before);
+        if (($value['after'] ?? null) === null) {
+            return $this->diffRemovedArray((array) $before);
         }
 
-        if (is_array($before) || is_array($after)) {
-            return $this->diffArray((array) $before, (array) $after);
-        }
-
-        return $this->diffValue($before, $after);
+        return $this->diffArray((array) $before, (array) $after);
     }
 
     /**
-     * Normalize a value: JSON strings are decoded, all other values pass through.
+     * Decode a field's raw value into a list; a plain scalar becomes a single-item list.
+     *
+     * @return array<array-key, mixed>
      */
-    protected function normalize(mixed $value): mixed
+    protected function decodeList(mixed $value): array
     {
-        return Str::isJson($value) ? json_decode($value, true) : $value;
+        if (is_array($value)) {
+            return $value;
+        }
+
+        $decoded = is_string($value) ? json_decode($value, true) : null;
+
+        return is_array($decoded) ? $decoded : array_filter([$value], fn (mixed $item) => $item !== null && $item !== '');
     }
 
     /**
-     * Build an HTML diff for a single before/after string pair.
+     * Render a raw value to HTML via $renderer, recursing into arrays.
+     *
+     * @param Closure(string):string $renderer
+     */
+    protected function render(mixed $value, Closure $renderer): mixed
+    {
+        if (is_array($value)) {
+            return array_map(fn (mixed $item) => $this->render($item, $renderer), $value);
+        }
+
+        return $renderer((string) $value);
+    }
+
+    /**
+     * Strip a rendered value down to plain text, recursing into arrays.
+     */
+    protected function plainText(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            return array_map($this->plainText(...), $value);
+        }
+
+        return trim(strip_tags((string) $value));
+    }
+
+    /**
+     * Diff a single before/after string pair as plain text, via jfcherng/php-diff.
      *
      * @return array{before: string, after: string}
      */
@@ -87,13 +149,65 @@ class HtmlDiff
         $before = (string) $before;
         $after = (string) $after;
 
-        return $this->containsHtml($before) || $this->containsHtml($after)
-            ? $this->diffHtmlValue($before, $after)
-            : $this->diffPlainValue($before, $after);
+        if ($this->detailLevel === 'none') {
+            return ['before' => $before, 'after' => $after];
+        }
+
+        if ($before === $after) {
+            return ['before' => $this->joinLines($before), 'after' => $this->joinLines($before)];
+        }
+
+        $diff = DiffHelper::calculate(
+            old: $before,
+            new: $after,
+            renderer: 'SideBySide',
+            differOptions: ['context' => Differ::CONTEXT_ALL],
+            rendererOptions: ['showHeader' => false, 'lineNumbers' => false, 'detailLevel' => $this->detailLevel],
+        );
+
+        $diff = $this->markWholeLineChanges($diff);
+
+        return [
+            'before' => $this->extractCells($diff, 'old'),
+            'after' => $this->extractCells($diff, 'new'),
+        ];
     }
 
     /**
-     * Build HTML diffs for a before/after array pair, aligning items by content via `ArrayAligner`.
+     * Diff two HTML renderings: diff the HTML itself for a formatting-only change, else diff as plain text.
+     *
+     * @return array{before: string, after: string}
+     */
+    protected function diffHtmlValue(string $beforeHtml, string $afterHtml): array
+    {
+        $before = trim(strip_tags($beforeHtml));
+        $after = trim(strip_tags($afterHtml));
+
+        if ($this->detailLevel !== 'none' && $before !== '' && $before === $after && $beforeHtml !== $afterHtml) {
+            return $this->diffFormatting($beforeHtml, $afterHtml);
+        }
+
+        return $this->diffValue($before, $after);
+    }
+
+    /**
+     * Word-diff two HTML renderings of identical text; the library marks the change as <ins class="mod">
+     * only, so "before" stays untouched.
+     *
+     * @return array{before: string, after: string}
+     */
+    protected function diffFormatting(string $beforeHtml, string $afterHtml): array
+    {
+        $merged = HtmlWordDiff::excecute($beforeHtml, $afterHtml);
+
+        return [
+            'before' => $beforeHtml,
+            'after' => preg_replace('/<del\b[^>]*>.*?<\/del>/s', '', $merged),
+        ];
+    }
+
+    /**
+     * Build diffs for a before/after array pair, aligning items by content via `ArrayAligner`.
      *
      * @param array<array-key, mixed> $before
      * @param array<array-key, mixed> $after
@@ -131,7 +245,7 @@ class HtmlDiff
     }
 
     /**
-     * Diff a single item pair from an aligned block. A null side means a pure insertion or deletion.
+     * Diff a single item pair from an aligned block; a null side means a pure insertion or deletion.
      *
      * @return array{before: ?string, after: ?string}
      */
@@ -184,33 +298,6 @@ class HtmlDiff
     }
 
     /**
-     * Build a plain-text diff, escaping identical values and delegating changes to jfcherng/php-diff.
-     *
-     * @return array{before: string, after: string}
-     */
-    protected function diffPlainValue(string $before, string $after): array
-    {
-        if ($before === $after) {
-            return ['before' => $this->joinLines($before), 'after' => $this->joinLines($before)];
-        }
-
-        $diff = DiffHelper::calculate(
-            old: $before,
-            new: $after,
-            renderer: 'SideBySide',
-            differOptions: ['context' => Differ::CONTEXT_ALL],
-            rendererOptions: ['showHeader' => false, 'lineNumbers' => false, 'detailLevel' => $this->detailLevel],
-        );
-
-        $diff = $this->markWholeLineChanges($diff);
-
-        return [
-            'before' => $this->extractCells($diff, 'old'),
-            'after' => $this->extractCells($diff, 'new'),
-        ];
-    }
-
-    /**
      * HTML-encode a string, consistent with jfcherng's own encoding of diffed values.
      */
     protected function escape(string $value): string
@@ -219,8 +306,7 @@ class HtmlDiff
     }
 
     /**
-     * HTML-encode a value line by line, joined by the configured line separator, so an
-     * unchanged multiline value keeps the same shape as one rendered through the differ.
+     * HTML-encode a value line by line, joined by the configured line separator, matching the differ's own output shape.
      */
     protected function joinLines(string $value): string
     {
@@ -231,8 +317,7 @@ class HtmlDiff
     }
 
     /**
-     * A wholly added/removed line has no inline <ins>/<del> of its own, only its <tbody>
-     * wrapper class — add the markup before that wrapper is discarded.
+     * Add inline <ins>/<del> markup for wholly changed lines, which otherwise only carry a <tbody> wrapper class.
      */
     protected function markWholeLineChanges(string $diff): string
     {
@@ -290,119 +375,5 @@ class HtmlDiff
     protected function normalizeLineEndings(string $value): string
     {
         return Str::of($value)->replace(["\r\n", "\r"], "\n")->value();
-    }
-
-    /**
-     * Return true when the string contains at least one HTML tag.
-     */
-    protected function containsHtml(string $value): bool
-    {
-        return Str::of($value)->test('/<\s*\/?\s*[a-zA-Z][^>]*>/');
-    }
-
-    /**
-     * Return true when the string contains list/table block structure (<ul>, <ol>, <table>).
-     */
-    protected function containsBlockStructure(string $value): bool
-    {
-        return Str::of($value)->test('/<(ul|ol|table)[\s>]/i');
-    }
-
-    /**
-     * Build an HTML diff for values where at least one contains HTML markup.
-     *
-     * Delegates to ssddanbrown/htmldiff for DOM-aware diffing, then splits the
-     * merged result into separate before (del-marked) and after (ins-marked) views.
-     *
-     * @return array{before: string, after: string}
-     */
-    protected function diffHtmlValue(string $before, string $after): array
-    {
-        if ($this->detailLevel === 'none') {
-            return ['before' => $before, 'after' => $after];
-        }
-
-        $before = $this->normalizeNewlines($before);
-        $after = $this->normalizeNewlines($after);
-
-        if ($this->hasMismatchedBlockStructure($before, $after)) {
-            return [
-                'before' => $this->diffValue($before, '')['before'],
-                'after' => $this->diffValue('', $after)['after'],
-            ];
-        }
-
-        $merged = new HtmlDiffer($before, $after)->build();
-
-        return [
-            'before' => $this->beforeView($merged),
-            'after' => $this->afterView($merged),
-        ];
-    }
-
-    /**
-     * Turn newlines into explicit <br> tags so the differ can't relocate them, except between
-     * block tags (dropped) or other tags (collapsed to a space) — matching how a browser renders that whitespace.
-     */
-    protected function normalizeNewlines(string $html): string
-    {
-        $blockTag = '<\/?(?:' . implode('|', static::BLOCK_TAGS) . ')(?:\s[^>]*)?>';
-
-        return Str::of($this->normalizeLineEndings($html))
-            ->replaceMatches('/(' . $blockTag . ')[ \t]*(?:\n[ \t]*)+(?=' . $blockTag . ')/i', '$1')
-            ->replaceMatches('/>[ \t]*(?:\n[ \t]*)+</', '> <')
-            ->replace("\n", '<br>')
-            ->toString();
-    }
-
-    /**
-     * Return true when exactly one side has list/table block structure, which can't merge
-     * word-by-word without fragments of the plain side getting trapped inside a <li>/<td>.
-     */
-    protected function hasMismatchedBlockStructure(string $before, string $after): bool
-    {
-        if ($before === '' || $after === '') {
-            return false;
-        }
-
-        return $this->containsBlockStructure($before) !== $this->containsBlockStructure($after);
-    }
-
-    /**
-     * Extract the before view: remove inserted content, normalise <del> tags.
-     */
-    protected function beforeView(string $merged): string
-    {
-        return new HtmlFragment($merged)
-            // Formatting-only change: show the old formatting instead of dropping the text.
-            ->renameElements('//ins[@class="mod"]', 'del')
-            // Drop <li>/<p>/<td>/<th>/<tr> elements that only ever held new content.
-            ->removeElementsEmptiedBy('//li | //p | //td | //th | //tr', 'ins')
-            // Any other inserted text didn't exist yet, so drop it.
-            ->removeElements('//ins')
-            // A wholly new list/table/blockquote/pre/code/mark leaves an empty wrapper behind once its
-            // children are gone; drop those too, repeating since removing one can empty its own parent.
-            ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead | //blockquote | //pre | //code | //mark')
-            // Normalise the differ's diff-specific <del> classes.
-            ->removeAttribute('//del[not(@class="mod")]', 'class')
-            ->toHtml();
-    }
-
-    /**
-     * Extract the after view: remove deleted content, normalise <ins> tags.
-     */
-    protected function afterView(string $merged): string
-    {
-        return new HtmlFragment($merged)
-            // Drop <li>/<p>/<td>/<th>/<tr> elements that only ever held removed content.
-            ->removeElementsEmptiedBy('//li | //p | //td | //th | //tr', 'del')
-            // Deleted text no longer exists, so drop it.
-            ->removeElements('//del')
-            // A wholly deleted list/table/blockquote/pre/code/mark leaves an empty wrapper behind once its
-            // children are gone; drop those too.
-            ->removeEmptyElements('//ul | //ol | //table | //tbody | //thead | //blockquote | //pre | //code | //mark')
-            // Normalise diff-specific <ins> classes, but keep the "mod" marker.
-            ->removeAttribute('//ins[not(@class="mod")]', 'class')
-            ->toHtml();
     }
 }

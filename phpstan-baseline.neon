@@ -145,12 +145,6 @@ parameters:
 			path: src/Relations/MorphToMany.php
 
 		-
-			message: '#^Property TestMonitor\\Revisable\\Renderers\\Support\\HtmlFragment\:\:\$root \(DOMElement\) does not accept DOMNameSpaceNode\|DOMNode\|null\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: src/Renderers/Support/HtmlFragment.php
-
-		-
 			message: '#^Call to function is_a\(\) with arguments class\-string\<TestMonitor\\Revisable\\Models\\Revision\>\|TestMonitor\\Revisable\\Models\\Revision, ''Illuminate\\\\Database\\\\Eloquent\\\\Model'' and true will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1
