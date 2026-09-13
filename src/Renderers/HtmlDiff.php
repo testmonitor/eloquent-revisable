@@ -141,7 +141,11 @@ class HtmlDiff
             return array_map($this->plainText(...), $value);
         }
 
-        return trim(strip_tags((string) $value));
+        return Str::of((string) $value)
+            ->stripTags()
+            ->pipe(fn ($value) => html_entity_decode($value, ENT_QUOTES, 'UTF-8'))
+            ->trim()
+            ->value();
     }
 
     /**
@@ -154,9 +158,9 @@ class HtmlDiff
         $before = (string) $before;
         $after = (string) $after;
 
-        // If detail level is 'none', skip any diffing and return the raw values.
+        // If detail level is 'none', skip any diffing but still escape the values.
         if ($this->detailLevel === 'none') {
-            return ['before' => $before, 'after' => $after];
+            return ['before' => $this->joinLines($before), 'after' => $this->joinLines($after)];
         }
 
         // If the before and after values are identical, no diffing is needed.
@@ -189,8 +193,8 @@ class HtmlDiff
      */
     protected function diffHtmlValue(string $beforeHtml, string $afterHtml): array
     {
-        $before = trim(strip_tags($beforeHtml));
-        $after = trim(strip_tags($afterHtml));
+        $before = (string) $this->plainText($beforeHtml);
+        $after = (string) $this->plainText($afterHtml);
 
         // Just a formatting change if the plain text is identical but the HTML differs.
         if ($this->detailLevel !== 'none' && $before !== '' && $before === $after && $beforeHtml !== $afterHtml) {

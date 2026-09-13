@@ -485,11 +485,11 @@ final class HtmlDiffRendererTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_html_unmodified_when_detail_level_is_none()
+    public function it_escapes_plain_values_without_diff_markers_when_detail_level_is_none()
     {
         // Given
-        $before = '<p>Hello <strong>world</strong></p>';
-        $after = '<p>Hello <strong>universe</strong></p>';
+        $before = '<script>alert(1)</script>';
+        $after = '<script>alert(2)</script>';
         $htmlDiff = new Diff(
             new Revision(['metadata' => ['attributes' => ['value' => $before]]]),
             new Revision(['metadata' => ['attributes' => ['value' => $after]]]),
@@ -499,8 +499,8 @@ final class HtmlDiffRendererTest extends TestCase
         $result = $htmlDiff->field('value');
 
         // Then
-        $this->assertSame($before, $result['before']);
-        $this->assertSame($after, $result['after']);
+        $this->assertSame('&lt;script&gt;alert(1)&lt;/script&gt;', $result['before']);
+        $this->assertSame('&lt;script&gt;alert(2)&lt;/script&gt;', $result['after']);
     }
 
     #[Test]
