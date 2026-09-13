@@ -104,13 +104,18 @@ class HtmlDiff
      */
     protected function decodeList(mixed $value): array
     {
+        // If the value is already an array, just return it as-is.
         if (is_array($value)) {
             return $value;
         }
 
+        // Attempt to decode a JSON string into an array first.
         $decoded = is_string($value) ? json_decode($value, true) : null;
 
-        return is_array($decoded) ? $decoded : array_filter([$value], fn (mixed $item) => $item !== null && $item !== '');
+        // If JSON decoding failed, fall back to wrapping the value in an array.
+        return is_array($decoded)
+            ? $decoded
+            : array_filter([$value], fn (mixed $item) => $item !== null && $item !== '');
     }
 
     /**
@@ -149,14 +154,17 @@ class HtmlDiff
         $before = (string) $before;
         $after = (string) $after;
 
+        // If detail level is 'none', skip any diffing and return the raw values.
         if ($this->detailLevel === 'none') {
             return ['before' => $before, 'after' => $after];
         }
 
+        // If the before and after values are identical, no diffing is needed.
         if ($before === $after) {
             return ['before' => $this->joinLines($before), 'after' => $this->joinLines($before)];
         }
 
+        // Calculate the diff using the SideBySide renderer with full context.
         $diff = DiffHelper::calculate(
             old: $before,
             new: $after,
@@ -165,6 +173,7 @@ class HtmlDiff
             rendererOptions: ['showHeader' => false, 'lineNumbers' => false, 'detailLevel' => $this->detailLevel],
         );
 
+        // Mark whole line changes to improve readability of the diff.
         $diff = $this->markWholeLineChanges($diff);
 
         return [
@@ -183,6 +192,7 @@ class HtmlDiff
         $before = trim(strip_tags($beforeHtml));
         $after = trim(strip_tags($afterHtml));
 
+        // Just a formatting change if the plain text is identical but the HTML differs.
         if ($this->detailLevel !== 'none' && $before !== '' && $before === $after && $beforeHtml !== $afterHtml) {
             return $this->diffFormatting($beforeHtml, $afterHtml);
         }
@@ -306,7 +316,8 @@ class HtmlDiff
     }
 
     /**
-     * HTML-encode a value line by line, joined by the configured line separator, matching the differ's own output shape.
+     * HTML-encode a value line by line, joined by the configured line separator,
+     * matching the differ's own output shape.
      */
     protected function joinLines(string $value): string
     {
