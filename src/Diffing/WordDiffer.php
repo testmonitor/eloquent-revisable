@@ -28,8 +28,6 @@ final class WordDiffer
                 $operation,
                 implode('', array_slice($beforeTokens, $beforeStart, $beforeEnd - $beforeStart)),
                 implode('', array_slice($afterTokens, $afterStart, $afterEnd - $afterStart)),
-                $beforeStart,
-                $afterStart,
             )];
         }
 
@@ -42,20 +40,15 @@ final class WordDiffer
      *
      * @return list<Segment>
      */
-    protected function segmentsFor(
-        int $operation,
-        string $beforeText,
-        string $afterText,
-        int $beforeOffset,
-        int $afterOffset,
-    ): array {
+    protected function segmentsFor(int $operation, string $beforeText, string $afterText): array
+    {
         return match ($operation) {
-            SequenceMatcher::OP_EQ => [new Segment(ChangeType::Kept, $beforeText, $beforeOffset, $afterOffset)],
-            SequenceMatcher::OP_DEL => [new Segment(ChangeType::Removed, $beforeText, $beforeOffset, $afterOffset)],
-            SequenceMatcher::OP_INS => [new Segment(ChangeType::Added, $afterText, $beforeOffset, $afterOffset)],
+            SequenceMatcher::OP_EQ => [new Segment(ChangeType::Kept, $beforeText)],
+            SequenceMatcher::OP_DEL => [new Segment(ChangeType::Removed, $beforeText)],
+            SequenceMatcher::OP_INS => [new Segment(ChangeType::Added, $afterText)],
             default => [
-                new Segment(ChangeType::Removed, $beforeText, $beforeOffset, $afterOffset),
-                new Segment(ChangeType::Added, $afterText, $beforeOffset, $afterOffset),
+                new Segment(ChangeType::Removed, $beforeText),
+                new Segment(ChangeType::Added, $afterText),
             ],
         };
     }

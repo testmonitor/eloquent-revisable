@@ -228,20 +228,73 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Wrap a whole node in a block-level marker and report it as one block.
+     * Mark a whole node as added or removed and report it as one block.
      *
-     * The node's contents are deliberately left alone: a block that is wholly added or
+     * The node's words are deliberately left unmarked: a block that is wholly added or
      * wholly removed says everything it needs to at block level, and marking its words as
      * well would only nest one marker inside another.
      */
     protected function markWholeBlock(Node $node, ChangeType $type): BlockDiff
     {
+        $text = $this->textOf($node);
+
+        $node instanceof ListItem
+            ? $this->markListItem($node, $type)
+            : $this->wrapBlock($node, $type);
+
+        return new BlockDiff($type, [new Segment($type, $text)]);
+    }
+
+    /**
+     * Put a block-level marker in a node's place and move the node inside it. Valid for
+     * any block whose parent takes flow content, which is every container this driver
+     * recurses into except a list.
+     */
+    protected function wrapBlock(Node $node, ChangeType $type): void
+    {
         $marker = new BlockChange($type);
 
         $node->replaceWith($marker);
         $marker->appendChild($node);
+    }
 
-        return new BlockDiff($type, [new Segment($type, $this->textOf($node))]);
+    /**
+     * Mark a list item from the inside, leaving the item itself exactly where the parser
+     * put it. Two reasons, both about the markup CommonMark then renders: a list may only
+     * hold list items, so a marker in the item's place would put <ins> directly inside
+     * <ul>; and a marker between the item and its paragraph would push that paragraph out
+     * of the list's tight rendering, so an added item would grow a <p> its siblings do not
+     * have. Marking the contents keeps the item tight and the marker inside the <li>,
+     * which is what a changed item already renders as.
+     */
+    protected function markListItem(ListItem $item, ChangeType $type): void
+    {
+        foreach ($item->children() as $child) {
+            $this->isOneOf($child, self::ATOMIC) || $this->isOneOf($child, self::CONTAINERS)
+                ? $this->wrapBlock($child, $type)
+                : $this->markInlineContent($child, $type);
+        }
+    }
+
+    /**
+     * Move a leaf block's inline children under a single inline marker, so the block
+     * itself, and its position in the tree, are left untouched.
+     */
+    protected function markInlineContent(Node $block, ChangeType $type): void
+    {
+        $children = iterator_to_array($block->children(), false);
+
+        if ($children === []) {
+            return;
+        }
+
+        $marker = new InlineChange($type);
+
+        $children[0]->replaceWith($marker);
+
+        foreach ($children as $child) {
+            $marker->appendChild($child);
+        }
     }
 
     /**

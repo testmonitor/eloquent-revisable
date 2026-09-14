@@ -406,4 +406,76 @@ final class MarkdownDriverTest extends TestCase
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
     }
+
+    #[Test]
+    public function it_marks_an_added_list_item_inside_the_item_rather_than_inside_the_list()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('- one', "- one\n- two");
+
+        // Then
+        $this->assertStringContainsString('<li><ins>two</ins></li>', $result->afterHtml);
+        $this->assertDoesNotMatchRegularExpression('/<ul>\s*<ins>/', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_renders_an_added_list_item_as_tightly_as_its_siblings()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('- one', "- one\n- two");
+
+        // Then
+        $this->assertStringNotContainsString('<p>', $result->afterHtml);
+    }
+
+    #[Test]
+    public function it_marks_a_removed_list_item_inside_the_item_as_well()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff("- one\n- two", '- one');
+
+        // Then
+        $this->assertStringContainsString('<li><del>two</del></li>', $result->beforeHtml);
+        $this->assertDoesNotMatchRegularExpression('/<ul>\s*<del>/', $result->beforeHtml);
+        $this->assertWellFormedHtml($result->beforeHtml);
+    }
+
+    #[Test]
+    public function it_still_marks_a_wholly_added_paragraph_at_block_level()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('One.', "One.\n\nTwo.");
+
+        // Then
+        $this->assertStringContainsString('<ins><p>Two.</p></ins>', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_marks_a_wholly_added_list_at_block_level()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('Text.', "Text.\n\n- one");
+
+        // Then
+        $this->assertStringContainsString('<ins><ul>', $result->afterHtml);
+        $this->assertStringContainsString('</ul></ins>', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
 }

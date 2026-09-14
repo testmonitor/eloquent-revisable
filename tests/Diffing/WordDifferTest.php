@@ -171,19 +171,4 @@ final class WordDifferTest extends TestCase
         // When / Then
         $this->assertSame([], $differ->diff('', ''));
     }
-
-    #[Test]
-    public function it_records_token_offsets_for_each_segment()
-    {
-        // Given
-        $differ = new WordDiffer;
-
-        // When
-        $segments = $differ->diff('a b', 'a c');
-
-        // Then
-        $this->assertSame(0, $segments[0]->beforeOffset);
-        $this->assertSame(0, $segments[0]->afterOffset);
-        $this->assertSame(2, $segments[1]->beforeOffset);
-    }
 }
