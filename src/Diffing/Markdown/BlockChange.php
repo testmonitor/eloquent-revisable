@@ -14,6 +14,12 @@ final class BlockChange extends AbstractBlock implements ChangeNode
     public function __construct(protected ChangeType $type)
     {
         parent::__construct();
+
+        if ($type !== ChangeType::Added && $type !== ChangeType::Removed) {
+            throw new \InvalidArgumentException(
+                'A change marker must be Added or Removed, got ' . $type->name . '.'
+            );
+        }
     }
 
     public function changeType(): ChangeType

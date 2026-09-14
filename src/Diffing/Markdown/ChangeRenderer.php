@@ -16,7 +16,9 @@ final class ChangeRenderer implements NodeRendererInterface
     public function render(Node $node, ChildNodeRendererInterface $childRenderer): string
     {
         if (! $node instanceof ChangeNode) {
-            return $childRenderer->renderNodes($node->children());
+            throw new \InvalidArgumentException(
+                ChangeRenderer::class . ' received an unexpected node: ' . $node::class
+            );
         }
 
         $tag = $node->changeType() === ChangeType::Removed ? 'del' : 'ins';
