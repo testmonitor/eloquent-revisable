@@ -1,6 +1,6 @@
 <?php
 
-namespace TestMonitor\Revisable\Renderers\Support;
+namespace TestMonitor\Revisable\Diffing\Support;
 
 /**
  * Marks matching content at $beforeIndex in one array and $afterIndex in the other —

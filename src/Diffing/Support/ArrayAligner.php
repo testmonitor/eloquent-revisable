@@ -1,29 +1,29 @@
 <?php
 
-namespace TestMonitor\Revisable\Renderers\Support;
+namespace TestMonitor\Revisable\Diffing\Support;
 
 use Jfcherng\Diff\SequenceMatcher;
 
 /**
- * Aligns two string arrays by content (or a derived key) rather than by position, so a
+ * Aligns two arrays by content (or a derived key) rather than by position, so a
  * removal or insertion doesn't shift later items out of alignment. Unique items are anchored
  * first, so a duplicated item can't get matched to the wrong occurrence.
  */
 class ArrayAligner
 {
     /**
-     * @param list<string> $before
-     * @param list<string> $after
-     * @param (\Closure(string): string)|null $key Derives the comparison key items are aligned
-     *        by; defaults to the item itself. Useful to align by plain text while keeping the
-     *        original (e.g. HTML) values in the returned blocks.
+     * @param list<mixed> $before
+     * @param list<mixed> $after
+     * @param (\Closure(mixed): string)|null $key Derives the comparison key items are aligned
+     *                                            by; defaults to the item cast to a string. Useful to align by plain text while
+     *                                            keeping the original (e.g. AST node) values in the returned blocks.
      */
     public function __construct(
         protected array $before,
         protected array $after,
         protected ?\Closure $key = null,
     ) {
-        $this->key ??= fn (string $item) => $item;
+        $this->key ??= fn (mixed $item) => (string) $item;
     }
 
     /**
@@ -39,8 +39,8 @@ class ArrayAligner
     /**
      * Recursively align a slice of the before and after arrays, using anchors to guide the alignment.
      *
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      * @return list<AlignedBlock>
      */
     protected function alignSlice(array $before, array $after): array
@@ -55,8 +55,8 @@ class ArrayAligner
     /**
      * Split before/after around each anchor, recursively aligning the gaps between them.
      *
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      * @param list<AnchorPair> $anchors
      * @return list<AlignedBlock>
      */
@@ -92,8 +92,8 @@ class ArrayAligner
     /**
      * Find items that occur exactly once in both arrays, in the order they're matched.
      *
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      * @return list<AnchorPair>
      */
     protected function findAnchors(array $before, array $after): array
@@ -136,8 +136,8 @@ class ArrayAligner
     /**
      * Align two arrays with no shared anchors using SequenceMatcher's opcodes.
      *
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      * @return list<AlignedBlock>
      */
     protected function matchByContent(array $before, array $after): array
