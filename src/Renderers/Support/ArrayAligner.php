@@ -5,20 +5,26 @@ namespace TestMonitor\Revisable\Renderers\Support;
 use Jfcherng\Diff\SequenceMatcher;
 
 /**
- * Aligns two string arrays by content rather than by position, so a removal or insertion
- * doesn't shift later items out of alignment. Unique items are anchored first, so a
- * duplicated item can't get matched to the wrong occurrence.
+ * Aligns two string arrays by content (or a derived key) rather than by position, so a
+ * removal or insertion doesn't shift later items out of alignment. Unique items are anchored
+ * first, so a duplicated item can't get matched to the wrong occurrence.
  */
 class ArrayAligner
 {
     /**
      * @param list<string> $before
      * @param list<string> $after
+     * @param (\Closure(string): string)|null $key Derives the comparison key items are aligned
+     *        by; defaults to the item itself. Useful to align by plain text while keeping the
+     *        original (e.g. HTML) values in the returned blocks.
      */
     public function __construct(
         protected array $before,
         protected array $after,
-    ) {}
+        protected ?\Closure $key = null,
+    ) {
+        $this->key ??= fn (string $item) => $item;
+    }
 
     /**
      * Align the two arrays using anchors to guide the alignment.
@@ -92,14 +98,17 @@ class ArrayAligner
      */
     protected function findAnchors(array $before, array $after): array
     {
-        $beforeCounts = array_count_values($before);
-        $afterCounts = array_count_values($after);
+        $beforeKeys = array_map($this->key, $before);
+        $afterKeys = array_map($this->key, $after);
 
-        $isUnique = fn (string $item) => ($beforeCounts[$item] ?? 0) === 1 && ($afterCounts[$item] ?? 0) === 1;
+        $beforeCounts = array_count_values($beforeKeys);
+        $afterCounts = array_count_values($afterKeys);
+
+        $isUnique = fn (string $key) => ($beforeCounts[$key] ?? 0) === 1 && ($afterCounts[$key] ?? 0) === 1;
 
         // Matching only within the unique items keeps a duplicate from ever being picked as an anchor.
-        $beforeUnique = collect($before)->filter($isUnique);
-        $afterUnique = collect($after)->filter($isUnique);
+        $beforeUnique = collect($beforeKeys)->filter($isUnique);
+        $afterUnique = collect($afterKeys)->filter($isUnique);
 
         $matcher = new SequenceMatcher($beforeUnique->values()->all(), $afterUnique->values()->all());
 
@@ -133,7 +142,7 @@ class ArrayAligner
      */
     protected function matchByContent(array $before, array $after): array
     {
-        $matcher = new SequenceMatcher($before, $after);
+        $matcher = new SequenceMatcher(array_map($this->key, $before), array_map($this->key, $after));
 
         return collect($matcher->getOpcodes())
             ->map(function (array $opcode) use ($before, $after) {
