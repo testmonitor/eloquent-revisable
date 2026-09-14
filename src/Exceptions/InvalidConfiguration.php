@@ -28,6 +28,13 @@ final class InvalidConfiguration extends Exception
         return new self("There is no diff driver named `{$name}`. Use 'plain', 'markdown', or pass a driver instance.");
     }
 
+    public static function missingCommonMark(): self
+    {
+        return new self(
+            'The markdown diff driver requires `league/commonmark`. Install it with `composer require league/commonmark`.'
+        );
+    }
+
     public static function fieldIsList(string $field): self
     {
         return new self("The field `{$field}` holds a list. Use `list()` instead of `field()` to diff it.");
