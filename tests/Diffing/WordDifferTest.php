@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Tests\Diffing;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diffing\Segment;
 use TestMonitor\Revisable\Diffing\WordDiffer;
@@ -19,6 +20,38 @@ final class WordDifferTest extends TestCase
     protected function simplify(array $segments): array
     {
         return array_map(fn (Segment $segment) => [$segment->type, $segment->text], $segments);
+    }
+
+    /**
+     * Rebuild one side of a diff by keeping only the segments present on that side and
+     * concatenating their text, in order.
+     *
+     * @param list<Segment> $segments
+     */
+    protected function reconstruct(array $segments, callable $isOnThisSide): string
+    {
+        return collect($segments)
+            ->filter(fn (Segment $segment) => $isOnThisSide($segment->type))
+            ->map(fn (Segment $segment) => $segment->text)
+            ->implode('');
+    }
+
+    /**
+     * Whitespace edge cases for the lossless-reconstruction property that PlainDriver
+     * and MarkdownDriver both depend on. Named cases document what each one probes.
+     *
+     * @return iterable<string, array{string, string}>
+     */
+    public static function losslessCases(): iterable
+    {
+        yield 'multiple spaces and a tab' => ["a  b\tc", "a  b\td"];
+        yield 'leading whitespace' => ['  hello', '  world'];
+        yield 'trailing whitespace' => ['hello  ', 'world  '];
+        yield 'leading and trailing whitespace' => ['  hello  ', '  world  '];
+        yield 'whitespace only' => ['   ', "\t\t"];
+        yield 'consecutive whitespace runs, a tab next to a newline' => ["a \t\nb", "a \t\nc"];
+        yield 'empty before side' => ['', 'brand new text'];
+        yield 'empty after side' => ['existing text', ''];
     }
 
     #[Test]
@@ -85,21 +118,18 @@ final class WordDifferTest extends TestCase
     }
 
     #[Test]
-    public function it_preserves_whitespace_exactly_so_rendering_is_lossless()
+    #[DataProvider('losslessCases')]
+    public function it_reconstructs_both_sides_exactly_so_rendering_is_lossless(string $before, string $after)
     {
         // Given
         $differ = new WordDiffer;
 
         // When
-        $segments = $differ->diff("a  b\tc", "a  b\td");
+        $segments = $differ->diff($before, $after);
 
         // Then
-        $rebuilt = collect($segments)
-            ->filter(fn (Segment $segment) => $segment->type->inBefore())
-            ->map(fn (Segment $segment) => $segment->text)
-            ->implode('');
-
-        $this->assertSame("a  b\tc", $rebuilt);
+        $this->assertSame($before, $this->reconstruct($segments, fn (ChangeType $type) => $type->inBefore()));
+        $this->assertSame($after, $this->reconstruct($segments, fn (ChangeType $type) => $type->inAfter()));
     }
 
     #[Test]
