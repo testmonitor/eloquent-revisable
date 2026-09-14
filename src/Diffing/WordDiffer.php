@@ -1,0 +1,76 @@
+<?php
+
+namespace TestMonitor\Revisable\Diffing;
+
+use Jfcherng\Diff\SequenceMatcher;
+use TestMonitor\Revisable\Enums\ChangeType;
+
+/**
+ * Diffs two strings word by word. Whitespace is kept as its own tokens, so joining a
+ * segment list back together reproduces the original string exactly.
+ */
+final class WordDiffer
+{
+    /**
+     * @return list<Segment>
+     */
+    public function diff(string $before, string $after): array
+    {
+        $beforeTokens = $this->tokenize($before);
+        $afterTokens = $this->tokenize($after);
+
+        $segments = [];
+
+        foreach (new SequenceMatcher($beforeTokens, $afterTokens)->getOpcodes() as $opcode) {
+            [$operation, $beforeStart, $beforeEnd, $afterStart, $afterEnd] = $opcode;
+
+            $segments = [...$segments, ...$this->segmentsFor(
+                $operation,
+                implode('', array_slice($beforeTokens, $beforeStart, $beforeEnd - $beforeStart)),
+                implode('', array_slice($afterTokens, $afterStart, $afterEnd - $afterStart)),
+                $beforeStart,
+                $afterStart,
+            )];
+        }
+
+        return $segments;
+    }
+
+    /**
+     * Turn a single opcode into the segments it represents. A replacement becomes a
+     * removal followed by an addition, so each segment belongs to exactly one side.
+     *
+     * @return list<Segment>
+     */
+    protected function segmentsFor(
+        int $operation,
+        string $beforeText,
+        string $afterText,
+        int $beforeOffset,
+        int $afterOffset,
+    ): array {
+        return match ($operation) {
+            SequenceMatcher::OP_EQ => [new Segment(ChangeType::Kept, $beforeText, $beforeOffset, $afterOffset)],
+            SequenceMatcher::OP_DEL => [new Segment(ChangeType::Removed, $beforeText, $beforeOffset, $afterOffset)],
+            SequenceMatcher::OP_INS => [new Segment(ChangeType::Added, $afterText, $beforeOffset, $afterOffset)],
+            default => [
+                new Segment(ChangeType::Removed, $beforeText, $beforeOffset, $afterOffset),
+                new Segment(ChangeType::Added, $afterText, $beforeOffset, $afterOffset),
+            ],
+        };
+    }
+
+    /**
+     * Split into alternating word and whitespace tokens, so no character is lost.
+     *
+     * @return list<string>
+     */
+    protected function tokenize(string $value): array
+    {
+        if ($value === '') {
+            return [];
+        }
+
+        return preg_split('/(\s+)/u', $value, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY) ?: [];
+    }
+}
