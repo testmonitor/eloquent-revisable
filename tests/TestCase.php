@@ -121,4 +121,41 @@ abstract class TestCase extends Orchestra
 
         return $pending ?? new PendingRevision(new Revision);
     }
+
+    /**
+     * Assert a fragment parses as well-formed markup. The old renderer's failure mode was
+     * overlapping and unbalanced tags, which string comparison only catches case by case.
+     */
+    protected function assertWellFormedHtml(string $html): void
+    {
+        if (trim($html) === '') {
+            return;
+        }
+
+        $previous = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+
+        $document = new \DOMDocument;
+        $document->loadXML('<root>' . $html . '</root>');
+
+        $errors = libxml_get_errors();
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        $this->assertSame(
+            [],
+            array_map(fn (\LibXMLError $error) => trim($error->message), $errors),
+            "Rendered markup is not well-formed:\n{$html}",
+        );
+    }
+
+    /**
+     * Assert the before view carries no insertions and the after view no deletions.
+     */
+    protected function assertSidesAreClean(string $beforeHtml, string $afterHtml): void
+    {
+        $this->assertStringNotContainsString('<ins>', $beforeHtml);
+        $this->assertStringNotContainsString('<del>', $afterHtml);
+    }
 }
