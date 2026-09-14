@@ -121,7 +121,7 @@ final class ChangeNodeTest extends TestCase
         // Given
         $renderer = new ChangeRenderer;
         $node = new Text('hello');
-        $childRenderer = $this->createMock(ChildNodeRendererInterface::class);
+        $childRenderer = $this->createStub(ChildNodeRendererInterface::class);
 
         // When/Then
         $this->expectException(\InvalidArgumentException::class);
