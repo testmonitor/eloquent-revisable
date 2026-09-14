@@ -5,7 +5,12 @@ namespace TestMonitor\Revisable;
 use Closure;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use TestMonitor\Revisable\Contracts\DiffDriver;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
+use TestMonitor\Revisable\Diffing\FieldDiff;
+use TestMonitor\Revisable\Diffing\ListDiff;
+use TestMonitor\Revisable\Diffing\PlainDriver;
+use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 
 final class Diff
 {
@@ -100,6 +105,82 @@ final class Diff
     public function get(string $field): ?array
     {
         return $this->all()[$field] ?? null;
+    }
+
+    /**
+     * Diff a single tracked field. Returns null when the field isn't tracked.
+     *
+     * @param string|DiffDriver $driver A built-in driver name, or an instance for custom configuration
+     */
+    public function field(string $field, string|DiffDriver $driver = 'plain'): ?FieldDiff
+    {
+        $value = $this->get($field);
+
+        if ($value === null || ! array_key_exists('before', $value)) {
+            return null;
+        }
+
+        if (is_array($value['before']) || is_array($value['after'])) {
+            throw InvalidConfiguration::fieldIsList($field);
+        }
+
+        if ($this->holdsJsonList($value['before']) || $this->holdsJsonList($value['after'])) {
+            throw InvalidConfiguration::fieldIsList($field);
+        }
+
+        return $this->driver($driver)->diff(
+            $this->stringOrNull($value['before']),
+            $this->stringOrNull($value['after']),
+        );
+    }
+
+    /**
+     * Diff a tracked field holding a list of values. Returns null when the field isn't tracked.
+     *
+     * @param string|DiffDriver $driver A built-in driver name, or an instance for custom configuration
+     */
+    public function list(string $field, string|DiffDriver $driver = 'plain'): ?ListDiff
+    {
+        $value = $this->get($field);
+
+        if ($value === null || ! array_key_exists('before', $value)) {
+            return null;
+        }
+
+        return ListDiff::for(
+            ListDiff::entries($value['before']),
+            ListDiff::entries($value['after']),
+            $this->driver($driver),
+        );
+    }
+
+    /**
+     * Resolve a driver name to an instance. Anything beyond the built-in names is passed
+     * in as an instance by the caller.
+     */
+    protected function driver(string|DiffDriver $driver): DiffDriver
+    {
+        if ($driver instanceof DiffDriver) {
+            return $driver;
+        }
+
+        return match ($driver) {
+            'plain' => new PlainDriver,
+            default => throw InvalidConfiguration::unknownDiffDriver($driver),
+        };
+    }
+
+    /**
+     * Whether a stored value is a JSON-encoded list rather than a scalar.
+     */
+    protected function holdsJsonList(mixed $value): bool
+    {
+        return is_string($value) && is_array(json_decode($value, true));
+    }
+
+    protected function stringOrNull(mixed $value): ?string
+    {
+        return $value === null ? null : (string) $value;
     }
 
     /**
