@@ -37,16 +37,22 @@ final class ListDiffTest extends TestCase
     }
 
     #[Test]
-    public function it_marks_an_appended_item_as_added()
+    public function it_marks_an_inserted_item_as_added()
     {
         // Given
         $driver = new PlainDriver;
 
         // When
-        $result = ListDiff::for(['a'], ['a', 'b'], $driver);
+        // A naive index-by-index zip of ['a', 'c'] against ['a', 'b', 'c'] would read this
+        // as 'c' changed into 'b' and 'c' added at the tail. Real alignment anchors on the
+        // shared 'a' and 'c' and reports only 'b' as new.
+        $result = ListDiff::for(['a', 'c'], ['a', 'b', 'c'], $driver);
 
         // Then
-        $this->assertSame([ChangeType::Kept, ChangeType::Added], $this->statuses($result->items));
+        $this->assertSame(
+            [ChangeType::Kept, ChangeType::Added, ChangeType::Kept],
+            $this->statuses($result->items),
+        );
     }
 
     #[Test]
@@ -56,10 +62,16 @@ final class ListDiffTest extends TestCase
         $driver = new PlainDriver;
 
         // When
-        $result = ListDiff::for(['a', 'b'], ['a'], $driver);
+        // A naive index-by-index zip of ['a', 'b', 'c'] against ['b', 'c'] would read this
+        // as 'a' changed into 'b', 'b' changed into 'c', and 'c' removed at the tail. Real
+        // alignment anchors on the shared 'b' and 'c' and reports only 'a' as gone.
+        $result = ListDiff::for(['a', 'b', 'c'], ['b', 'c'], $driver);
 
         // Then
-        $this->assertSame([ChangeType::Kept, ChangeType::Removed], $this->statuses($result->items));
+        $this->assertSame(
+            [ChangeType::Removed, ChangeType::Kept, ChangeType::Kept],
+            $this->statuses($result->items),
+        );
     }
 
     #[Test]
@@ -85,11 +97,22 @@ final class ListDiffTest extends TestCase
         $driver = new PlainDriver;
 
         // When
-        $result = ListDiff::for(['keep', 'the brown fox'], ['keep', 'the red fox'], $driver);
+        // 'new' is inserted at the front, shifting 'the brown fox' and 'end' one position
+        // to the right. A naive index-by-index zip would compare every entry against its
+        // neighbour and see nothing but Changed/Added. Real alignment anchors on the shared
+        // 'keep' and 'end' and still pairs the edited sentence with its earlier self.
+        $result = ListDiff::for(
+            ['keep', 'the brown fox', 'end'],
+            ['new', 'keep', 'the red fox', 'end'],
+            $driver,
+        );
 
         // Then
-        $this->assertSame([ChangeType::Kept, ChangeType::Changed], $this->statuses($result->items));
-        $this->assertSame('the <del>brown</del> fox', $result->items[1]->beforeHtml);
+        $this->assertSame(
+            [ChangeType::Added, ChangeType::Kept, ChangeType::Changed, ChangeType::Kept],
+            $this->statuses($result->items),
+        );
+        $this->assertSame('the <del>brown</del> fox', $result->items[2]->beforeHtml);
     }
 
     // List status
@@ -127,9 +150,19 @@ final class ListDiffTest extends TestCase
         $driver = new PlainDriver;
 
         // When
-        $result = ListDiff::for(['a', 'b'], ['a', 'c'], $driver);
+        // 'x' is removed from the front, shifting 'a' and 'b' one position to the left. A
+        // naive index-by-index zip would read this as 'x' changed into 'a', 'a' changed
+        // into 'b', and 'b' removed at the tail: [Changed, Changed, Removed]. Real alignment
+        // anchors on the shared 'a' and reports 'x' removed and 'b' edited into 'c'. Both
+        // hypotheses land on the same overall Changed status, so the item-level statuses
+        // are what actually distinguishes them.
+        $result = ListDiff::for(['x', 'a', 'b'], ['a', 'c'], $driver);
 
         // Then
+        $this->assertSame(
+            [ChangeType::Removed, ChangeType::Kept, ChangeType::Changed],
+            $this->statuses($result->items),
+        );
         $this->assertSame(ChangeType::Changed, $result->status);
     }
 
@@ -203,6 +236,28 @@ final class ListDiffTest extends TestCase
 
         // When / Then
         $this->assertSame(['one', 'two'], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_drops_false_but_keeps_zero_and_true_as_text()
+    {
+        // Given
+        $value = ['one', null, '', 0, false, true, 'two'];
+
+        // When / Then
+        // false casts to an empty string, same as null and '', so it must be dropped too.
+        // 0 and true cast to non-empty strings ('0' and '1'), so they must survive.
+        $this->assertSame(['one', '0', '1', 'two'], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_drops_a_false_entry_decoded_from_json()
+    {
+        // Given
+        $value = json_encode(['a', false, 'b', true]);
+
+        // When / Then
+        $this->assertSame(['a', 'b', '1'], ListDiff::entries($value));
     }
 
     #[Test]

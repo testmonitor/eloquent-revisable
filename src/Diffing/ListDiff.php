@@ -41,7 +41,9 @@ readonly class ListDiff
 
     /**
      * Normalise a stored value into a list of entries. A JSON array decodes; anything
-     * else becomes a single entry. Null and empty entries are dropped.
+     * else becomes a single entry. Entries are cast to string first, then any entry that
+     * stringifies to empty (null, false, an empty string) is dropped, so a boolean can't
+     * survive as a silent blank.
      *
      * @return list<string>
      */
@@ -56,8 +58,8 @@ readonly class ListDiff
         $entries = is_array($decoded) ? $decoded : [$value];
 
         return collect($entries)
-            ->reject(fn (mixed $entry) => $entry === null || $entry === '')
             ->map(fn (mixed $entry) => (string) $entry)
+            ->reject(fn (string $entry) => $entry === '')
             ->values()
             ->all();
     }
