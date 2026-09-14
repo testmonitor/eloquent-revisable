@@ -4,6 +4,7 @@ namespace TestMonitor\Revisable\Tests;
 
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diff;
+use TestMonitor\Revisable\Diffing\FieldDiff;
 use TestMonitor\Revisable\Diffing\PlainDriver;
 use TestMonitor\Revisable\Enums\ChangeType;
 use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
@@ -37,6 +38,22 @@ final class DiffFieldTest extends TestCase
 
         // When / Then
         $this->assertNull($diff->list('nonexistent'));
+    }
+
+    #[Test]
+    public function it_returns_null_for_a_tracked_relation_name()
+    {
+        // Given
+        // Raw relation metadata, shaped as in RevisionDiffTest::it_returns_the_raw_before_and_after_metadata:
+        // `get()` returns an added/removed/kept/changed entry for this name, not a before/after one.
+        $before = new Revision(['metadata' => ['relations' => ['tags' => ['pivots' => []]]]]);
+        $after = new Revision(['metadata' => ['relations' => ['tags' => ['pivots' => []]]]]);
+
+        $diff = new Diff($before, $after);
+
+        // When / Then
+        $this->assertNull($diff->field('tags'));
+        $this->assertNull($diff->list('tags'));
     }
 
     #[Test]
@@ -102,10 +119,38 @@ final class DiffFieldTest extends TestCase
 
         // Then
         $this->expectException(InvalidConfiguration::class);
-        $this->expectExceptionMessage('value');
+        $this->expectExceptionMessage('The field `value` holds a list. Use `list()` instead of `field()` to diff it.');
 
         // When
         $diff->field('value');
+    }
+
+    #[Test]
+    public function it_does_not_throw_for_a_json_object_field()
+    {
+        // Given
+        // A JSON object decodes to a PHP array too, same as a JSON list, but it isn't a
+        // list: there's no object-diffing driver, so it must fall through to plain text
+        // instead of being mistaken for a list and thrown as fieldIsList().
+        $diff = $this->diffFor(json_encode(['a' => 1, 'b' => 2]), json_encode(['a' => 1, 'b' => 3]));
+
+        // When
+        $result = $diff->field('value');
+
+        // Then
+        $this->assertInstanceOf(FieldDiff::class, $result);
+        $this->assertSame(ChangeType::Changed, $result->status);
+    }
+
+    #[Test]
+    public function it_treats_json_scalars_and_stray_brackets_as_plain_text_not_lists()
+    {
+        // Given / When / Then
+        foreach (['5', '"text"', 'true', 'null', 'a [bracket] in prose'] as $value) {
+            $diff = $this->diffFor($value, $value);
+
+            $this->assertInstanceOf(FieldDiff::class, $diff->field('value'));
+        }
     }
 
     #[Test]

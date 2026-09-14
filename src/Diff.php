@@ -171,11 +171,20 @@ final class Diff
     }
 
     /**
-     * Whether a stored value is a JSON-encoded list rather than a scalar.
+     * Whether a stored value is a JSON-encoded list rather than a scalar. A JSON object
+     * decodes to a PHP array too, but it isn't a list, so it falls through and diffs as
+     * plain text instead of throwing: this package has no object-diffing driver, and text
+     * is strictly more useful than an exception.
      */
     protected function holdsJsonList(mixed $value): bool
     {
-        return is_string($value) && is_array(json_decode($value, true));
+        if (! is_string($value)) {
+            return false;
+        }
+
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) && array_is_list($decoded);
     }
 
     protected function stringOrNull(mixed $value): ?string
