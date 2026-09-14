@@ -4,6 +4,7 @@ namespace TestMonitor\Revisable\Tests\Diffing;
 
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diffing\BlockDiff;
 use TestMonitor\Revisable\Diffing\MarkdownDriver;
@@ -477,5 +478,134 @@ final class MarkdownDriverTest extends TestCase
         $this->assertStringContainsString('<ins><ul>', $result->afterHtml);
         $this->assertStringContainsString('</ul></ins>', $result->afterHtml);
         $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    // Block variants
+
+    #[Test]
+    public function it_treats_a_bullet_list_turned_ordered_as_a_removal_and_an_addition()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff("- one\n- two", "1. one\n2. two");
+
+        // Then
+        $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
+        $this->assertStringContainsString('<ins><ol>', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_treats_a_changed_list_start_number_as_a_removal_and_an_addition()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('1. one', '3. one');
+
+        // Then
+        $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
+        $this->assertStringContainsString('<ol start="3">', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_treats_a_list_turned_loose_as_a_removal_and_an_addition()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff("- one\n- two", "- one\n\n- two");
+
+        // Then
+        $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_treats_a_changed_code_block_language_as_a_removal_and_an_addition()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff("```php\ncode\n```", "```js\ncode\n```");
+
+        // Then
+        $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
+        $this->assertStringContainsString('class="language-js"', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_ignores_list_padding_that_changes_nothing_in_the_output()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('-   one', '- one');
+
+        // Then
+        $this->assertSame(ChangeType::Kept, $result->status);
+    }
+
+    // The invariant behind every status
+
+    /**
+     * A field reported as kept must render identically on both sides. Anything a node
+     * carries that changes its output has to reach the status, or a consumer that skips
+     * kept fields silently hides an edit the user really made.
+     */
+    #[Test]
+    #[DataProvider('blockPairs')]
+    public function it_renders_both_sides_identically_whenever_it_reports_a_field_as_kept(
+        string $before,
+        string $after,
+        ChangeType $expected,
+    ) {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff($before, $after);
+
+        // Then
+        $this->assertSame($expected, $result->status);
+
+        if ($result->status === ChangeType::Kept) {
+            $this->assertSame($result->beforeHtml, $result->afterHtml, 'A kept field rendered two different sides.');
+        }
+    }
+
+    /**
+     * @return array<string, array{string, string, ChangeType}>
+     */
+    public static function blockPairs(): array
+    {
+        return [
+            'identical paragraph' => ['A paragraph.', 'A paragraph.', ChangeType::Kept],
+            'identical heading and body' => ["# Title\n\nBody.", "# Title\n\nBody.", ChangeType::Kept],
+            'identical tight list' => ["- one\n- two", "- one\n- two", ChangeType::Kept],
+            'identical ordered list' => ["1. one\n2. two", "1. one\n2. two", ChangeType::Kept],
+            'identical fenced code' => ["```php\ncode\n```", "```php\ncode\n```", ChangeType::Kept],
+            'identical blockquote' => ['> quoted', '> quoted', ChangeType::Kept],
+            'identical thematic break' => ["a\n\n---\n\nb", "a\n\n---\n\nb", ChangeType::Kept],
+            'thematic break style' => ["a\n\n---\n\nb", "a\n\n***\n\nb", ChangeType::Kept],
+            'list marker padding' => ['-   one', '- one', ChangeType::Kept],
+            'heading level' => ['# Same words.', '## Same words.', ChangeType::Changed],
+            'bullet list turned ordered' => ["- one\n- two", "1. one\n2. two", ChangeType::Changed],
+            'list start number' => ['1. one', '3. one', ChangeType::Changed],
+            'tight list turned loose' => ["- one\n- two", "- one\n\n- two", ChangeType::Changed],
+            'fenced code language' => ["```php\ncode\n```", "```js\ncode\n```", ChangeType::Changed],
+            'changed word' => ['The brown fox.', 'The red fox.', ChangeType::Changed],
+            'added paragraph' => ['One.', "One.\n\nTwo.", ChangeType::Changed],
+            'removed list item' => ["- one\n- two", '- one', ChangeType::Changed],
+            'emphasis added' => ['Hello world', 'Hello **world**', ChangeType::Changed],
+        ];
     }
 }

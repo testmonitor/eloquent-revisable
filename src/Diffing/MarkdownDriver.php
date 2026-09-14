@@ -491,13 +491,35 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * What makes two blocks the same kind of block: their type, plus any variant the type
-     * carries outside its text. Two headings holding the same words are still different
-     * blocks when their levels differ, and without the level they would report as kept.
+     * What makes two blocks the same kind of block: their type plus their variant.
      */
     protected function blockSignature(Node $node): string
     {
-        return $node::class . ($node instanceof Heading ? ':h' . $node->getLevel() : '');
+        return $node::class . ':' . $this->blockVariant($node);
+    }
+
+    /**
+     * The state a node carries that changes what CommonMark renders without showing up in
+     * either its class or its text. Anything missing here is a change the diff cannot see,
+     * and a field that renders two different sides would report as kept. Only what is
+     * actually rendered belongs here: a list's delimiter and padding, a fenced block's
+     * fence character, and a thematic break's style all parse but never reach the output.
+     */
+    protected function blockVariant(Node $node): string
+    {
+        return match (true) {
+            // One Heading class covers h1 through h6.
+            $node instanceof Heading => 'h' . $node->getLevel(),
+            // The tag, the start attribute, and whether the items render tight or loose.
+            $node instanceof ListBlock => implode(':', [
+                $node->getListData()->type,
+                $node->getListData()->start ?? 1,
+                $node->isTight() ? 'tight' : 'loose',
+            ]),
+            // The first info word becomes the code element's language class.
+            $node instanceof FencedCode => $node->getInfoWords()[0] ?? '',
+            default => '',
+        };
     }
 
     protected function textOf(Node $node): string
