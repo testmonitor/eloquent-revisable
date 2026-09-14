@@ -72,13 +72,26 @@ final class ArrayAlignerTest extends TestCase
     public function it_anchors_on_unique_items_so_duplicates_cannot_mismatch()
     {
         // Given
-        $aligner = new ArrayAligner(['x', 'dup', 'dup', 'y'], ['x', 'dup', 'dup', 'y']);
+        // 'Log in as admin' is duplicated in $before, so it can never anchor; the only
+        // anchor available is 'Divider'. A positional (or naive longest-match) diff would
+        // instead latch onto the leading 'Log in as admin' as the single longest match
+        // (it appears earliest in $before), treating everything else as pure removals and
+        // insertions and leaving the trailing 'Log in as admin' unmatched.
+        $aligner = new ArrayAligner(
+            ['Log in as admin', 'Divider', 'Verify dashboard loads', 'Log in as admin'],
+            ['Divider', 'Verify dashboard loads correctly', 'Log in as admin'],
+        );
 
         // When
         $pairs = $this->pairs($aligner->align());
 
         // Then
-        $this->assertSame([['x', 'x'], ['dup', 'dup'], ['dup', 'dup'], ['y', 'y']], $pairs);
+        $this->assertSame([
+            ['Log in as admin', null],
+            ['Divider', 'Divider'],
+            ['Verify dashboard loads', 'Verify dashboard loads correctly'],
+            ['Log in as admin', 'Log in as admin'],
+        ], $pairs);
     }
 
     #[Test]

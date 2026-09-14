@@ -77,7 +77,7 @@ class ArrayAligner
                 $blocks[] = $block;
             }
 
-            // Skip the synthetic trailing anchor added above — it has no content of its own.
+            // Skip the synthetic trailing anchor added above, it has no content of its own.
             if ($anchor->beforeIndex < count($before)) {
                 $blocks[] = new AlignedBlock([$before[$anchor->beforeIndex]], [$after[$anchor->afterIndex]]);
             }
@@ -146,7 +146,7 @@ class ArrayAligner
 
         return collect($matcher->getOpcodes())
             ->map(function (array $opcode) use ($before, $after) {
-                // The opcode type (equal/replace/insert/delete) is discarded — every kind becomes
+                // The opcode type (equal/replace/insert/delete) is discarded, every kind becomes
                 // a block here, whether it's a verbatim match or a run to diff positionally.
                 [, $beforeStart, $beforeEnd, $afterStart, $afterEnd] = $opcode;
 
