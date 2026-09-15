@@ -5,8 +5,13 @@ namespace TestMonitor\Revisable;
 use Closure;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use TestMonitor\Revisable\Contracts\Differ;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
-use TestMonitor\Revisable\Renderers\HtmlDiff;
+use TestMonitor\Revisable\Diffing\FieldDiff;
+use TestMonitor\Revisable\Diffing\ListDiff;
+use TestMonitor\Revisable\Diffing\MarkdownDiffer;
+use TestMonitor\Revisable\Diffing\PlainDiffer;
+use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 
 final class Diff
 {
@@ -104,14 +109,78 @@ final class Diff
     }
 
     /**
-     * Wrap this diff in an HTML renderer.
+     * Diff a single tracked field. Returns null when the field isn't tracked.
      *
-     * @param string $detailLevel Granularity of inline highlighting: 'none'|'line'|'word'|'char'
-     * @param string $lineSeparator String placed between cells when a multi-line value is joined
+     * @param string|Differ $differ A built-in differ name, or an instance for custom configuration
      */
-    public function asHtml(string $detailLevel = 'word', string $lineSeparator = '<br>'): HtmlDiff
+    public function field(string $field, string|Differ $differ = 'plain'): ?FieldDiff
     {
-        return new HtmlDiff($this, $detailLevel, $lineSeparator);
+        $value = $this->get($field);
+
+        if ($value === null || ! array_key_exists('before', $value)) {
+            return null;
+        }
+
+        if (is_array($value['before']) || is_array($value['after'])) {
+            throw InvalidConfiguration::fieldIsList($field);
+        }
+
+        if ($this->holdsJsonList($value['before']) || $this->holdsJsonList($value['after'])) {
+            throw InvalidConfiguration::fieldIsList($field);
+        }
+
+        return $this->differ($differ)->diff(
+            $value['before'] === null ? null : (string) $value['before'],
+            $value['after'] === null ? null : (string) $value['after'],
+        );
+    }
+
+    /**
+     * Diff a tracked field holding a list of values. Returns null when the field isn't tracked.
+     *
+     * @param string|Differ $differ A built-in differ name, or an instance for custom configuration
+     */
+    public function list(string $field, string|Differ $differ = 'plain'): ?ListDiff
+    {
+        $value = $this->get($field);
+
+        if ($value === null || ! array_key_exists('before', $value)) {
+            return null;
+        }
+
+        return ListDiff::for(
+            ListDiff::entries($value['before']),
+            ListDiff::entries($value['after']),
+            $this->differ($differ),
+        );
+    }
+
+    /**
+     * Resolve a built-in differ name to an instance; anything else arrives as one already.
+     */
+    protected function differ(string|Differ $differ): Differ
+    {
+        if ($differ instanceof Differ) {
+            return $differ;
+        }
+
+        return match ($differ) {
+            'plain' => new PlainDiffer,
+            'markdown' => new MarkdownDiffer,
+            default => throw InvalidConfiguration::unknownDiffer($differ),
+        };
+    }
+
+    /**
+     * Whether a stored value is a JSON-encoded list rather than a scalar.
+     */
+    protected function holdsJsonList(mixed $value): bool
+    {
+        if (! is_string($value)) {
+            return false;
+        }
+
+        return is_array(json_decode($value));
     }
 
     /**

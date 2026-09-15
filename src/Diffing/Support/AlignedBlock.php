@@ -1,6 +1,6 @@
 <?php
 
-namespace TestMonitor\Revisable\Renderers\Support;
+namespace TestMonitor\Revisable\Diffing\Support;
 
 /**
  * A before/after slice that `ArrayAligner` considers aligned: a matched item, or a
@@ -9,8 +9,8 @@ namespace TestMonitor\Revisable\Renderers\Support;
 readonly class AlignedBlock
 {
     /**
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      */
     public function __construct(
         public array $before,

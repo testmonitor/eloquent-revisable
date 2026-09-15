@@ -1,0 +1,29 @@
+<?php
+
+namespace TestMonitor\Revisable\Diffing\Markdown;
+
+use InvalidArgumentException;
+use League\CommonMark\Node\Block\AbstractBlock;
+use TestMonitor\Revisable\Enums\ChangeType;
+
+/**
+ * Wraps a wholly added or removed block; <ins> and <del> take transparent content.
+ */
+final class BlockChange extends AbstractBlock implements ChangeNode
+{
+    public function __construct(protected ChangeType $type)
+    {
+        parent::__construct();
+
+        if ($type !== ChangeType::Added && $type !== ChangeType::Removed) {
+            throw new InvalidArgumentException(
+                'A change marker must be Added or Removed, got ' . $type->name . '.'
+            );
+        }
+    }
+
+    public function changeType(): ChangeType
+    {
+        return $this->type;
+    }
+}

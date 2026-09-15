@@ -1,24 +1,32 @@
 <?php
 
-namespace TestMonitor\Revisable\Renderers\Support;
+namespace TestMonitor\Revisable\Diffing\Support;
 
+use Closure;
 use Jfcherng\Diff\SequenceMatcher;
 
 /**
- * Aligns two string arrays by content rather than by position, so a removal or insertion
- * doesn't shift later items out of alignment. Unique items are anchored first, so a
- * duplicated item can't get matched to the wrong occurrence.
+ * Aligns two arrays by content (or a derived key) rather than by position, so a
+ * removal or insertion doesn't shift later items out of alignment. Unique items are anchored
+ * first, so a duplicated item can't get matched to the wrong occurrence.
  */
 class ArrayAligner
 {
     /**
-     * @param list<string> $before
-     * @param list<string> $after
+     * Items may be matched on a derived key rather than their own value, so they can align
+     * on something else, for example the plain text of an AST node.
+     *
+     * @param list<mixed> $before
+     * @param list<mixed> $after
+     * @param Closure(mixed):string|null $key Defaults to the item cast to a string.
      */
     public function __construct(
         protected array $before,
         protected array $after,
-    ) {}
+        protected ?Closure $key = null,
+    ) {
+        $this->key ??= fn (mixed $item) => (string) $item;
+    }
 
     /**
      * Align the two arrays using anchors to guide the alignment.
@@ -33,8 +41,8 @@ class ArrayAligner
     /**
      * Recursively align a slice of the before and after arrays, using anchors to guide the alignment.
      *
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      * @return list<AlignedBlock>
      */
     protected function alignSlice(array $before, array $after): array
@@ -49,8 +57,8 @@ class ArrayAligner
     /**
      * Split before/after around each anchor, recursively aligning the gaps between them.
      *
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      * @param list<AnchorPair> $anchors
      * @return list<AlignedBlock>
      */
@@ -71,7 +79,7 @@ class ArrayAligner
                 $blocks[] = $block;
             }
 
-            // Skip the synthetic trailing anchor added above — it has no content of its own.
+            // Skip the synthetic trailing anchor added above, it has no content of its own.
             if ($anchor->beforeIndex < count($before)) {
                 $blocks[] = new AlignedBlock([$before[$anchor->beforeIndex]], [$after[$anchor->afterIndex]]);
             }
@@ -86,20 +94,23 @@ class ArrayAligner
     /**
      * Find items that occur exactly once in both arrays, in the order they're matched.
      *
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      * @return list<AnchorPair>
      */
     protected function findAnchors(array $before, array $after): array
     {
-        $beforeCounts = array_count_values($before);
-        $afterCounts = array_count_values($after);
+        $beforeKeys = array_map($this->key, $before);
+        $afterKeys = array_map($this->key, $after);
 
-        $isUnique = fn (string $item) => ($beforeCounts[$item] ?? 0) === 1 && ($afterCounts[$item] ?? 0) === 1;
+        $beforeCounts = array_count_values($beforeKeys);
+        $afterCounts = array_count_values($afterKeys);
+
+        $isUnique = fn (string $key) => ($beforeCounts[$key] ?? 0) === 1 && ($afterCounts[$key] ?? 0) === 1;
 
         // Matching only within the unique items keeps a duplicate from ever being picked as an anchor.
-        $beforeUnique = collect($before)->filter($isUnique);
-        $afterUnique = collect($after)->filter($isUnique);
+        $beforeUnique = collect($beforeKeys)->filter($isUnique);
+        $afterUnique = collect($afterKeys)->filter($isUnique);
 
         $matcher = new SequenceMatcher($beforeUnique->values()->all(), $afterUnique->values()->all());
 
@@ -127,17 +138,17 @@ class ArrayAligner
     /**
      * Align two arrays with no shared anchors using SequenceMatcher's opcodes.
      *
-     * @param list<string> $before
-     * @param list<string> $after
+     * @param list<mixed> $before
+     * @param list<mixed> $after
      * @return list<AlignedBlock>
      */
     protected function matchByContent(array $before, array $after): array
     {
-        $matcher = new SequenceMatcher($before, $after);
+        $matcher = new SequenceMatcher(array_map($this->key, $before), array_map($this->key, $after));
 
         return collect($matcher->getOpcodes())
             ->map(function (array $opcode) use ($before, $after) {
-                // The opcode type (equal/replace/insert/delete) is discarded — every kind becomes
+                // The opcode type (equal/replace/insert/delete) is discarded, every kind becomes
                 // a block here, whether it's a verbatim match or a run to diff positionally.
                 [, $beforeStart, $beforeEnd, $afterStart, $afterEnd] = $opcode;
 

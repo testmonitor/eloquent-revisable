@@ -1,0 +1,322 @@
+<?php
+
+namespace TestMonitor\Revisable\Tests\Diffing;
+
+use PHPUnit\Framework\Attributes\Test;
+use TestMonitor\Revisable\Diffing\FieldDiff;
+use TestMonitor\Revisable\Diffing\ListDiff;
+use TestMonitor\Revisable\Diffing\PlainDiffer;
+use TestMonitor\Revisable\Enums\ChangeType;
+use TestMonitor\Revisable\Tests\TestCase;
+
+final class ListDiffTest extends TestCase
+{
+    /**
+     * @param list<FieldDiff> $items
+     * @return list<ChangeType>
+     */
+    protected function statuses(array $items): array
+    {
+        return array_map(fn (FieldDiff $item) => $item->status, $items);
+    }
+
+    // Item statuses
+    //
+    // Entries align by content rather than position.
+
+    #[Test]
+    public function it_keeps_items_present_on_both_sides()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = ListDiff::for(['a', 'b'], ['a', 'b'], $differ);
+
+        // Then
+        $this->assertSame([ChangeType::Kept, ChangeType::Kept], $this->statuses($result->items));
+        $this->assertSame(ChangeType::Kept, $result->status);
+    }
+
+    #[Test]
+    public function it_marks_an_inserted_item_as_added()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = ListDiff::for(['a', 'c'], ['a', 'b', 'c'], $differ);
+
+        // Then
+        $this->assertSame(
+            [ChangeType::Kept, ChangeType::Added, ChangeType::Kept],
+            $this->statuses($result->items),
+        );
+    }
+
+    #[Test]
+    public function it_marks_a_dropped_item_as_removed()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = ListDiff::for(['a', 'b', 'c'], ['b', 'c'], $differ);
+
+        // Then
+        $this->assertSame(
+            [ChangeType::Removed, ChangeType::Kept, ChangeType::Kept],
+            $this->statuses($result->items),
+        );
+    }
+
+    #[Test]
+    public function it_does_not_shift_later_items_when_an_early_item_is_removed()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = ListDiff::for(['first', 'second', 'third'], ['first', 'third'], $differ);
+
+        // Then
+        $this->assertSame(
+            [ChangeType::Kept, ChangeType::Removed, ChangeType::Kept],
+            $this->statuses($result->items),
+        );
+    }
+
+    #[Test]
+    public function it_marks_an_edited_item_as_changed_rather_than_removed_and_added()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = ListDiff::for(
+            ['keep', 'the brown fox', 'end'],
+            ['new', 'keep', 'the red fox', 'end'],
+            $differ,
+        );
+
+        // Then
+        $this->assertSame(
+            [ChangeType::Added, ChangeType::Kept, ChangeType::Changed, ChangeType::Kept],
+            $this->statuses($result->items),
+        );
+        $this->assertSame('the <del>brown</del> fox', $result->items[2]->beforeHtml);
+    }
+
+    // List status
+
+    #[Test]
+    public function it_reports_the_whole_list_as_added_when_every_item_is_new()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = ListDiff::for([], ['a', 'b'], $differ);
+
+        // Then
+        $this->assertSame(ChangeType::Added, $result->status);
+    }
+
+    #[Test]
+    public function it_reports_the_whole_list_as_removed_when_every_item_is_gone()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = ListDiff::for(['a', 'b'], [], $differ);
+
+        // Then
+        $this->assertSame(ChangeType::Removed, $result->status);
+    }
+
+    #[Test]
+    public function it_reports_the_whole_list_as_changed_when_items_differ_in_kind()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        // The overall status is Changed either way, so the item statuses are what discriminate.
+        $result = ListDiff::for(['x', 'a', 'b'], ['a', 'c'], $differ);
+
+        // Then
+        $this->assertSame(
+            [ChangeType::Removed, ChangeType::Kept, ChangeType::Changed],
+            $this->statuses($result->items),
+        );
+        $this->assertSame(ChangeType::Changed, $result->status);
+    }
+
+    #[Test]
+    public function it_reports_an_empty_list_as_kept()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = ListDiff::for([], [], $differ);
+
+        // Then
+        $this->assertSame(ChangeType::Kept, $result->status);
+        $this->assertSame([], $result->items);
+    }
+
+    // Rendering
+
+    #[Test]
+    public function it_omits_added_items_from_the_before_view_and_removed_items_from_the_after_view()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $html = ListDiff::for(['keep', 'gone'], ['keep', 'fresh'], $differ)->toHtml();
+
+        // Then
+        $this->assertSame(['keep', '<del>gone</del>'], $html['before']);
+        $this->assertSame(['keep', '<ins>fresh</ins>'], $html['after']);
+    }
+
+    // Entry decoding
+
+    #[Test]
+    public function it_decodes_a_json_array_into_entries()
+    {
+        // Given
+        $value = json_encode(['one', 'two']);
+
+        // When / Then
+        $this->assertSame(['one', 'two'], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_treats_a_plain_string_as_a_single_entry()
+    {
+        // Given
+        $value = 'not json at all';
+
+        // When / Then
+        $this->assertSame(['not json at all'], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_accepts_an_array_value_as_is()
+    {
+        // Given
+        $value = ['one', 'two'];
+
+        // When / Then
+        $this->assertSame(['one', 'two'], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_filters_out_null_and_empty_entries()
+    {
+        // Given
+        $value = ['one', null, '', 'two'];
+
+        // When / Then
+        $this->assertSame(['one', 'two'], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_drops_false_but_keeps_zero_and_true_as_text()
+    {
+        // Given
+        $value = ['one', null, '', 0, false, true, 'two'];
+
+        // When / Then
+        // false casts to '', so it drops; 0 and true cast to '0' and '1', so they survive.
+        $this->assertSame(['one', '0', '1', 'two'], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_drops_a_false_entry_decoded_from_json()
+    {
+        // Given
+        $value = json_encode(['a', false, 'b', true]);
+
+        // When / Then
+        $this->assertSame(['a', 'b', '1'], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_returns_no_entries_for_a_null_value()
+    {
+        // Given
+        $value = null;
+
+        // When / Then
+        $this->assertSame([], ListDiff::entries($value));
+    }
+
+    #[Test]
+    public function it_json_encodes_a_non_scalar_entry_instead_of_casting_it_to_the_word_array()
+    {
+        // Given
+        // Casting an array would yield the literal 'Array', plus a PHP warning.
+        $value = json_encode([['name' => 'step one'], ['name' => 'step two']]);
+
+        // When
+        $warnings = $this->captureWarnings(fn () => ListDiff::entries($value));
+
+        // Then
+        $this->assertSame([], $warnings, 'Encoding a non-scalar entry must not raise a PHP warning.');
+        $this->assertSame(
+            [json_encode(['name' => 'step one']), json_encode(['name' => 'step two'])],
+            ListDiff::entries($value),
+        );
+    }
+
+    #[Test]
+    public function it_reports_a_changed_list_of_json_objects_instead_of_kept()
+    {
+        // Given
+        $differ = new PlainDiffer;
+        $before = json_encode([['name' => 'step one']]);
+        $after = json_encode([['name' => 'step two']]);
+
+        // When
+        $warnings = $this->captureWarnings(
+            fn () => ListDiff::for(ListDiff::entries($before), ListDiff::entries($after), $differ),
+        );
+        $result = ListDiff::for(ListDiff::entries($before), ListDiff::entries($after), $differ);
+
+        // Then
+        $this->assertSame([], $warnings, 'Diffing a list of JSON objects must not raise a PHP warning.');
+        $this->assertNotSame(ChangeType::Kept, $result->status);
+        $this->assertNotSame(['Array'], ListDiff::entries($before));
+    }
+
+    /**
+     * Run $callback with a temporary error handler that records every E_WARNING raised
+     * during the call, instead of relying on PHPUnit's own warning-to-failure conversion.
+     * That keeps this assertion meaningful even if the suite's warning handling changes.
+     *
+     * @return list<string>
+     */
+    protected function captureWarnings(callable $callback): array
+    {
+        $warnings = [];
+
+        set_error_handler(function (int $severity, string $message) use (&$warnings) {
+            $warnings[] = $message;
+
+            return true;
+        }, E_WARNING);
+
+        try {
+            $callback();
+        } finally {
+            restore_error_handler();
+        }
+
+        return $warnings;
+    }
+}

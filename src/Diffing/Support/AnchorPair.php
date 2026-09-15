@@ -1,9 +1,9 @@
 <?php
 
-namespace TestMonitor\Revisable\Renderers\Support;
+namespace TestMonitor\Revisable\Diffing\Support;
 
 /**
- * Marks matching content at $beforeIndex in one array and $afterIndex in the other —
+ * Marks matching content at $beforeIndex in one array and $afterIndex in the other,
  * a reliable alignment point since it's unique on both sides.
  */
 readonly class AnchorPair
