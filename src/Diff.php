@@ -130,8 +130,8 @@ final class Diff
         }
 
         return $this->differ($differ)->diff(
-            $this->stringOrNull($value['before']),
-            $this->stringOrNull($value['after']),
+            $value['before'] === null ? null : (string) $value['before'],
+            $value['after'] === null ? null : (string) $value['after'],
         );
     }
 
@@ -184,11 +184,6 @@ final class Diff
 
         // A JSON object decodes to an array too, so the list check is what separates them.
         return is_array($decoded) && array_is_list($decoded);
-    }
-
-    protected function stringOrNull(mixed $value): ?string
-    {
-        return $value === null ? null : (string) $value;
     }
 
     /**
