@@ -7,11 +7,11 @@ use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diffing\BlockDiff;
-use TestMonitor\Revisable\Diffing\MarkdownDriver;
+use TestMonitor\Revisable\Diffing\MarkdownDiffer;
 use TestMonitor\Revisable\Enums\ChangeType;
 use TestMonitor\Revisable\Tests\TestCase;
 
-final class MarkdownDriverTest extends TestCase
+final class MarkdownDifferTest extends TestCase
 {
     /**
      * @param list<BlockDiff> $blocks
@@ -28,10 +28,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_keeps_every_block_when_nothing_changed()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("# Title\n\nSome text.", "# Title\n\nSome text.");
+        $result = $differ->diff("# Title\n\nSome text.", "# Title\n\nSome text.");
 
         // Then
         $this->assertSame([ChangeType::Kept, ChangeType::Kept], $this->statuses($result->blocks));
@@ -42,10 +42,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_only_the_edited_paragraph_as_changed()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("# Title\n\nThe brown fox.", "# Title\n\nThe red fox.");
+        $result = $differ->diff("# Title\n\nThe brown fox.", "# Title\n\nThe red fox.");
 
         // Then
         $this->assertSame([ChangeType::Kept, ChangeType::Changed], $this->statuses($result->blocks));
@@ -55,10 +55,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_does_not_shift_later_blocks_when_one_is_removed()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("One.\n\nTwo.\n\nThree.", "One.\n\nThree.");
+        $result = $differ->diff("One.\n\nTwo.\n\nThree.", "One.\n\nThree.");
 
         // Then
         $this->assertSame(
@@ -71,10 +71,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_treats_a_paragraph_promoted_to_a_heading_as_a_removal_and_an_addition()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('Same words.', '# Same words.');
+        $result = $differ->diff('Same words.', '# Same words.');
 
         // Then
         $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
@@ -86,10 +86,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_recurses_into_list_items_rather_than_replacing_the_whole_list()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("- one\n- two", "- one\n- three");
+        $result = $differ->diff("- one\n- two", "- one\n- three");
 
         // Then
         $this->assertSame([ChangeType::Kept, ChangeType::Changed], $this->statuses($result->blocks));
@@ -99,10 +99,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_an_appended_list_item_as_added()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('- one', "- one\n- two");
+        $result = $differ->diff('- one', "- one\n- two");
 
         // Then
         $this->assertSame([ChangeType::Kept, ChangeType::Added], $this->statuses($result->blocks));
@@ -112,10 +112,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_keeps_the_list_wrapper_in_the_rendered_output()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("- one\n- two", "- one\n- three");
+        $result = $differ->diff("- one\n- two", "- one\n- three");
 
         // Then
         $this->assertStringContainsString('<ul>', $result->afterHtml);
@@ -129,10 +129,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_replaces_a_changed_code_block_whole_rather_than_diffing_inside_it()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("```\nfoo bar\n```", "```\nfoo baz\n```");
+        $result = $differ->diff("```\nfoo bar\n```", "```\nfoo baz\n```");
 
         // Then
         $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
@@ -145,10 +145,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_keeps_an_unchanged_code_block()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("```\nfoo bar\n```", "```\nfoo bar\n```");
+        $result = $differ->diff("```\nfoo bar\n```", "```\nfoo bar\n```");
 
         // Then
         $this->assertSame([ChangeType::Kept], $this->statuses($result->blocks));
@@ -160,10 +160,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_changed_words_inside_a_paragraph()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('The brown fox.', 'The red fox.');
+        $result = $differ->diff('The brown fox.', 'The red fox.');
 
         // Then
         $this->assertStringContainsString('<del>brown</del>', $result->beforeHtml);
@@ -177,10 +177,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_places_inline_markers_inside_the_paragraph_element()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('The brown fox.', 'The red fox.');
+        $result = $differ->diff('The brown fox.', 'The red fox.');
 
         // Then
         $this->assertStringStartsWith('<p>', trim($result->afterHtml));
@@ -191,10 +191,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_preserves_emphasis_around_unchanged_words()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('A **bold** brown fox.', 'A **bold** red fox.');
+        $result = $differ->diff('A **bold** brown fox.', 'A **bold** red fox.');
 
         // Then
         $this->assertStringContainsString('<strong>bold</strong>', $result->afterHtml);
@@ -206,10 +206,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_reports_a_formatting_only_change_as_changed()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('Hello world', 'Hello **world**');
+        $result = $differ->diff('Hello world', 'Hello **world**');
 
         // Then
         $this->assertSame(ChangeType::Changed, $result->status);
@@ -220,10 +220,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_only_the_word_whose_formatting_changed()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('A bold word here', 'A **bold** word here');
+        $result = $differ->diff('A bold word here', 'A **bold** word here');
 
         // Then
         $this->assertSame(
@@ -237,10 +237,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_each_reformatted_word_separately()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('a b c d', 'a **b** c **d**');
+        $result = $differ->diff('a b c d', 'a **b** c **d**');
 
         // Then
         $this->assertSame(2, substr_count($result->afterHtml, '<ins class="mod">'));
@@ -252,10 +252,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_leaves_unchanged_formatting_unmarked_in_a_partly_reformatted_block()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('A **kept** word here', 'A **kept** *new* word here');
+        $result = $differ->diff('A **kept** word here', 'A **kept** *new* word here');
 
         // Then
         $this->assertStringContainsString('<strong>kept</strong>', $result->afterHtml);
@@ -268,10 +268,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_renders_a_single_paragraph_entry_inline_when_asked()
     {
         // Given
-        $driver = new MarkdownDriver(inlineSingleParagraph: true);
+        $differ = new MarkdownDiffer(inlineSingleParagraph: true);
 
         // When
-        $result = $driver->diff('Step one', 'Step two');
+        $result = $differ->diff('Step one', 'Step two');
 
         // Then
         $this->assertSame('Step <del>one</del>', trim($result->beforeHtml));
@@ -283,10 +283,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_keeps_block_markup_for_an_entry_holding_several_blocks()
     {
         // Given
-        $driver = new MarkdownDriver(inlineSingleParagraph: true);
+        $differ = new MarkdownDiffer(inlineSingleParagraph: true);
 
         // When
-        $result = $driver->diff("Para one\n\nPara two", "Para one\n\nPara three");
+        $result = $differ->diff("Para one\n\nPara two", "Para one\n\nPara three");
 
         // Then
         $this->assertStringContainsString('<p>', $result->afterHtml);
@@ -297,10 +297,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_keeps_block_markup_for_an_entry_that_is_not_a_paragraph()
     {
         // Given
-        $driver = new MarkdownDriver(inlineSingleParagraph: true);
+        $differ = new MarkdownDiffer(inlineSingleParagraph: true);
 
         // When
-        $result = $driver->diff('# Heading one', '# Heading two');
+        $result = $differ->diff('# Heading one', '# Heading two');
 
         // Then
         $this->assertStringContainsString('<h1>', $result->afterHtml);
@@ -311,10 +311,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_unwraps_a_wholly_added_entry_inside_its_marker()
     {
         // Given
-        $driver = new MarkdownDriver(inlineSingleParagraph: true);
+        $differ = new MarkdownDiffer(inlineSingleParagraph: true);
 
         // When
-        $result = $driver->diff(null, 'Brand new');
+        $result = $differ->diff(null, 'Brand new');
 
         // Then
         $this->assertSame('<ins>Brand new</ins>', trim($result->afterHtml));
@@ -325,10 +325,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_leaves_block_rendering_alone_by_default()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('Step one', 'Step two');
+        $result = $differ->diff('Step one', 'Step two');
 
         // Then
         $this->assertSame('<p>Step <ins>two</ins></p>', trim($result->afterHtml));
@@ -340,10 +340,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_a_formatting_only_change_so_it_does_not_read_as_no_change()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('Setup step.', '**Setup step.**');
+        $result = $differ->diff('Setup step.', '**Setup step.**');
 
         // Then
         $this->assertSame(ChangeType::Changed, $result->status);
@@ -355,10 +355,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_leaves_the_before_view_unmarked_for_a_formatting_only_change()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('Setup step.', '**Setup step.**');
+        $result = $differ->diff('Setup step.', '**Setup step.**');
 
         // Then
         $this->assertSame('<p>Setup step.</p>', trim($result->beforeHtml));
@@ -369,10 +369,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_removed_formatting_as_well_as_added_formatting()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('**Setup step.**', 'Setup step.');
+        $result = $differ->diff('**Setup step.**', 'Setup step.');
 
         // Then
         $this->assertSame(ChangeType::Changed, $result->status);
@@ -383,11 +383,11 @@ final class MarkdownDriverTest extends TestCase
     public function it_distinguishes_a_formatting_marker_from_a_real_insertion()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $formatting = $driver->diff('Setup step.', '**Setup step.**');
-        $insertion = $driver->diff('Setup', 'Setup step');
+        $formatting = $differ->diff('Setup step.', '**Setup step.**');
+        $insertion = $differ->diff('Setup', 'Setup step');
 
         // Then
         $this->assertStringContainsString('<ins class="mod">', $formatting->afterHtml);
@@ -399,10 +399,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_does_not_mark_anything_when_neither_words_nor_formatting_changed()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('**Setup step.**', '**Setup step.**');
+        $result = $differ->diff('**Setup step.**', '**Setup step.**');
 
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
@@ -416,10 +416,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_wraps_a_wholly_added_block_at_block_level()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('One.', "One.\n\nTwo.");
+        $result = $differ->diff('One.', "One.\n\nTwo.");
 
         // Then
         $this->assertStringContainsString('<ins>', $result->afterHtml);
@@ -434,10 +434,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_reports_an_absent_previous_value_as_added()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff(null, '# Fresh');
+        $result = $differ->diff(null, '# Fresh');
 
         // Then
         $this->assertSame(ChangeType::Added, $result->status);
@@ -449,10 +449,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_reports_an_absent_new_value_as_removed()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('# Gone', null);
+        $result = $differ->diff('# Gone', null);
 
         // Then
         $this->assertSame(ChangeType::Removed, $result->status);
@@ -465,10 +465,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_escapes_raw_html_embedded_in_markdown_by_default()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('<script>alert(1)</script>', '<script>alert(1)</script>');
+        $result = $differ->diff('<script>alert(1)</script>', '<script>alert(1)</script>');
 
         // Then
         $this->assertStringNotContainsString('<script>', $result->afterHtml);
@@ -483,10 +483,10 @@ final class MarkdownDriverTest extends TestCase
         // Given
         $environment = new Environment(['html_input' => 'escape']);
         $environment->addExtension(new CommonMarkCoreExtension);
-        $driver = new MarkdownDriver($environment);
+        $differ = new MarkdownDiffer($environment);
 
         // When
-        $result = $driver->diff('Hello world', 'Hello there');
+        $result = $differ->diff('Hello world', 'Hello there');
 
         // Then
         $this->assertStringContainsString('<ins>there</ins>', $result->afterHtml);
@@ -499,10 +499,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_keys_a_value_by_its_plain_text_so_formatting_edits_still_align()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When / Then
-        $this->assertSame($driver->key('Run **tests**'), $driver->key('Run tests'));
+        $this->assertSame($differ->key('Run **tests**'), $differ->key('Run tests'));
     }
 
     // Block identity
@@ -511,10 +511,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_treats_a_heading_level_change_as_a_removal_and_an_addition()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('# Heading', '## Heading');
+        $result = $differ->diff('# Heading', '## Heading');
 
         // Then
         $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
@@ -528,10 +528,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_a_changed_code_span_as_a_whole()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('Run `foo bar` now.', 'Run `foo baz` now.');
+        $result = $differ->diff('Run `foo bar` now.', 'Run `foo baz` now.');
 
         // Then
         $this->assertStringContainsString('<del><code>foo bar</code></del>', $result->beforeHtml);
@@ -546,10 +546,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_changed_link_text_without_disturbing_the_anchor()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('See [the docs](https://a) here.', 'See [the guide](https://a) here.');
+        $result = $differ->diff('See [the docs](https://a) here.', 'See [the guide](https://a) here.');
 
         // Then
         $this->assertStringContainsString('<a href="https://a">the <ins>guide</ins></a>', $result->afterHtml);
@@ -562,10 +562,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_does_not_nest_inline_markers_inside_a_wholly_added_block()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('One.', "One.\n\nOne. Two.");
+        $result = $differ->diff('One.', "One.\n\nOne. Two.");
 
         // Then
         $this->assertStringContainsString('<ins><p>One. Two.</p></ins>', $result->afterHtml);
@@ -579,10 +579,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_reports_a_change_when_neither_side_produces_any_block()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('[docs]: https://a', '[docs]: https://b');
+        $result = $differ->diff('[docs]: https://a', '[docs]: https://b');
 
         // Then
         $this->assertSame([], $result->blocks);
@@ -593,10 +593,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_reports_two_blockless_values_that_match_as_kept()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('[docs]: https://a', '[docs]: https://a');
+        $result = $differ->diff('[docs]: https://a', '[docs]: https://a');
 
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
@@ -606,10 +606,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_an_added_list_item_inside_the_item_rather_than_inside_the_list()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('- one', "- one\n- two");
+        $result = $differ->diff('- one', "- one\n- two");
 
         // Then
         $this->assertStringContainsString('<li><ins>two</ins></li>', $result->afterHtml);
@@ -621,10 +621,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_renders_an_added_list_item_as_tightly_as_its_siblings()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('- one', "- one\n- two");
+        $result = $differ->diff('- one', "- one\n- two");
 
         // Then
         $this->assertStringNotContainsString('<p>', $result->afterHtml);
@@ -634,10 +634,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_a_removed_list_item_inside_the_item_as_well()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("- one\n- two", '- one');
+        $result = $differ->diff("- one\n- two", '- one');
 
         // Then
         $this->assertStringContainsString('<li><del>two</del></li>', $result->beforeHtml);
@@ -649,10 +649,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_still_marks_a_wholly_added_paragraph_at_block_level()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('One.', "One.\n\nTwo.");
+        $result = $differ->diff('One.', "One.\n\nTwo.");
 
         // Then
         $this->assertStringContainsString('<ins><p>Two.</p></ins>', $result->afterHtml);
@@ -663,10 +663,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_a_wholly_added_list_at_block_level()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('Text.', "Text.\n\n- one");
+        $result = $differ->diff('Text.', "Text.\n\n- one");
 
         // Then
         $this->assertStringContainsString('<ins><ul>', $result->afterHtml);
@@ -680,10 +680,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_treats_a_bullet_list_turned_ordered_as_a_removal_and_an_addition()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("- one\n- two", "1. one\n2. two");
+        $result = $differ->diff("- one\n- two", "1. one\n2. two");
 
         // Then
         $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
@@ -695,10 +695,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_treats_a_changed_list_start_number_as_a_removal_and_an_addition()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('1. one', '3. one');
+        $result = $differ->diff('1. one', '3. one');
 
         // Then
         $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
@@ -710,10 +710,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_treats_a_list_turned_loose_as_a_removal_and_an_addition()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("- one\n- two", "- one\n\n- two");
+        $result = $differ->diff("- one\n- two", "- one\n\n- two");
 
         // Then
         $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
@@ -724,10 +724,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_treats_a_changed_code_block_language_as_a_removal_and_an_addition()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("```php\ncode\n```", "```js\ncode\n```");
+        $result = $differ->diff("```php\ncode\n```", "```js\ncode\n```");
 
         // Then
         $this->assertSame([ChangeType::Removed, ChangeType::Added], $this->statuses($result->blocks));
@@ -739,10 +739,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_ignores_list_padding_that_changes_nothing_in_the_output()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('-   one', '- one');
+        $result = $differ->diff('-   one', '- one');
 
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
@@ -763,10 +763,10 @@ final class MarkdownDriverTest extends TestCase
         ChangeType $expected,
     ) {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff($before, $after);
+        $result = $differ->diff($before, $after);
 
         // Then
         $this->assertSame($expected, $result->status);
@@ -811,13 +811,13 @@ final class MarkdownDriverTest extends TestCase
         ];
     }
 
-    // Repeated use of one driver instance
+    // Repeated use of one differ instance
 
     #[Test]
     public function it_produces_the_same_result_across_repeated_calls_on_one_instance()
     {
         // Given
-        $shared = new MarkdownDriver;
+        $shared = new MarkdownDiffer;
 
         $pairs = [
             ['The brown fox.', 'The red fox.'],
@@ -828,7 +828,7 @@ final class MarkdownDriverTest extends TestCase
 
         // When
         $sharedResults = array_map(fn (array $pair) => $shared->diff(...$pair), $pairs);
-        $freshResults = array_map(fn (array $pair) => (new MarkdownDriver)->diff(...$pair), $pairs);
+        $freshResults = array_map(fn (array $pair) => (new MarkdownDiffer)->diff(...$pair), $pairs);
 
         // Then
         foreach ($sharedResults as $i => $result) {
@@ -845,10 +845,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_marks_changed_words_inside_a_multi_byte_paragraph()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff('Café au café, très chaud.', 'Café au café, très froid.');
+        $result = $differ->diff('Café au café, très chaud.', 'Café au café, très froid.');
 
         // Then
         $this->assertStringContainsString('<del>chaud.</del>', $result->beforeHtml);
@@ -865,10 +865,10 @@ final class MarkdownDriverTest extends TestCase
     public function it_treats_a_hard_break_turned_soft_as_a_change_in_the_rendered_break()
     {
         // Given
-        $driver = new MarkdownDriver;
+        $differ = new MarkdownDiffer;
 
         // When
-        $result = $driver->diff("a  \nb", "a\nb");
+        $result = $differ->diff("a  \nb", "a\nb");
 
         // Then
         $this->assertNotSame(ChangeType::Kept, $result->status);

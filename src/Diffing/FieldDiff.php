@@ -5,7 +5,7 @@ namespace TestMonitor\Revisable\Diffing;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * A diffed field: a flat list of blocks for inspection, plus the driver's rendered views.
+ * A diffed field: a flat list of blocks for inspection, plus the differ's rendered views.
  */
 readonly class FieldDiff
 {

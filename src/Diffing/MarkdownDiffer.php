@@ -24,7 +24,7 @@ use League\CommonMark\Node\Node;
 use League\CommonMark\Node\StringContainerHelper;
 use League\CommonMark\Parser\MarkdownParser;
 use League\CommonMark\Renderer\HtmlRenderer;
-use TestMonitor\Revisable\Contracts\DiffDriver;
+use TestMonitor\Revisable\Contracts\Differ;
 use TestMonitor\Revisable\Diffing\Markdown\BlockChange;
 use TestMonitor\Revisable\Diffing\Markdown\ChangeRenderer;
 use TestMonitor\Revisable\Diffing\Markdown\FormattingChange;
@@ -38,7 +38,7 @@ use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
  * Diffs markdown through its CommonMark AST, marking changes in the tree and letting
  * CommonMark render both sides, so the markup is valid by construction.
  */
-final class MarkdownDriver implements DiffDriver
+final class MarkdownDiffer implements Differ
 {
     /**
      * Node types never diffed inline. Strings, because Table ships with GFM and may be absent.
@@ -68,7 +68,7 @@ final class MarkdownDriver implements DiffDriver
 
     /**
      * @param Environment|null $environment A CommonMark environment that has NOT been
-     *                                      initialised yet, since the driver registers its own renderers on it.
+     *                                      initialised yet, since the differ registers its own renderers on it.
      */
     public function __construct(
         ?Environment $environment = null,

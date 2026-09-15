@@ -37,8 +37,8 @@ final class WordDifferTest extends TestCase
     }
 
     /**
-     * Whitespace edge cases for the lossless-reconstruction property that PlainDriver
-     * and MarkdownDriver both depend on. Named cases document what each one probes.
+     * Whitespace edge cases for the lossless-reconstruction property that PlainDiffer
+     * and MarkdownDiffer both depend on. Named cases document what each one probes.
      *
      * @return iterable<string, array{string, string}>
      */

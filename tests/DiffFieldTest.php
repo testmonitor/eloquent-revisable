@@ -5,7 +5,7 @@ namespace TestMonitor\Revisable\Tests;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diff;
 use TestMonitor\Revisable\Diffing\FieldDiff;
-use TestMonitor\Revisable\Diffing\PlainDriver;
+use TestMonitor\Revisable\Diffing\PlainDiffer;
 use TestMonitor\Revisable\Enums\ChangeType;
 use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 use TestMonitor\Revisable\Models\Revision;
@@ -57,7 +57,7 @@ final class DiffFieldTest extends TestCase
     }
 
     #[Test]
-    public function it_diffs_a_field_with_the_plain_driver_by_default()
+    public function it_diffs_a_field_with_the_plain_differ_by_default()
     {
         // Given
         $diff = $this->diffFor('the brown fox', 'the red fox');
@@ -72,7 +72,7 @@ final class DiffFieldTest extends TestCase
     }
 
     #[Test]
-    public function it_resolves_a_driver_by_name()
+    public function it_resolves_a_differ_by_name()
     {
         // Given
         $diff = $this->diffFor('old', 'new');
@@ -85,20 +85,20 @@ final class DiffFieldTest extends TestCase
     }
 
     #[Test]
-    public function it_accepts_a_driver_instance_for_one_off_configuration()
+    public function it_accepts_a_differ_instance_for_one_off_configuration()
     {
         // Given
         $diff = $this->diffFor("one\ntwo", "one\ntwo");
 
         // When
-        $result = $diff->field('value', new PlainDriver(separator: ' / '));
+        $result = $diff->field('value', new PlainDiffer(separator: ' / '));
 
         // Then
         $this->assertSame('one / two', $result->beforeHtml);
     }
 
     #[Test]
-    public function it_throws_for_an_unknown_driver_name()
+    public function it_throws_for_an_unknown_differ_name()
     {
         // Given
         $diff = $this->diffFor('old', 'new');
@@ -130,7 +130,7 @@ final class DiffFieldTest extends TestCase
     {
         // Given
         // A JSON object decodes to a PHP array too, same as a JSON list, but it isn't a
-        // list: there's no object-diffing driver, so it must fall through to plain text
+        // list: there's no object-diffing differ, so it must fall through to plain text
         // instead of being mistaken for a list and thrown as fieldIsList().
         $diff = $this->diffFor(json_encode(['a' => 1, 'b' => 2]), json_encode(['a' => 1, 'b' => 3]));
 
@@ -187,7 +187,7 @@ final class DiffFieldTest extends TestCase
     }
 
     #[Test]
-    public function it_resolves_the_markdown_driver_by_name()
+    public function it_resolves_the_markdown_differ_by_name()
     {
         // Given
         $diff = $this->diffFor('The brown fox.', 'The red fox.');

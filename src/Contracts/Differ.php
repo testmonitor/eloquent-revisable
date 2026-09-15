@@ -4,10 +4,10 @@ namespace TestMonitor\Revisable\Contracts;
 
 use TestMonitor\Revisable\Diffing\FieldDiff;
 
-interface DiffDriver
+interface Differ
 {
     /**
-     * Diff two values of this driver's content type; a null side means the value was absent.
+     * Diff two values of this differ's content type; a null side means the value was absent.
      */
     public function diff(?string $before, ?string $after): FieldDiff;
 

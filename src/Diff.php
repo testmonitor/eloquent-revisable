@@ -5,12 +5,12 @@ namespace TestMonitor\Revisable;
 use Closure;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use TestMonitor\Revisable\Contracts\DiffDriver;
+use TestMonitor\Revisable\Contracts\Differ;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diffing\FieldDiff;
 use TestMonitor\Revisable\Diffing\ListDiff;
-use TestMonitor\Revisable\Diffing\MarkdownDriver;
-use TestMonitor\Revisable\Diffing\PlainDriver;
+use TestMonitor\Revisable\Diffing\MarkdownDiffer;
+use TestMonitor\Revisable\Diffing\PlainDiffer;
 use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 
 final class Diff
@@ -111,9 +111,9 @@ final class Diff
     /**
      * Diff a single tracked field. Returns null when the field isn't tracked.
      *
-     * @param string|DiffDriver $driver A built-in driver name, or an instance for custom configuration
+     * @param string|Differ $differ A built-in differ name, or an instance for custom configuration
      */
-    public function field(string $field, string|DiffDriver $driver = 'plain'): ?FieldDiff
+    public function field(string $field, string|Differ $differ = 'plain'): ?FieldDiff
     {
         $value = $this->get($field);
 
@@ -129,7 +129,7 @@ final class Diff
             throw InvalidConfiguration::fieldIsList($field);
         }
 
-        return $this->driver($driver)->diff(
+        return $this->differ($differ)->diff(
             $this->stringOrNull($value['before']),
             $this->stringOrNull($value['after']),
         );
@@ -138,9 +138,9 @@ final class Diff
     /**
      * Diff a tracked field holding a list of values. Returns null when the field isn't tracked.
      *
-     * @param string|DiffDriver $driver A built-in driver name, or an instance for custom configuration
+     * @param string|Differ $differ A built-in differ name, or an instance for custom configuration
      */
-    public function list(string $field, string|DiffDriver $driver = 'plain'): ?ListDiff
+    public function list(string $field, string|Differ $differ = 'plain'): ?ListDiff
     {
         $value = $this->get($field);
 
@@ -151,23 +151,23 @@ final class Diff
         return ListDiff::for(
             ListDiff::entries($value['before']),
             ListDiff::entries($value['after']),
-            $this->driver($driver),
+            $this->differ($differ),
         );
     }
 
     /**
-     * Resolve a built-in driver name to an instance; anything else arrives as one already.
+     * Resolve a built-in differ name to an instance; anything else arrives as one already.
      */
-    protected function driver(string|DiffDriver $driver): DiffDriver
+    protected function differ(string|Differ $differ): Differ
     {
-        if ($driver instanceof DiffDriver) {
-            return $driver;
+        if ($differ instanceof Differ) {
+            return $differ;
         }
 
-        return match ($driver) {
-            'plain' => new PlainDriver,
-            'markdown' => new MarkdownDriver,
-            default => throw InvalidConfiguration::unknownDiffDriver($driver),
+        return match ($differ) {
+            'plain' => new PlainDiffer,
+            'markdown' => new MarkdownDiffer,
+            default => throw InvalidConfiguration::unknownDiffer($differ),
         };
     }
 

@@ -2,7 +2,7 @@
 
 namespace TestMonitor\Revisable\Diffing;
 
-use TestMonitor\Revisable\Contracts\DiffDriver;
+use TestMonitor\Revisable\Contracts\Differ;
 use TestMonitor\Revisable\Diffing\Support\AlignedBlock;
 use TestMonitor\Revisable\Diffing\Support\ArrayAligner;
 use TestMonitor\Revisable\Enums\ChangeType;
@@ -10,7 +10,7 @@ use TestMonitor\Revisable\Enums\ChangeType;
 /**
  * Diffs plain text: lines are blocks, aligned by content, then diffed word by word.
  */
-final class PlainDriver implements DiffDriver
+final class PlainDiffer implements Differ
 {
     public function __construct(
         protected string $separator = '<br/>',

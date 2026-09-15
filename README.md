@@ -431,7 +431,7 @@ foreach ($result->blocks as $block) {
 
 #### Diffing markdown
 
-Pass the `markdown` driver for fields holding markdown. It compares the parsed document rather than the rendered markup, so a reworded sentence highlights only the words that changed, while restructuring a paragraph into a list reads as a removal and an addition:
+Pass the `markdown` differ for fields holding markdown. It compares the parsed document rather than the rendered markup, so a reworded sentence highlights only the words that changed, while restructuring a paragraph into a list reads as a removal and an addition:
 
 ```php
 $result = $diff->field('body', 'markdown');
@@ -439,25 +439,25 @@ $result = $diff->field('body', 'markdown');
 // after:  '<p>Hello <ins>universe</ins></p>'
 ```
 
-The markdown driver requires `league/commonmark`:
+The markdown differ requires `league/commonmark`:
 
 ```bash
 composer require league/commonmark
 ```
 
-To control parsing, pass your own environment. Any CommonMark extension works, including GitHub Flavored Markdown. The environment must not have been initialised yet, since the driver registers its own renderers on it. With the table extension enabled, a table whose only change is its column alignment is not detected and reports as unchanged:
+To control parsing, pass your own environment. Any CommonMark extension works, including GitHub Flavored Markdown. The environment must not have been initialised yet, since the differ registers its own renderers on it. With the table extension enabled, a table whose only change is its column alignment is not detected and reports as unchanged:
 
 ```php
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
-use TestMonitor\Revisable\Diffing\MarkdownDriver;
+use TestMonitor\Revisable\Diffing\MarkdownDiffer;
 
 $environment = new Environment(['html_input' => 'escape']);
 $environment->addExtension(new CommonMarkCoreExtension);
 $environment->addExtension(new GithubFlavoredMarkdownExtension);
 
-$result = $diff->field('body', new MarkdownDriver($environment));
+$result = $diff->field('body', new MarkdownDiffer($environment));
 ```
 
 By default raw HTML inside markdown is escaped and unsafe links are stripped.
@@ -481,12 +481,12 @@ $result->toHtml(); // ['before' => [...], 'after' => [...]]
 
 #### Plain text options
 
-The plain driver joins multi-line values with `<br/>`. Pass a different separator if you need one:
+The plain differ joins multi-line values with `<br/>`. Pass a different separator if you need one:
 
 ```php
-use TestMonitor\Revisable\Diffing\PlainDriver;
+use TestMonitor\Revisable\Diffing\PlainDiffer;
 
-$diff->field('notes', new PlainDriver(separator: '</p><p>'));
+$diff->field('notes', new PlainDiffer(separator: '</p><p>'));
 ```
 
 ---

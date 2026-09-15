@@ -4,11 +4,11 @@ namespace TestMonitor\Revisable\Tests\Diffing;
 
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diffing\BlockDiff;
-use TestMonitor\Revisable\Diffing\PlainDriver;
+use TestMonitor\Revisable\Diffing\PlainDiffer;
 use TestMonitor\Revisable\Enums\ChangeType;
 use TestMonitor\Revisable\Tests\TestCase;
 
-final class PlainDriverTest extends TestCase
+final class PlainDifferTest extends TestCase
 {
     // Status
 
@@ -16,10 +16,10 @@ final class PlainDriverTest extends TestCase
     public function it_reports_a_field_as_kept_when_both_sides_match()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff('hello world', 'hello world');
+        $result = $differ->diff('hello world', 'hello world');
 
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
@@ -29,10 +29,10 @@ final class PlainDriverTest extends TestCase
     public function it_reports_a_field_as_added_when_there_was_no_previous_value()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff(null, 'brand new');
+        $result = $differ->diff(null, 'brand new');
 
         // Then
         $this->assertSame(ChangeType::Added, $result->status);
@@ -44,10 +44,10 @@ final class PlainDriverTest extends TestCase
     public function it_reports_a_field_as_removed_when_the_value_is_gone()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff('was here', null);
+        $result = $differ->diff('was here', null);
 
         // Then
         $this->assertSame(ChangeType::Removed, $result->status);
@@ -59,10 +59,10 @@ final class PlainDriverTest extends TestCase
     public function it_reports_a_field_as_kept_when_both_sides_are_empty()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff(null, null);
+        $result = $differ->diff(null, null);
 
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
@@ -75,10 +75,10 @@ final class PlainDriverTest extends TestCase
     public function it_produces_one_block_per_line()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff("first\nsecond\nthird", "first\nsecond\nthird");
+        $result = $differ->diff("first\nsecond\nthird", "first\nsecond\nthird");
 
         // Then
         $this->assertCount(3, $result->blocks);
@@ -92,10 +92,10 @@ final class PlainDriverTest extends TestCase
     public function it_marks_only_the_changed_line_when_a_middle_line_is_edited()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff("keep\nold\nkeep too", "keep\nnew\nkeep too");
+        $result = $differ->diff("keep\nold\nkeep too", "keep\nnew\nkeep too");
 
         // Then
         $this->assertSame(
@@ -108,10 +108,10 @@ final class PlainDriverTest extends TestCase
     public function it_does_not_shift_later_lines_when_a_line_is_removed()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff("a\nb\nc", "a\nc");
+        $result = $differ->diff("a\nb\nc", "a\nc");
 
         // Then
         $this->assertSame(
@@ -126,10 +126,10 @@ final class PlainDriverTest extends TestCase
     public function it_marks_deletions_in_the_before_view_and_insertions_in_the_after_view()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff('the brown fox', 'the red fox');
+        $result = $differ->diff('the brown fox', 'the red fox');
 
         // Then
         $this->assertSame('the <del>brown</del> fox', $result->beforeHtml);
@@ -143,10 +143,10 @@ final class PlainDriverTest extends TestCase
     public function it_escapes_html_special_characters()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff('hello & <b>world</b>', 'hello & <b>world</b>');
+        $result = $differ->diff('hello & <b>world</b>', 'hello & <b>world</b>');
 
         // Then
         $this->assertSame('hello &amp; &lt;b&gt;world&lt;/b&gt;', $result->beforeHtml);
@@ -156,10 +156,10 @@ final class PlainDriverTest extends TestCase
     public function it_treats_html_looking_text_as_literal_text_when_it_changes()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff('<b>old</b>', '<b>new</b>');
+        $result = $differ->diff('<b>old</b>', '<b>new</b>');
 
         // Then
         $this->assertStringContainsString('&lt;b&gt;', $result->beforeHtml);
@@ -171,10 +171,10 @@ final class PlainDriverTest extends TestCase
     public function it_joins_lines_with_the_configured_separator()
     {
         // Given
-        $driver = new PlainDriver(separator: ' | ');
+        $differ = new PlainDiffer(separator: ' | ');
 
         // When
-        $result = $driver->diff("one\ntwo", "one\ntwo");
+        $result = $differ->diff("one\ntwo", "one\ntwo");
 
         // Then
         $this->assertSame('one | two', $result->beforeHtml);
@@ -184,10 +184,10 @@ final class PlainDriverTest extends TestCase
     public function it_defaults_to_a_line_break_separator()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = $driver->diff("one\ntwo", "one\ntwo");
+        $result = $differ->diff("one\ntwo", "one\ntwo");
 
         // Then
         $this->assertSame('one<br/>two', $result->beforeHtml);
@@ -197,10 +197,10 @@ final class PlainDriverTest extends TestCase
     public function it_normalises_windows_line_endings()
     {
         // Given
-        $driver = new PlainDriver(separator: '|');
+        $differ = new PlainDiffer(separator: '|');
 
         // When
-        $result = $driver->diff("one\r\ntwo", "one\r\ntwo");
+        $result = $differ->diff("one\r\ntwo", "one\r\ntwo");
 
         // Then
         $this->assertSame('one|two', $result->beforeHtml);
@@ -210,10 +210,10 @@ final class PlainDriverTest extends TestCase
     public function it_omits_a_removed_line_from_the_after_view_entirely()
     {
         // Given
-        $driver = new PlainDriver(separator: '|');
+        $differ = new PlainDiffer(separator: '|');
 
         // When
-        $result = $driver->diff("a\nb", 'a');
+        $result = $differ->diff("a\nb", 'a');
 
         // Then
         $this->assertSame('a|<del>b</del>', $result->beforeHtml);
@@ -226,9 +226,9 @@ final class PlainDriverTest extends TestCase
     public function it_uses_the_value_itself_as_its_alignment_key()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When / Then
-        $this->assertSame('some value', $driver->key('some value'));
+        $this->assertSame('some value', $differ->key('some value'));
     }
 }

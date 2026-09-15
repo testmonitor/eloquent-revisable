@@ -23,15 +23,15 @@ final class InvalidConfiguration extends Exception
         return new self("The given model class `{$className}` does not extend `" . Model::class . '`');
     }
 
-    public static function unknownDiffDriver(string $name): self
+    public static function unknownDiffer(string $name): self
     {
-        return new self("There is no diff driver named `{$name}`. Use 'plain', 'markdown', or pass a driver instance.");
+        return new self("There is no differ named `{$name}`. Use 'plain', 'markdown', or pass a differ instance.");
     }
 
     public static function missingCommonMark(): self
     {
         return new self(
-            'The markdown diff driver requires `league/commonmark`. Install it with `composer require league/commonmark`.'
+            'The markdown differ requires `league/commonmark`. Install it with `composer require league/commonmark`.'
         );
     }
 

@@ -5,7 +5,7 @@ namespace TestMonitor\Revisable\Tests\Diffing;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diffing\FieldDiff;
 use TestMonitor\Revisable\Diffing\ListDiff;
-use TestMonitor\Revisable\Diffing\PlainDriver;
+use TestMonitor\Revisable\Diffing\PlainDiffer;
 use TestMonitor\Revisable\Enums\ChangeType;
 use TestMonitor\Revisable\Tests\TestCase;
 
@@ -26,10 +26,10 @@ final class ListDiffTest extends TestCase
     public function it_keeps_items_present_on_both_sides()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = ListDiff::for(['a', 'b'], ['a', 'b'], $driver);
+        $result = ListDiff::for(['a', 'b'], ['a', 'b'], $differ);
 
         // Then
         $this->assertSame([ChangeType::Kept, ChangeType::Kept], $this->statuses($result->items));
@@ -40,13 +40,13 @@ final class ListDiffTest extends TestCase
     public function it_marks_an_inserted_item_as_added()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
         // A naive index-by-index zip of ['a', 'c'] against ['a', 'b', 'c'] would read this
         // as 'c' changed into 'b' and 'c' added at the tail. Real alignment anchors on the
         // shared 'a' and 'c' and reports only 'b' as new.
-        $result = ListDiff::for(['a', 'c'], ['a', 'b', 'c'], $driver);
+        $result = ListDiff::for(['a', 'c'], ['a', 'b', 'c'], $differ);
 
         // Then
         $this->assertSame(
@@ -59,13 +59,13 @@ final class ListDiffTest extends TestCase
     public function it_marks_a_dropped_item_as_removed()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
         // A naive index-by-index zip of ['a', 'b', 'c'] against ['b', 'c'] would read this
         // as 'a' changed into 'b', 'b' changed into 'c', and 'c' removed at the tail. Real
         // alignment anchors on the shared 'b' and 'c' and reports only 'a' as gone.
-        $result = ListDiff::for(['a', 'b', 'c'], ['b', 'c'], $driver);
+        $result = ListDiff::for(['a', 'b', 'c'], ['b', 'c'], $differ);
 
         // Then
         $this->assertSame(
@@ -78,10 +78,10 @@ final class ListDiffTest extends TestCase
     public function it_does_not_shift_later_items_when_an_early_item_is_removed()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = ListDiff::for(['first', 'second', 'third'], ['first', 'third'], $driver);
+        $result = ListDiff::for(['first', 'second', 'third'], ['first', 'third'], $differ);
 
         // Then
         $this->assertSame(
@@ -94,7 +94,7 @@ final class ListDiffTest extends TestCase
     public function it_marks_an_edited_item_as_changed_rather_than_removed_and_added()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
         // 'new' is inserted at the front, shifting 'the brown fox' and 'end' one position
@@ -104,7 +104,7 @@ final class ListDiffTest extends TestCase
         $result = ListDiff::for(
             ['keep', 'the brown fox', 'end'],
             ['new', 'keep', 'the red fox', 'end'],
-            $driver,
+            $differ,
         );
 
         // Then
@@ -121,10 +121,10 @@ final class ListDiffTest extends TestCase
     public function it_reports_the_whole_list_as_added_when_every_item_is_new()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = ListDiff::for([], ['a', 'b'], $driver);
+        $result = ListDiff::for([], ['a', 'b'], $differ);
 
         // Then
         $this->assertSame(ChangeType::Added, $result->status);
@@ -134,10 +134,10 @@ final class ListDiffTest extends TestCase
     public function it_reports_the_whole_list_as_removed_when_every_item_is_gone()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = ListDiff::for(['a', 'b'], [], $driver);
+        $result = ListDiff::for(['a', 'b'], [], $differ);
 
         // Then
         $this->assertSame(ChangeType::Removed, $result->status);
@@ -147,7 +147,7 @@ final class ListDiffTest extends TestCase
     public function it_reports_the_whole_list_as_changed_when_items_differ_in_kind()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
         // 'x' is removed from the front, shifting 'a' and 'b' one position to the left. A
@@ -156,7 +156,7 @@ final class ListDiffTest extends TestCase
         // anchors on the shared 'a' and reports 'x' removed and 'b' edited into 'c'. Both
         // hypotheses land on the same overall Changed status, so the item-level statuses
         // are what actually distinguishes them.
-        $result = ListDiff::for(['x', 'a', 'b'], ['a', 'c'], $driver);
+        $result = ListDiff::for(['x', 'a', 'b'], ['a', 'c'], $differ);
 
         // Then
         $this->assertSame(
@@ -170,10 +170,10 @@ final class ListDiffTest extends TestCase
     public function it_reports_an_empty_list_as_kept()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $result = ListDiff::for([], [], $driver);
+        $result = ListDiff::for([], [], $differ);
 
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
@@ -186,10 +186,10 @@ final class ListDiffTest extends TestCase
     public function it_omits_added_items_from_the_before_view_and_removed_items_from_the_after_view()
     {
         // Given
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
 
         // When
-        $html = ListDiff::for(['keep', 'gone'], ['keep', 'fresh'], $driver)->toHtml();
+        $html = ListDiff::for(['keep', 'gone'], ['keep', 'fresh'], $differ)->toHtml();
 
         // Then
         $this->assertSame(['keep', '<del>gone</del>'], $html['before']);
@@ -296,15 +296,15 @@ final class ListDiffTest extends TestCase
         // Before the fix, both sides cast their single entry to the literal string
         // 'Array', so the two sides read as identical and the field reported Kept even
         // though the underlying objects differ.
-        $driver = new PlainDriver;
+        $differ = new PlainDiffer;
         $before = json_encode([['name' => 'step one']]);
         $after = json_encode([['name' => 'step two']]);
 
         // When
         $warnings = $this->captureWarnings(
-            fn () => ListDiff::for(ListDiff::entries($before), ListDiff::entries($after), $driver),
+            fn () => ListDiff::for(ListDiff::entries($before), ListDiff::entries($after), $differ),
         );
-        $result = ListDiff::for(ListDiff::entries($before), ListDiff::entries($after), $driver);
+        $result = ListDiff::for(ListDiff::entries($before), ListDiff::entries($after), $differ);
 
         // Then
         $this->assertSame([], $warnings, 'Diffing a list of JSON objects must not raise a PHP warning.');

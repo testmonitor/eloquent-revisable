@@ -2,12 +2,12 @@
 
 namespace TestMonitor\Revisable\Diffing;
 
-use TestMonitor\Revisable\Contracts\DiffDriver;
+use TestMonitor\Revisable\Contracts\Differ;
 use TestMonitor\Revisable\Diffing\Support\ArrayAligner;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * A diffed list field, its items aligned by the driver's key so edits pair with their originals.
+ * A diffed list field, its items aligned by the differ's key so edits pair with their originals.
  */
 readonly class ListDiff
 {
@@ -20,18 +20,18 @@ readonly class ListDiff
     ) {}
 
     /**
-     * Align two entry lists and diff each aligned pair with the given driver.
+     * Align two entry lists and diff each aligned pair with the given differ.
      *
      * @param list<string> $before
      * @param list<string> $after
      */
-    public static function for(array $before, array $after, DiffDriver $driver): self
+    public static function for(array $before, array $after, Differ $differ): self
     {
         $items = [];
 
-        foreach (new ArrayAligner($before, $after, fn (mixed $entry) => $driver->key((string) $entry))->align() as $aligned) {
+        foreach (new ArrayAligner($before, $after, fn (mixed $entry) => $differ->key((string) $entry))->align() as $aligned) {
             foreach (array_map(null, $aligned->before, $aligned->after) as [$beforeEntry, $afterEntry]) {
-                $items[] = $driver->diff($beforeEntry, $afterEntry);
+                $items[] = $differ->diff($beforeEntry, $afterEntry);
             }
         }
 
