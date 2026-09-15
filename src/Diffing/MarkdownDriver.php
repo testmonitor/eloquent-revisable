@@ -16,6 +16,7 @@ use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
 use League\CommonMark\Node\Block\Document;
 use League\CommonMark\Node\Block\Paragraph;
+use League\CommonMark\Node\Inline\AbstractInline;
 use League\CommonMark\Node\Inline\AbstractStringContainer;
 use League\CommonMark\Node\Inline\Newline;
 use League\CommonMark\Node\Inline\Text;
@@ -235,7 +236,7 @@ final class MarkdownDriver implements DiffDriver
             // Nothing was inserted or removed, so there is no segment to mark. Mark the
             // after side's text instead, or the change would render as two identical
             // looking sides and read as no change at all.
-            $this->markFormatting($afterContainers);
+            $this->markFormatting($beforeContainers, $afterContainers);
 
             return new BlockDiff(ChangeType::Changed);
         }
@@ -319,22 +320,179 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Wrap each piece of text in a formatting marker, leaving the inline nodes around it
-     * (emphasis, links) in place so the new formatting still renders.
+     * Mark only the runs whose formatting actually changed.
+     *
+     * Both sides carry identical words here, so what differs is which inline nodes each
+     * run sits inside. Comparing that path run by run means bolding a single word marks
+     * that word alone, instead of lighting up the whole block and hiding where the edit
+     * really was.
+     *
+     * @param list<AbstractStringContainer> $beforeContainers
+     * @param list<AbstractStringContainer> $afterContainers
+     */
+    protected function markFormatting(array $beforeContainers, array $afterContainers): void
+    {
+        $runs = $this->formattingRuns($beforeContainers);
+
+        $offset = 0;
+
+        foreach ($afterContainers as $container) {
+            $literal = $container->getLiteral();
+            $path = $this->formattingPathOf($container);
+            $length = strlen($literal);
+
+            $pieces = [];
+            $consumed = 0;
+
+            while ($consumed < $length) {
+                [$before, $available] = $this->runAt($runs, $offset + $consumed);
+                $take = min($available, $length - $consumed);
+
+                $pieces[] = [substr($literal, $consumed, $take), $before !== $path];
+
+                $consumed += $take;
+            }
+
+            $offset += $length;
+
+            $this->rewriteFormatting($container, $this->mergeFormattingPieces($pieces));
+        }
+    }
+
+    /**
+     * The before side as a flat run of [byte length, formatting path] pairs.
      *
      * @param list<AbstractStringContainer> $containers
+     * @return list<array{int, string}>
      */
-    protected function markFormatting(array $containers): void
+    protected function formattingRuns(array $containers): array
     {
+        $runs = [];
+
         foreach ($containers as $container) {
-            if ($container->getLiteral() === '') {
+            $runs[] = [strlen($container->getLiteral()), $this->formattingPathOf($container)];
+        }
+
+        return $runs;
+    }
+
+    /**
+     * The formatting path covering $offset, and how many bytes of it remain from there.
+     *
+     * @param list<array{int, string}> $runs
+     * @return array{string, int}
+     */
+    protected function runAt(array $runs, int $offset): array
+    {
+        $cursor = 0;
+
+        foreach ($runs as [$length, $path]) {
+            if ($offset < $cursor + $length) {
+                return [$path, $cursor + $length - $offset];
+            }
+
+            $cursor += $length;
+        }
+
+        return ['', PHP_INT_MAX];
+    }
+
+    /**
+     * The chain of inline nodes a run sits inside, which is what "its formatting" means.
+     * Each ancestor contributes its variant too, so a link whose destination changed
+     * counts as reformatted rather than untouched.
+     */
+    protected function formattingPathOf(Node $node): string
+    {
+        $path = [];
+        $parent = $node->parent();
+
+        while ($parent instanceof AbstractInline) {
+            $path[] = $parent::class . ':' . $this->inlineVariant($parent);
+            $parent = $parent->parent();
+        }
+
+        return implode('>', array_reverse($path));
+    }
+
+    /**
+     * Join neighbouring pieces that share a verdict, so one reformatted span becomes one
+     * marker rather than several abutting ones.
+     *
+     * @param list<array{string, bool}> $pieces
+     * @return list<array{string, bool}>
+     */
+    protected function mergeFormattingPieces(array $pieces): array
+    {
+        $merged = [];
+
+        foreach ($pieces as [$text, $changed]) {
+            $last = array_key_last($merged);
+
+            if ($last !== null && $merged[$last][1] === $changed) {
+                $merged[$last][0] .= $text;
+
+                continue;
+            }
+
+            $merged[] = [$text, $changed];
+        }
+
+        return $merged;
+    }
+
+    /**
+     * Rebuild a container so its reformatted spans sit inside a marker.
+     *
+     * @param list<array{string, bool}> $pieces
+     */
+    protected function rewriteFormatting(AbstractStringContainer $container, array $pieces): void
+    {
+        if ($pieces === [] || ! collect($pieces)->contains(fn (array $piece) => $piece[1])) {
+            return;
+        }
+
+        // A code span or raw inline carries markup that splitting would destroy, so it is
+        // marked whole rather than rebuilt from plain text.
+        if (! $container instanceof Text) {
+            $marker = new FormattingChange;
+
+            $container->replaceWith($marker);
+            $marker->appendChild($container);
+
+            return;
+        }
+
+        $replacements = [];
+
+        foreach ($pieces as [$text, $changed]) {
+            if ($text === '') {
+                continue;
+            }
+
+            $node = new Text($text);
+
+            if (! $changed) {
+                $replacements[] = $node;
+
                 continue;
             }
 
             $marker = new FormattingChange;
-            $marker->appendChild(new Text($container->getLiteral()));
+            $marker->appendChild($node);
 
-            $container->replaceWith($marker);
+            $replacements[] = $marker;
+        }
+
+        $first = array_shift($replacements);
+
+        $container->replaceWith($first);
+
+        $previous = $first;
+
+        foreach ($replacements as $replacement) {
+            $previous->insertAfter($replacement);
+            $previous = $replacement;
         }
     }
 

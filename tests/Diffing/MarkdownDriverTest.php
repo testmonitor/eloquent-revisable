@@ -216,6 +216,52 @@ final class MarkdownDriverTest extends TestCase
         $this->assertWellFormedHtml($result->afterHtml);
     }
 
+    #[Test]
+    public function it_marks_only_the_word_whose_formatting_changed()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('A bold word here', 'A **bold** word here');
+
+        // Then
+        $this->assertSame(
+            '<p>A <strong><ins class="mod">bold</ins></strong> word here</p>',
+            trim($result->afterHtml),
+        );
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_marks_each_reformatted_word_separately()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('a b c d', 'a **b** c **d**');
+
+        // Then
+        $this->assertSame(2, substr_count($result->afterHtml, '<ins class="mod">'));
+        $this->assertStringNotContainsString('<ins class="mod">a', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_leaves_unchanged_formatting_unmarked_in_a_partly_reformatted_block()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('A **kept** word here', 'A **kept** *new* word here');
+
+        // Then
+        $this->assertStringContainsString('<strong>kept</strong>', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
     // Inline single paragraph
 
     #[Test]

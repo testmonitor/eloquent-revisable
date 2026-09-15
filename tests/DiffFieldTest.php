@@ -218,7 +218,9 @@ final class DiffFieldTest extends TestCase
             array_map(fn ($item) => $item->status, $result->items),
         );
 
-        $this->assertStringContainsString('Run tests', $result->items[1]->afterHtml);
+        // The wording is unchanged, only the emphasis was dropped, so just that word is
+        // marked rather than the whole entry.
+        $this->assertStringContainsString('Run <ins class="mod">tests</ins>', $result->items[1]->afterHtml);
         $this->assertStringContainsString('Ship it', $result->items[2]->afterHtml);
     }
 }
