@@ -15,6 +15,7 @@ use League\CommonMark\Extension\CommonMark\Node\Block\ThematicBreak;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
 use League\CommonMark\Extension\Table\Table;
+use League\CommonMark\Extension\TaskList\TaskListItemMarker;
 use League\CommonMark\Node\Block\Document;
 use League\CommonMark\Node\Block\Paragraph;
 use League\CommonMark\Node\Inline\AbstractInline;
@@ -42,7 +43,7 @@ use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 final class MarkdownDiffer implements Differ
 {
     /**
-     * Node types never diffed inline. Strings, because Table ships with GFM and may be absent.
+     * Node types never diffed inline. Table ships with GFM, so it may be absent at runtime.
      *
      * @var list<class-string>
      */
@@ -646,6 +647,8 @@ final class MarkdownDiffer implements Differ
             // Hard break renders `<br />`; soft break renders the configured separator
             // (a plain newline by default). Neither leaves any text behind.
             $node instanceof Newline => (string) $node->getType(),
+            // A ticked checkbox renders a checked attribute, but leaves no text behind.
+            $node instanceof TaskListItemMarker => $node->isChecked() ? 'checked' : 'unchecked',
             default => '',
         };
     }

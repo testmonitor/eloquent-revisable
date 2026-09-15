@@ -5,6 +5,7 @@ namespace TestMonitor\Revisable\Tests\Diffing;
 use Iterator;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diffing\BlockDiff;
@@ -612,6 +613,43 @@ final class MarkdownDifferTest extends TestCase
 
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
+    }
+
+    #[Test]
+    public function it_treats_a_ticked_task_list_item_as_a_change()
+    {
+        // Given
+        $environment = new Environment(['html_input' => 'escape']);
+        $environment->addExtension(new CommonMarkCoreExtension);
+        $environment->addExtension(new GithubFlavoredMarkdownExtension);
+
+        $differ = new MarkdownDiffer($environment);
+
+        // When
+        $result = $differ->diff('- [ ] task', '- [x] task');
+
+        // Then
+        $this->assertSame(ChangeType::Changed, $result->status);
+        $this->assertStringNotContainsString('checked', $result->beforeHtml);
+        $this->assertStringContainsString('checked', $result->afterHtml);
+    }
+
+    #[Test]
+    public function it_keeps_a_task_list_item_whose_checkbox_did_not_move()
+    {
+        // Given
+        $environment = new Environment(['html_input' => 'escape']);
+        $environment->addExtension(new CommonMarkCoreExtension);
+        $environment->addExtension(new GithubFlavoredMarkdownExtension);
+
+        $differ = new MarkdownDiffer($environment);
+
+        // When
+        $result = $differ->diff('- [x] task', '- [x] task');
+
+        // Then
+        $this->assertSame(ChangeType::Kept, $result->status);
+        $this->assertSame($result->beforeHtml, $result->afterHtml);
     }
 
     // The invariant behind every status
