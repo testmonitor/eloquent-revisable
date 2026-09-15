@@ -661,4 +661,22 @@ final class MarkdownDriverTest extends TestCase
         $this->assertWellFormedHtml($result->beforeHtml);
         $this->assertWellFormedHtml($result->afterHtml);
     }
+
+    // Line breaks
+
+    #[Test]
+    public function it_treats_a_hard_break_turned_soft_as_a_change_in_the_rendered_break()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff("a  \nb", "a\nb");
+
+        // Then
+        $this->assertNotSame(ChangeType::Kept, $result->status);
+        $this->assertStringContainsString('<br />', $result->beforeHtml);
+        $this->assertStringNotContainsString('<br />', $result->afterHtml);
+        $this->assertNotSame($result->beforeHtml, $result->afterHtml);
+    }
 }
