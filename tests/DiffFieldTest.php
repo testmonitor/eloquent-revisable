@@ -251,10 +251,23 @@ final class DiffFieldTest extends TestCase
     public function it_does_not_throw_for_a_json_object_field()
     {
         // Given
-        // A JSON object decodes to a PHP array too, same as a JSON list, but it isn't a
-        // list: there's no object-diffing differ, so it must fall through to plain text
-        // instead of being mistaken for a list and thrown as fieldIsList().
+        // There is no object-diffing differ, so an object falls through to plain text.
         $diff = $this->diffFor(json_encode(['a' => 1, 'b' => 2]), json_encode(['a' => 1, 'b' => 3]));
+
+        // When
+        $result = $diff->field('value');
+
+        // Then
+        $this->assertInstanceOf(FieldDiff::class, $result);
+        $this->assertSame(ChangeType::Changed, $result->status);
+    }
+
+    #[Test]
+    public function it_does_not_throw_for_a_json_object_with_sequential_numeric_keys()
+    {
+        // Given
+        // Decoded associatively this object would become a PHP list and read as one.
+        $diff = $this->diffFor('{"0":"a","1":"b"}', '{"0":"a","1":"c"}');
 
         // When
         $result = $diff->field('value');

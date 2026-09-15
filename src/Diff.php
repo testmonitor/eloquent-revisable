@@ -180,10 +180,7 @@ final class Diff
             return false;
         }
 
-        $decoded = json_decode($value, true);
-
-        // A JSON object decodes to an array too, so the list check is what separates them.
-        return is_array($decoded) && array_is_list($decoded);
+        return is_array(json_decode($value));
     }
 
     /**
