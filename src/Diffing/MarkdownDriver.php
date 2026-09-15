@@ -12,8 +12,11 @@ use League\CommonMark\Extension\CommonMark\Node\Block\IndentedCode;
 use League\CommonMark\Extension\CommonMark\Node\Block\ListBlock;
 use League\CommonMark\Extension\CommonMark\Node\Block\ListItem;
 use League\CommonMark\Extension\CommonMark\Node\Block\ThematicBreak;
+use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
+use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
 use League\CommonMark\Node\Block\Document;
 use League\CommonMark\Node\Inline\AbstractStringContainer;
+use League\CommonMark\Node\Inline\Newline;
 use League\CommonMark\Node\Inline\Text;
 use League\CommonMark\Node\Node;
 use League\CommonMark\Node\StringContainerHelper;
@@ -312,6 +315,15 @@ final class MarkdownDriver implements DiffDriver
      * single token can span several containers ("A**b**c" is one token across three Text
      * nodes) and so token offsets cannot express a container boundary at all.
      *
+     * This walk does its arithmetic with strlen()/substr(), which count and slice bytes,
+     * not multi-byte characters. That is safe only because every cut this method makes
+     * lands on a boundary that already existed in the original string: a container
+     * boundary from the parser, or a token boundary from WordDiffer's `/u` (Unicode-mode)
+     * tokenizer, which never splits inside a multi-byte codepoint. Byte length still
+     * exactly matches character content up to that boundary, so slicing there can never
+     * land mid-codepoint. If a future change ever introduces a cut at a position that is
+     * not already one of these boundaries, this would need mb_* functions instead.
+     *
      * @param list<AbstractStringContainer> $containers
      * @param list<Segment> $segments
      */
@@ -466,17 +478,38 @@ final class MarkdownDriver implements DiffDriver
 
     /**
      * The sequence of inline node types in a block, used to tell a formatting-only change
-     * from no change at all.
+     * from no change at all. Each node's class is paired with its inlineVariant(), the
+     * same widening blockSignature() does for block nodes one level up: a node's
+     * attributes are otherwise invisible to this comparison, which only ever sees the
+     * class and, via the text stream compared before this is reached, the visible text.
      */
     protected function inlineShapeOf(Node $node): string
     {
         $shape = [];
 
         foreach ($node->children() as $child) {
-            $shape[] = $child::class . '(' . $this->inlineShapeOf($child) . ')';
+            $shape[] = $child::class . ':' . $this->inlineVariant($child) . '(' . $this->inlineShapeOf($child) . ')';
         }
 
         return implode(',', $shape);
+    }
+
+    /**
+     * The state an inline node carries that changes what CommonMark renders without
+     * showing up in its class or its text. Mirrors blockVariant() one level down.
+     */
+    protected function inlineVariant(Node $node): string
+    {
+        return match (true) {
+            // The destination and the title both reach the output as attributes (href/src
+            // and title). The link or image label is a child node and already part of the
+            // text comparison, so it does not need to be repeated here.
+            $node instanceof Link, $node instanceof Image => $node->getUrl() . ':' . ($node->getTitle() ?? ''),
+            // Hard break renders `<br />`; soft break renders the configured separator
+            // (a plain newline by default). Neither leaves any text behind.
+            $node instanceof Newline => (string) $node->getType(),
+            default => '',
+        };
     }
 
     /**

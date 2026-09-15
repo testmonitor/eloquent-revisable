@@ -606,6 +606,59 @@ final class MarkdownDriverTest extends TestCase
             'added paragraph' => ['One.', "One.\n\nTwo.", ChangeType::Changed],
             'removed list item' => ["- one\n- two", '- one', ChangeType::Changed],
             'emphasis added' => ['Hello world', 'Hello **world**', ChangeType::Changed],
+            'link destination' => ['[text](/a)', '[text](/b)', ChangeType::Changed],
+            'link title' => ['[t](/a "one")', '[t](/a "two")', ChangeType::Changed],
+            'image source' => ['![alt](/a.png)', '![alt](/b.png)', ChangeType::Changed],
+            'image source, no alt text' => ['![](/a.png)', '![](/b.png)', ChangeType::Changed],
+            'identical link' => ['[text](/a)', '[text](/a)', ChangeType::Kept],
         ];
+    }
+
+    // Repeated use of one driver instance
+
+    #[Test]
+    public function it_produces_the_same_result_across_repeated_calls_on_one_instance()
+    {
+        // Given
+        $shared = new MarkdownDriver;
+
+        $pairs = [
+            ['The brown fox.', 'The red fox.'],
+            ["- one\n- two", "- one\n- three"],
+            ['The brown fox.', 'The red fox.'], // deliberately repeated
+            ['[text](/a)', '[text](/b)'],
+        ];
+
+        // When
+        $sharedResults = array_map(fn (array $pair) => $shared->diff(...$pair), $pairs);
+        $freshResults = array_map(fn (array $pair) => (new MarkdownDriver)->diff(...$pair), $pairs);
+
+        // Then
+        foreach ($sharedResults as $i => $result) {
+            $this->assertSame($this->statuses($freshResults[$i]->blocks), $this->statuses($result->blocks));
+            $this->assertSame($freshResults[$i]->status, $result->status);
+            $this->assertSame($freshResults[$i]->beforeHtml, $result->beforeHtml);
+            $this->assertSame($freshResults[$i]->afterHtml, $result->afterHtml);
+        }
+    }
+
+    // Multi-byte text
+
+    #[Test]
+    public function it_marks_changed_words_inside_a_multi_byte_paragraph()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('Café au café, très chaud.', 'Café au café, très froid.');
+
+        // Then
+        $this->assertStringContainsString('<del>chaud.</del>', $result->beforeHtml);
+        $this->assertStringContainsString('<ins>froid.</ins>', $result->afterHtml);
+        $this->assertStringContainsString('Café au café, très', $result->afterHtml);
+        $this->assertSidesAreClean($result->beforeHtml, $result->afterHtml);
+        $this->assertWellFormedHtml($result->beforeHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
     }
 }
