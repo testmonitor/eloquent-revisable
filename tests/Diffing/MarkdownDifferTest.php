@@ -270,6 +270,37 @@ final class MarkdownDifferTest extends TestCase
     }
 
     #[Test]
+    public function it_marks_a_reformatted_word_alongside_an_insertion()
+    {
+        // Given
+        $differ = new MarkdownDiffer;
+
+        // When
+        $result = $differ->diff('Test **Cases**', 'Test Cases ok');
+
+        // Then
+        $this->assertSame(
+            '<p>Test <ins class="mod">Cases</ins><ins> ok</ins></p>',
+            trim($result->afterHtml),
+        );
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_marks_a_reformatted_word_that_follows_a_deletion()
+    {
+        // Given
+        $differ = new MarkdownDiffer;
+
+        // When
+        $result = $differ->diff('Drop this, **Cases** here', 'Cases here');
+
+        // Then
+        $this->assertSame('<p><ins class="mod">Cases</ins> here</p>', trim($result->afterHtml));
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
     public function it_distinguishes_a_formatting_marker_from_a_real_insertion()
     {
         // Given
