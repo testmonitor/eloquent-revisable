@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diffing\BlockDiff;
 use TestMonitor\Revisable\Diffing\MarkdownDiffer;
 use TestMonitor\Revisable\Enums\ChangeType;
+use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 use TestMonitor\Revisable\Tests\TestCase;
 
 final class MarkdownDifferTest extends TestCase
@@ -283,6 +284,35 @@ final class MarkdownDifferTest extends TestCase
         $this->assertStringContainsString('<ins>', $insertion->afterHtml);
     }
 
+    #[Test]
+    public function it_joins_neighbouring_reformatted_runs_into_one_marker()
+    {
+        // Given
+        $differ = new MarkdownDiffer;
+
+        // When
+        $result = $differ->diff('*a* *b* c', '**a b** c');
+
+        // Then
+        $this->assertStringContainsString('<ins class="mod">a b</ins>', $result->afterHtml);
+        $this->assertSame(1, substr_count($result->afterHtml, '<ins class="mod">'));
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_marks_a_reformatted_code_span_whole()
+    {
+        // Given
+        $differ = new MarkdownDiffer;
+
+        // When
+        $result = $differ->diff('`code` here', '**`code`** here');
+
+        // Then
+        $this->assertStringContainsString('<ins class="mod"><code>code</code></ins>', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
     // Added and removed blocks
 
     #[Test]
@@ -430,6 +460,22 @@ final class MarkdownDifferTest extends TestCase
 
         // Then
         $this->assertStringNotContainsString('<p>', $result->afterHtml);
+    }
+
+    #[Test]
+    public function it_marks_a_nested_list_inside_an_added_item_as_a_block()
+    {
+        // Given
+        $differ = new MarkdownDiffer;
+
+        // When
+        $result = $differ->diff('- one', "- one\n- two\n    - nested");
+
+        // Then
+        // The nested list is marked as a block of its own, inside the item.
+        $this->assertStringContainsString('<ins><ul>', $result->afterHtml);
+        $this->assertStringContainsString('</ul></ins>', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
     }
 
     // Atomic blocks
@@ -828,5 +874,16 @@ final class MarkdownDifferTest extends TestCase
             $this->assertSame($freshResults[$i]->beforeHtml, $result->beforeHtml);
             $this->assertSame($freshResults[$i]->afterHtml, $result->afterHtml);
         }
+    }
+
+    #[Test]
+    public function it_names_the_package_to_install_when_commonmark_is_missing()
+    {
+        // Given / When
+        $exception = InvalidConfiguration::missingCommonMark();
+
+        // Then
+        $this->assertStringContainsString('league/commonmark', $exception->getMessage());
+        $this->assertStringContainsString('composer require', $exception->getMessage());
     }
 }

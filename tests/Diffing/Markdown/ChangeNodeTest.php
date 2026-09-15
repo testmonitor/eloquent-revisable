@@ -8,6 +8,7 @@ use League\CommonMark\Renderer\ChildNodeRendererInterface;
 use PHPUnit\Framework\Attributes\Test;
 use TestMonitor\Revisable\Diffing\Markdown\BlockChange;
 use TestMonitor\Revisable\Diffing\Markdown\ChangeRenderer;
+use TestMonitor\Revisable\Diffing\Markdown\FormattingRenderer;
 use TestMonitor\Revisable\Diffing\Markdown\InlineChange;
 use TestMonitor\Revisable\Enums\ChangeType;
 use TestMonitor\Revisable\Tests\TestCase;
@@ -121,6 +122,19 @@ final class ChangeNodeTest extends TestCase
     {
         // Given
         $renderer = new ChangeRenderer;
+        $node = new Text('hello');
+        $childRenderer = $this->createStub(ChildNodeRendererInterface::class);
+
+        // When / Then
+        $this->expectException(InvalidArgumentException::class);
+        $renderer->render($node, $childRenderer);
+    }
+
+    #[Test]
+    public function it_rejects_a_node_that_is_not_a_formatting_marker()
+    {
+        // Given
+        $renderer = new FormattingRenderer;
         $node = new Text('hello');
         $childRenderer = $this->createStub(ChildNodeRendererInterface::class);
 
