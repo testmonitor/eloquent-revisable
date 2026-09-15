@@ -7,14 +7,12 @@ use TestMonitor\Revisable\Diffing\FieldDiff;
 interface DiffDriver
 {
     /**
-     * Diff two values of this driver's content type. A null side means the value was
-     * absent, which surfaces as an Added or Removed field.
+     * Diff two values of this driver's content type; a null side means the value was absent.
      */
     public function diff(?string $before, ?string $after): FieldDiff;
 
     /**
-     * Derive the key this value is aligned by when it appears inside a list, so that a
-     * cosmetic edit still matches the same item.
+     * The key this value is aligned by inside a list, so a cosmetic edit still matches.
      */
     public function key(string $value): string;
 }

@@ -8,8 +8,7 @@ use League\CommonMark\Renderer\NodeRendererInterface;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * Renders both marker node types. Children are rendered by CommonMark itself, so the
- * surrounding markup is always balanced.
+ * Renders both marker node types, leaving their children to CommonMark.
  */
 final class ChangeRenderer implements NodeRendererInterface
 {

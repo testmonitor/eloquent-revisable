@@ -6,8 +6,7 @@ use League\CommonMark\Node\Block\AbstractBlock;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * Wraps a wholly added or removed block. Block-level <ins>/<del> is valid HTML, since
- * both elements take transparent content.
+ * Wraps a wholly added or removed block; <ins> and <del> take transparent content.
  */
 final class BlockChange extends AbstractBlock implements ChangeNode
 {

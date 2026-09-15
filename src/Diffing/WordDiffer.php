@@ -6,8 +6,7 @@ use Jfcherng\Diff\SequenceMatcher;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * Diffs two strings word by word. Whitespace is kept as its own tokens, so joining a
- * segment list back together reproduces the original string exactly.
+ * Diffs two strings word by word, keeping whitespace as its own tokens so nothing is lost.
  */
 final class WordDiffer
 {
@@ -35,8 +34,7 @@ final class WordDiffer
     }
 
     /**
-     * Turn a single opcode into the segments it represents. A replacement becomes a
-     * removal followed by an addition, so each segment belongs to exactly one side.
+     * Turn one opcode into segments; a replacement becomes a removal then an addition.
      *
      * @return list<Segment>
      */

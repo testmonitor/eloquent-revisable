@@ -7,8 +7,7 @@ use TestMonitor\Revisable\Diffing\Support\ArrayAligner;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * A diffed list field. Items are aligned by the driver's key, so an edited entry pairs
- * up with its earlier self instead of reading as a removal plus an insertion.
+ * A diffed list field, its items aligned by the driver's key so edits pair with their originals.
  */
 readonly class ListDiff
 {
@@ -40,13 +39,7 @@ readonly class ListDiff
     }
 
     /**
-     * Normalise a stored value into a list of entries. A JSON array decodes; anything
-     * else becomes a single entry. A scalar entry (or null) is cast to string; anything
-     * else, e.g. a nested array or object, is JSON-encoded instead of cast, since casting
-     * an array produces the literal string 'Array' (plus a PHP warning) rather than
-     * anything a diff could meaningfully compare. Once stringified, any entry that reads
-     * as empty (null, false, an empty string) is dropped, so a boolean can't survive as a
-     * silent blank.
+     * Normalise a stored value into a list of entries.
      *
      * @return list<string>
      */
@@ -61,7 +54,10 @@ readonly class ListDiff
         $entries = is_array($decoded) ? $decoded : [$value];
 
         return collect($entries)
+            // Anything non-scalar is encoded rather than cast, since (string) on an array
+            // yields the literal 'Array' and a PHP warning.
             ->map(fn (mixed $entry) => is_scalar($entry) || $entry === null ? (string) $entry : (string) json_encode($entry))
+            // Rejected after stringifying, so false cannot survive as a silent blank.
             ->reject(fn (string $entry) => $entry === '')
             ->values()
             ->all();

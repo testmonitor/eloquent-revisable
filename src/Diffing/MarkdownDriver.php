@@ -35,17 +35,13 @@ use TestMonitor\Revisable\Enums\ChangeType;
 use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 
 /**
- * Diffs markdown through its CommonMark AST. Block nodes are aligned by type and text,
- * matched leaves are diffed word by word, and the changes are written back into the tree
- * as marker nodes. CommonMark then renders both sides, so the markup is valid by
- * construction rather than repaired after the fact.
+ * Diffs markdown through its CommonMark AST, marking changes in the tree and letting
+ * CommonMark render both sides, so the markup is valid by construction.
  */
 final class MarkdownDriver implements DiffDriver
 {
     /**
-     * Node types that are never diffed inline. A word diff inside a code block or across
-     * table cells produces noise rather than insight. Referenced as strings because Table
-     * ships with the GFM extension and may not be loaded.
+     * Node types never diffed inline. Strings, because Table ships with GFM and may be absent.
      *
      * @var list<class-string>
      */
@@ -111,10 +107,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * The field status, with one markdown-only correction on top of the shared rule:
-     * markdown can carry content that produces no block nodes at all (whitespace only, or
-     * nothing but a link reference definition). An empty block list reads as unchanged, so
-     * two different values would report Kept. Compare the raw values instead in that case.
+     * The field status, correcting for markdown that parses to no blocks at all.
      *
      * @param list<BlockDiff> $blocks
      */
@@ -124,14 +117,15 @@ final class MarkdownDriver implements DiffDriver
 
         $bothHeldAValue = $before !== null && $before !== '' && $after !== null && $after !== '';
 
+        // Markdown can parse to no blocks at all (whitespace, or only a link definition),
+        // and an empty block list would otherwise read as unchanged.
         return $blocks === [] && $bothHeldAValue && $before !== $after
             ? ChangeType::Changed
             : $status;
     }
 
     /**
-     * Align two nodes' children and diff each aligned pair, emitting one flat block list
-     * in document order.
+     * Align two nodes' children and diff each pair, emitting one flat list in document order.
      *
      * @return list<BlockDiff>
      */
@@ -189,16 +183,11 @@ final class MarkdownDriver implements DiffDriver
     /**
      * An atomic block is kept when its text matches, and replaced whole when it doesn't.
      *
-     * Equality here deliberately does not go through textOf(): its trim() is right for an
-     * alignment key, where surrounding whitespace shouldn't stop two blocks from pairing
-     * up, but wrong for this comparison, where a fenced or indented code block renders its
-     * leading and trailing whitespace verbatim. Trimming it away would let a reindented
-     * code sample report as Kept while its rendered HTML actually changed.
-     *
      * @return list<BlockDiff>
      */
     protected function diffAtomic(Node $before, Node $after): array
     {
+        // Untrimmed, unlike textOf(): a code block renders its surrounding whitespace verbatim.
         if (StringContainerHelper::getChildText($before) === StringContainerHelper::getChildText($after)) {
             return [new BlockDiff(ChangeType::Kept)];
         }
@@ -210,32 +199,24 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Diff a leaf block (paragraph, heading) word by word, writing the result back into
-     * both trees as inline marker nodes.
-     *
-     * The text handed to the word differ is the concatenation of the block's own string
-     * containers, not `textOf()`. That keeps the segment stream and the containers exactly
-     * in step, which is what lets `applySegments()` map a segment back to the node it
-     * came from.
+     * Diff a leaf block word by word, writing the result into both trees as inline markers.
      */
     protected function diffLeaf(Node $before, Node $after): BlockDiff
     {
         $beforeContainers = $this->stringContainers($before);
         $afterContainers = $this->stringContainers($after);
 
+        // Built from the containers themselves, so the segments stay in step with the nodes.
         $beforeText = $this->literalsOf($beforeContainers);
         $afterText = $this->literalsOf($afterContainers);
 
         if ($beforeText === $afterText) {
-            // Same words. The block still counts as changed when the inline structure
-            // differs, which is how a formatting-only edit is detected.
+            // Same words, so only the inline structure can have changed.
             if ($this->inlineShapeOf($before) === $this->inlineShapeOf($after)) {
                 return new BlockDiff(ChangeType::Kept);
             }
 
-            // Nothing was inserted or removed, so there is no segment to mark. Mark the
-            // after side's text instead, or the change would render as two identical
-            // looking sides and read as no change at all.
+            // Nothing was inserted or removed, so there is no segment to carry a marker.
             $this->markFormatting($beforeContainers, $afterContainers);
 
             return new BlockDiff(ChangeType::Changed);
@@ -251,15 +232,13 @@ final class MarkdownDriver implements DiffDriver
 
     /**
      * Mark a whole node as added or removed and report it as one block.
-     *
-     * The node's words are deliberately left unmarked: a block that is wholly added or
-     * wholly removed says everything it needs to at block level, and marking its words as
-     * well would only nest one marker inside another.
      */
     protected function markWholeBlock(Node $node, ChangeType $type): BlockDiff
     {
         $text = $this->textOf($node);
 
+        // The words inside stay unmarked: block level says it all, and marking them too
+        // would nest one marker inside another.
         $node instanceof ListItem
             ? $this->markListItem($node, $type)
             : $this->wrapBlock($node, $type);
@@ -268,9 +247,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Put a block-level marker in a node's place and move the node inside it. Valid for
-     * any block whose parent takes flow content, which is every container this driver
-     * recurses into except a list.
+     * Put a block-level marker in a node's place and move the node inside it.
      */
     protected function wrapBlock(Node $node, ChangeType $type): void
     {
@@ -281,16 +258,12 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Mark a list item from the inside, leaving the item itself exactly where the parser
-     * put it. Two reasons, both about the markup CommonMark then renders: a list may only
-     * hold list items, so a marker in the item's place would put <ins> directly inside
-     * <ul>; and a marker between the item and its paragraph would push that paragraph out
-     * of the list's tight rendering, so an added item would grow a <p> its siblings do not
-     * have. Marking the contents keeps the item tight and the marker inside the <li>,
-     * which is what a changed item already renders as.
+     * Mark a list item from the inside, leaving the item where the parser put it.
      */
     protected function markListItem(ListItem $item, ChangeType $type): void
     {
+        // A marker in the item's own place would put <ins> straight inside <ul>, and would
+        // push the item out of the list's tight rendering.
         foreach ($item->children() as $child) {
             $this->isOneOf($child, self::ATOMIC) || $this->isOneOf($child, self::CONTAINERS)
                 ? $this->wrapBlock($child, $type)
@@ -299,8 +272,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Move a leaf block's inline children under a single inline marker, so the block
-     * itself, and its position in the tree, are left untouched.
+     * Move a leaf block's inline children under one marker, leaving the block untouched.
      */
     protected function markInlineContent(Node $block, ChangeType $type): void
     {
@@ -321,11 +293,6 @@ final class MarkdownDriver implements DiffDriver
 
     /**
      * Mark only the runs whose formatting actually changed.
-     *
-     * Both sides carry identical words here, so what differs is which inline nodes each
-     * run sits inside. Comparing that path run by run means bolding a single word marks
-     * that word alone, instead of lighting up the whole block and hiding where the edit
-     * really was.
      *
      * @param list<AbstractStringContainer> $beforeContainers
      * @param list<AbstractStringContainer> $afterContainers
@@ -348,6 +315,7 @@ final class MarkdownDriver implements DiffDriver
                 [$before, $available] = $this->runAt($runs, $offset + $consumed);
                 $take = min($available, $length - $consumed);
 
+                // A differing path means this run sits inside different inline nodes now.
                 $pieces[] = [substr($literal, $consumed, $take), $before !== $path];
 
                 $consumed += $take;
@@ -398,9 +366,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * The chain of inline nodes a run sits inside, which is what "its formatting" means.
-     * Each ancestor contributes its variant too, so a link whose destination changed
-     * counts as reformatted rather than untouched.
+     * The chain of inline nodes a run sits inside, which is what its formatting means.
      */
     protected function formattingPathOf(Node $node): string
     {
@@ -416,8 +382,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Join neighbouring pieces that share a verdict, so one reformatted span becomes one
-     * marker rather than several abutting ones.
+     * Join neighbouring pieces sharing a verdict, so one span yields one marker.
      *
      * @param list<array{string, bool}> $pieces
      * @return list<array{string, bool}>
@@ -497,28 +462,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Rewrite a block's string containers so the runs belonging to $side are wrapped in
-     * inline markers.
-     *
-     * The segments of one side concatenate to exactly that side's text, and so do the
-     * block's string containers, so the two can be walked together by character position:
-     * each container consumes the next slice of the segment stream and is rebuilt from the
-     * pieces it received. A container that straddles a segment boundary is split into a
-     * Text / InlineChange / Text sequence in place, which leaves every surrounding inline
-     * node (emphasis, strong, links) structurally untouched.
-     *
-     * Character positions are used rather than the token offsets on Segment, because a
-     * single token can span several containers ("A**b**c" is one token across three Text
-     * nodes) and so token offsets cannot express a container boundary at all.
-     *
-     * This walk does its arithmetic with strlen()/substr(), which count and slice bytes,
-     * not multi-byte characters. That is safe only because every cut this method makes
-     * lands on a boundary that already existed in the original string: a container
-     * boundary from the parser, or a token boundary from WordDiffer's `/u` (Unicode-mode)
-     * tokenizer, which never splits inside a multi-byte codepoint. Byte length still
-     * exactly matches character content up to that boundary, so slicing there can never
-     * land mid-codepoint. If a future change ever introduces a cut at a position that is
-     * not already one of these boundaries, this would need mb_* functions instead.
+     * Wrap the runs belonging to $side in inline markers, rebuilding each container in place.
      *
      * @param list<AbstractStringContainer> $containers
      * @param list<Segment> $segments
@@ -527,10 +471,14 @@ final class MarkdownDriver implements DiffDriver
     {
         $stream = $this->streamFor($segments, $side);
 
+        // Walked by character position, not Segment's token offsets: one token can span
+        // several containers ("A**b**c"), so offsets cannot express a container boundary.
         $index = 0;
         $offset = 0;
 
         foreach ($containers as $container) {
+            // Byte arithmetic is safe here because every cut lands on a boundary that already
+            // existed: a parser container edge, or a token edge from WordDiffer's /u tokenizer.
             $remaining = strlen($container->getLiteral());
             $pieces = [];
 
@@ -556,8 +504,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * The segments belonging to one side, in order. Concatenating their text reproduces
-     * that side's input exactly, which is the invariant applySegments() walks on.
+     * The segments belonging to one side, in order. Their text concatenates to that side's input.
      *
      * @param list<Segment> $segments
      * @return list<Segment>
@@ -614,8 +561,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * The node one piece of the stream renders as: bare text when kept, text inside a
-     * marker when it belongs to this side alone.
+     * The node a piece renders as: bare text when kept, wrapped in a marker otherwise.
      */
     protected function nodeFor(Segment $piece, ChangeType $side): Node
     {
@@ -673,11 +619,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * The sequence of inline node types in a block, used to tell a formatting-only change
-     * from no change at all. Each node's class is paired with its inlineVariant(), the
-     * same widening blockSignature() does for block nodes one level up: a node's
-     * attributes are otherwise invisible to this comparison, which only ever sees the
-     * class and, via the text stream compared before this is reached, the visible text.
+     * A block's inline types and variants, for telling a formatting-only change from none.
      */
     protected function inlineShapeOf(Node $node): string
     {
@@ -691,8 +633,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * The state an inline node carries that changes what CommonMark renders without
-     * showing up in its class or its text. Mirrors blockVariant() one level down.
+     * Inline state that changes the rendered output without showing in the class or text.
      */
     protected function inlineVariant(Node $node): string
     {
@@ -709,8 +650,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * The alignment key for a block node: its type plus its normalised text, so a
-     * paragraph never aligns to a heading carrying the same words.
+     * The alignment key for a block: its type plus its normalised text.
      */
     protected function nodeKey(mixed $node): string
     {
@@ -728,11 +668,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * The state a node carries that changes what CommonMark renders without showing up in
-     * either its class or its text. Anything missing here is a change the diff cannot see,
-     * and a field that renders two different sides would report as kept. Only what is
-     * actually rendered belongs here: a list's delimiter and padding, a fenced block's
-     * fence character, and a thematic break's style all parse but never reach the output.
+     * Block state that changes the rendered output without showing in the class or text.
      */
     protected function blockVariant(Node $node): string
     {
@@ -776,12 +712,7 @@ final class MarkdownDriver implements DiffDriver
     }
 
     /**
-     * Lift a lone paragraph's contents up to the document, so an entry that is a single
-     * paragraph renders as inline content rather than a block.
-     *
-     * A list entry is an item, not a document, so wrapping it in <p> adds block markup
-     * the consumer did not ask for. An entry that genuinely holds several blocks, or
-     * anything other than one paragraph, is left exactly as it is.
+     * Lift a lone paragraph's contents up, so a single-paragraph entry renders inline.
      */
     protected function unwrapLoneParagraph(Document $document): void
     {

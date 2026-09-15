@@ -8,8 +8,7 @@ use TestMonitor\Revisable\Diffing\Support\ArrayAligner;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * Diffs plain text: lines are blocks, aligned by content, and each matched pair is
- * diffed word by word.
+ * Diffs plain text: lines are blocks, aligned by content, then diffed word by word.
  */
 final class PlainDriver implements DiffDriver
 {

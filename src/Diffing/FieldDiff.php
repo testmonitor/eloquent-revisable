@@ -5,8 +5,7 @@ namespace TestMonitor\Revisable\Diffing;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * A diffed field. `blocks` is a flat list in document order, for inspection; the two HTML
- * strings are the rendered views, produced by the driver that built this result.
+ * A diffed field: a flat list of blocks for inspection, plus the driver's rendered views.
  */
 readonly class FieldDiff
 {
@@ -29,8 +28,7 @@ readonly class FieldDiff
     }
 
     /**
-     * Derive a field's overall status from whether each side held a value and, when both
-     * did, whether any block changed.
+     * A field's status: whether each side held a value, and whether any block changed.
      *
      * @param list<BlockDiff> $blocks
      */

@@ -7,9 +7,7 @@ use League\CommonMark\Renderer\ChildNodeRendererInterface;
 use League\CommonMark\Renderer\NodeRendererInterface;
 
 /**
- * Renders a formatting-only change as <ins class="mod">, distinguishing it from a real
- * insertion by its class rather than its tag. Children are rendered by CommonMark, so
- * the surrounding markup stays balanced.
+ * Renders a formatting-only change as <ins class="mod">, distinct from a real insertion.
  */
 final class FormattingRenderer implements NodeRendererInterface
 {

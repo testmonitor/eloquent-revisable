@@ -6,8 +6,7 @@ use League\CommonMark\Node\Inline\AbstractInline;
 use TestMonitor\Revisable\Enums\ChangeType;
 
 /**
- * Wraps changed inline content so the renderer can mark it. Inserted into the AST by
- * MarkdownDriver, never produced by parsing.
+ * Wraps changed inline content so the renderer can mark it.
  */
 final class InlineChange extends AbstractInline implements ChangeNode
 {

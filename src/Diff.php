@@ -156,8 +156,7 @@ final class Diff
     }
 
     /**
-     * Resolve a driver name to an instance. Anything beyond the built-in names is passed
-     * in as an instance by the caller.
+     * Resolve a built-in driver name to an instance; anything else arrives as one already.
      */
     protected function driver(string|DiffDriver $driver): DiffDriver
     {
@@ -173,10 +172,7 @@ final class Diff
     }
 
     /**
-     * Whether a stored value is a JSON-encoded list rather than a scalar. A JSON object
-     * decodes to a PHP array too, but it isn't a list, so it falls through and diffs as
-     * plain text instead of throwing: this package has no object-diffing driver, and text
-     * is strictly more useful than an exception.
+     * Whether a stored value is a JSON-encoded list rather than a scalar.
      */
     protected function holdsJsonList(mixed $value): bool
     {
@@ -186,6 +182,7 @@ final class Diff
 
         $decoded = json_decode($value, true);
 
+        // A JSON object decodes to an array too, so the list check is what separates them.
         return is_array($decoded) && array_is_list($decoded);
     }
 
