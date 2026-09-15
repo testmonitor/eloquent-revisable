@@ -21,3 +21,7 @@ logs/
 
 # OS
 .DS_Store
+
+# Local planning documents and agent workspaces, never published
+docs/superpowers/
+.superpowers/
