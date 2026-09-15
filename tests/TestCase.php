@@ -123,8 +123,8 @@ abstract class TestCase extends Orchestra
     }
 
     /**
-     * Assert a fragment parses as well-formed markup. The old renderer's failure mode was
-     * overlapping and unbalanced tags, which string comparison only catches case by case.
+     * Assert a fragment parses as well-formed markup, catching overlapping or unbalanced
+     * tags that a string comparison would only catch case by case.
      */
     protected function assertWellFormedHtml(string $html): void
     {

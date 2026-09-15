@@ -21,6 +21,8 @@ final class ListDiffTest extends TestCase
     }
 
     // Item statuses
+    //
+    // Entries align by content rather than position.
 
     #[Test]
     public function it_keeps_items_present_on_both_sides()
@@ -43,9 +45,6 @@ final class ListDiffTest extends TestCase
         $differ = new PlainDiffer;
 
         // When
-        // A naive index-by-index zip of ['a', 'c'] against ['a', 'b', 'c'] would read this
-        // as 'c' changed into 'b' and 'c' added at the tail. Real alignment anchors on the
-        // shared 'a' and 'c' and reports only 'b' as new.
         $result = ListDiff::for(['a', 'c'], ['a', 'b', 'c'], $differ);
 
         // Then
@@ -62,9 +61,6 @@ final class ListDiffTest extends TestCase
         $differ = new PlainDiffer;
 
         // When
-        // A naive index-by-index zip of ['a', 'b', 'c'] against ['b', 'c'] would read this
-        // as 'a' changed into 'b', 'b' changed into 'c', and 'c' removed at the tail. Real
-        // alignment anchors on the shared 'b' and 'c' and reports only 'a' as gone.
         $result = ListDiff::for(['a', 'b', 'c'], ['b', 'c'], $differ);
 
         // Then
@@ -97,10 +93,6 @@ final class ListDiffTest extends TestCase
         $differ = new PlainDiffer;
 
         // When
-        // 'new' is inserted at the front, shifting 'the brown fox' and 'end' one position
-        // to the right. A naive index-by-index zip would compare every entry against its
-        // neighbour and see nothing but Changed/Added. Real alignment anchors on the shared
-        // 'keep' and 'end' and still pairs the edited sentence with its earlier self.
         $result = ListDiff::for(
             ['keep', 'the brown fox', 'end'],
             ['new', 'keep', 'the red fox', 'end'],
@@ -150,12 +142,7 @@ final class ListDiffTest extends TestCase
         $differ = new PlainDiffer;
 
         // When
-        // 'x' is removed from the front, shifting 'a' and 'b' one position to the left. A
-        // naive index-by-index zip would read this as 'x' changed into 'a', 'a' changed
-        // into 'b', and 'b' removed at the tail: [Changed, Changed, Removed]. Real alignment
-        // anchors on the shared 'a' and reports 'x' removed and 'b' edited into 'c'. Both
-        // hypotheses land on the same overall Changed status, so the item-level statuses
-        // are what actually distinguishes them.
+        // The overall status is Changed either way, so the item statuses are what discriminate.
         $result = ListDiff::for(['x', 'a', 'b'], ['a', 'c'], $differ);
 
         // Then
@@ -245,8 +232,7 @@ final class ListDiffTest extends TestCase
         $value = ['one', null, '', 0, false, true, 'two'];
 
         // When / Then
-        // false casts to an empty string, same as null and '', so it must be dropped too.
-        // 0 and true cast to non-empty strings ('0' and '1'), so they must survive.
+        // false casts to '', so it drops; 0 and true cast to '0' and '1', so they survive.
         $this->assertSame(['one', '0', '1', 'two'], ListDiff::entries($value));
     }
 
@@ -274,8 +260,7 @@ final class ListDiffTest extends TestCase
     public function it_json_encodes_a_non_scalar_entry_instead_of_casting_it_to_the_word_array()
     {
         // Given
-        // (string) $entry on an array produces the literal string 'Array' plus a PHP
-        // warning, which is not something a diff can meaningfully compare.
+        // Casting an array would yield the literal 'Array', plus a PHP warning.
         $value = json_encode([['name' => 'step one'], ['name' => 'step two']]);
 
         // When
@@ -293,9 +278,6 @@ final class ListDiffTest extends TestCase
     public function it_reports_a_changed_list_of_json_objects_instead_of_kept()
     {
         // Given
-        // Before the fix, both sides cast their single entry to the literal string
-        // 'Array', so the two sides read as identical and the field reported Kept even
-        // though the underlying objects differ.
         $differ = new PlainDiffer;
         $before = json_encode([['name' => 'step one']]);
         $after = json_encode([['name' => 'step two']]);
