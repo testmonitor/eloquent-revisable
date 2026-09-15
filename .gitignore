@@ -22,7 +22,7 @@ logs/
 # OS
 .DS_Store
 
-# Local working documents, never part of the published package
+# Local documents
 /docs/
 /plans/
 /projects/
