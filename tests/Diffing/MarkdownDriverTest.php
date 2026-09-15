@@ -216,6 +216,78 @@ final class MarkdownDriverTest extends TestCase
         $this->assertWellFormedHtml($result->afterHtml);
     }
 
+    // Inline single paragraph
+
+    #[Test]
+    public function it_renders_a_single_paragraph_entry_inline_when_asked()
+    {
+        // Given
+        $driver = new MarkdownDriver(inlineSingleParagraph: true);
+
+        // When
+        $result = $driver->diff('Step one', 'Step two');
+
+        // Then
+        $this->assertSame('Step <del>one</del>', trim($result->beforeHtml));
+        $this->assertSame('Step <ins>two</ins>', trim($result->afterHtml));
+        $this->assertStringNotContainsString('<p>', $result->afterHtml);
+    }
+
+    #[Test]
+    public function it_keeps_block_markup_for_an_entry_holding_several_blocks()
+    {
+        // Given
+        $driver = new MarkdownDriver(inlineSingleParagraph: true);
+
+        // When
+        $result = $driver->diff("Para one\n\nPara two", "Para one\n\nPara three");
+
+        // Then
+        $this->assertStringContainsString('<p>', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_keeps_block_markup_for_an_entry_that_is_not_a_paragraph()
+    {
+        // Given
+        $driver = new MarkdownDriver(inlineSingleParagraph: true);
+
+        // When
+        $result = $driver->diff('# Heading one', '# Heading two');
+
+        // Then
+        $this->assertStringContainsString('<h1>', $result->afterHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_unwraps_a_wholly_added_entry_inside_its_marker()
+    {
+        // Given
+        $driver = new MarkdownDriver(inlineSingleParagraph: true);
+
+        // When
+        $result = $driver->diff(null, 'Brand new');
+
+        // Then
+        $this->assertSame('<ins>Brand new</ins>', trim($result->afterHtml));
+        $this->assertStringNotContainsString('<p>', $result->afterHtml);
+    }
+
+    #[Test]
+    public function it_leaves_block_rendering_alone_by_default()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('Step one', 'Step two');
+
+        // Then
+        $this->assertSame('<p>Step <ins>two</ins></p>', trim($result->afterHtml));
+    }
+
     // Formatting-only changes
 
     #[Test]

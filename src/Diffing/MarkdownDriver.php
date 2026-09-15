@@ -15,6 +15,7 @@ use League\CommonMark\Extension\CommonMark\Node\Block\ThematicBreak;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
 use League\CommonMark\Node\Block\Document;
+use League\CommonMark\Node\Block\Paragraph;
 use League\CommonMark\Node\Inline\AbstractStringContainer;
 use League\CommonMark\Node\Inline\Newline;
 use League\CommonMark\Node\Inline\Text;
@@ -72,8 +73,11 @@ final class MarkdownDriver implements DiffDriver
      * @param Environment|null $environment A CommonMark environment that has NOT been
      *                                      initialised yet, since the driver registers its own renderers on it.
      */
-    public function __construct(?Environment $environment = null, protected WordDiffer $words = new WordDiffer)
-    {
+    public function __construct(
+        ?Environment $environment = null,
+        protected bool $inlineSingleParagraph = false,
+        protected WordDiffer $words = new WordDiffer,
+    ) {
         if (! class_exists(Environment::class)) {
             throw InvalidConfiguration::missingCommonMark();
         }
@@ -613,8 +617,44 @@ final class MarkdownDriver implements DiffDriver
         return new MarkdownParser($this->environment)->parse($value ?? '');
     }
 
+    /**
+     * Lift a lone paragraph's contents up to the document, so an entry that is a single
+     * paragraph renders as inline content rather than a block.
+     *
+     * A list entry is an item, not a document, so wrapping it in <p> adds block markup
+     * the consumer did not ask for. An entry that genuinely holds several blocks, or
+     * anything other than one paragraph, is left exactly as it is.
+     */
+    protected function unwrapLoneParagraph(Document $document): void
+    {
+        $children = iterator_to_array($document->children(), false);
+
+        if (count($children) !== 1) {
+            return;
+        }
+
+        // A wholly added or removed entry sits inside a marker node, so look through it.
+        $paragraph = $children[0] instanceof BlockChange
+            ? $children[0]->firstChild()
+            : $children[0];
+
+        if (! $paragraph instanceof Paragraph) {
+            return;
+        }
+
+        foreach (iterator_to_array($paragraph->children(), false) as $child) {
+            $paragraph->insertBefore($child);
+        }
+
+        $paragraph->detach();
+    }
+
     protected function render(Document $document): string
     {
+        if ($this->inlineSingleParagraph) {
+            $this->unwrapLoneParagraph($document);
+        }
+
         return trim(new HtmlRenderer($this->environment)->renderDocument($document)->getContent());
     }
 
