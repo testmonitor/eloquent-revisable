@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Diffing\Markdown;
 
+use InvalidArgumentException;
 use League\CommonMark\Node\Block\AbstractBlock;
 use TestMonitor\Revisable\Enums\ChangeType;
 
@@ -15,7 +16,7 @@ final class BlockChange extends AbstractBlock implements ChangeNode
         parent::__construct();
 
         if ($type !== ChangeType::Added && $type !== ChangeType::Removed) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 'A change marker must be Added or Removed, got ' . $type->name . '.'
             );
         }

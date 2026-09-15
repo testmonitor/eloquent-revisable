@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Tests\Diffing;
 
+use Iterator;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -596,38 +597,36 @@ final class MarkdownDifferTest extends TestCase
     }
 
     /**
-     * @return array<string, array{string, string, ChangeType}>
+     * @return Iterator<string, array{string, string, ChangeType}>
      */
-    public static function blockPairs(): array
+    public static function blockPairs(): Iterator
     {
-        return [
-            'identical paragraph' => ['A paragraph.', 'A paragraph.', ChangeType::Kept],
-            'identical heading and body' => ["# Title\n\nBody.", "# Title\n\nBody.", ChangeType::Kept],
-            'identical tight list' => ["- one\n- two", "- one\n- two", ChangeType::Kept],
-            'identical ordered list' => ["1. one\n2. two", "1. one\n2. two", ChangeType::Kept],
-            'identical fenced code' => ["```php\ncode\n```", "```php\ncode\n```", ChangeType::Kept],
-            'fenced code indentation added' => ["```\nfoo\n```", "```\n  foo\n```", ChangeType::Changed],
-            'fenced code trailing whitespace removed' => ["```\nfoo  \n```", "```\nfoo\n```", ChangeType::Changed],
-            'indented code block reindented' => ['    foo', '      foo', ChangeType::Changed],
-            'identical blockquote' => ['> quoted', '> quoted', ChangeType::Kept],
-            'identical thematic break' => ["a\n\n---\n\nb", "a\n\n---\n\nb", ChangeType::Kept],
-            'thematic break style' => ["a\n\n---\n\nb", "a\n\n***\n\nb", ChangeType::Kept],
-            'list marker padding' => ['-   one', '- one', ChangeType::Kept],
-            'heading level' => ['# Same words.', '## Same words.', ChangeType::Changed],
-            'bullet list turned ordered' => ["- one\n- two", "1. one\n2. two", ChangeType::Changed],
-            'list start number' => ['1. one', '3. one', ChangeType::Changed],
-            'tight list turned loose' => ["- one\n- two", "- one\n\n- two", ChangeType::Changed],
-            'fenced code language' => ["```php\ncode\n```", "```js\ncode\n```", ChangeType::Changed],
-            'changed word' => ['The brown fox.', 'The red fox.', ChangeType::Changed],
-            'added paragraph' => ['One.', "One.\n\nTwo.", ChangeType::Changed],
-            'removed list item' => ["- one\n- two", '- one', ChangeType::Changed],
-            'emphasis added' => ['Hello world', 'Hello **world**', ChangeType::Changed],
-            'link destination' => ['[text](/a)', '[text](/b)', ChangeType::Changed],
-            'link title' => ['[t](/a "one")', '[t](/a "two")', ChangeType::Changed],
-            'image source' => ['![alt](/a.png)', '![alt](/b.png)', ChangeType::Changed],
-            'image source, no alt text' => ['![](/a.png)', '![](/b.png)', ChangeType::Changed],
-            'identical link' => ['[text](/a)', '[text](/a)', ChangeType::Kept],
-        ];
+        yield 'identical paragraph' => ['A paragraph.', 'A paragraph.', ChangeType::Kept];
+        yield 'identical heading and body' => ["# Title\n\nBody.", "# Title\n\nBody.", ChangeType::Kept];
+        yield 'identical tight list' => ["- one\n- two", "- one\n- two", ChangeType::Kept];
+        yield 'identical ordered list' => ["1. one\n2. two", "1. one\n2. two", ChangeType::Kept];
+        yield 'identical fenced code' => ["```php\ncode\n```", "```php\ncode\n```", ChangeType::Kept];
+        yield 'fenced code indentation added' => ["```\nfoo\n```", "```\n  foo\n```", ChangeType::Changed];
+        yield 'fenced code trailing whitespace removed' => ["```\nfoo  \n```", "```\nfoo\n```", ChangeType::Changed];
+        yield 'indented code block reindented' => ['    foo', '      foo', ChangeType::Changed];
+        yield 'identical blockquote' => ['> quoted', '> quoted', ChangeType::Kept];
+        yield 'identical thematic break' => ["a\n\n---\n\nb", "a\n\n---\n\nb", ChangeType::Kept];
+        yield 'thematic break style' => ["a\n\n---\n\nb", "a\n\n***\n\nb", ChangeType::Kept];
+        yield 'list marker padding' => ['-   one', '- one', ChangeType::Kept];
+        yield 'heading level' => ['# Same words.', '## Same words.', ChangeType::Changed];
+        yield 'bullet list turned ordered' => ["- one\n- two", "1. one\n2. two", ChangeType::Changed];
+        yield 'list start number' => ['1. one', '3. one', ChangeType::Changed];
+        yield 'tight list turned loose' => ["- one\n- two", "- one\n\n- two", ChangeType::Changed];
+        yield 'fenced code language' => ["```php\ncode\n```", "```js\ncode\n```", ChangeType::Changed];
+        yield 'changed word' => ['The brown fox.', 'The red fox.', ChangeType::Changed];
+        yield 'added paragraph' => ['One.', "One.\n\nTwo.", ChangeType::Changed];
+        yield 'removed list item' => ["- one\n- two", '- one', ChangeType::Changed];
+        yield 'emphasis added' => ['Hello world', 'Hello **world**', ChangeType::Changed];
+        yield 'link destination' => ['[text](/a)', '[text](/b)', ChangeType::Changed];
+        yield 'link title' => ['[t](/a "one")', '[t](/a "two")', ChangeType::Changed];
+        yield 'image source' => ['![alt](/a.png)', '![alt](/b.png)', ChangeType::Changed];
+        yield 'image source, no alt text' => ['![](/a.png)', '![](/b.png)', ChangeType::Changed];
+        yield 'identical link' => ['[text](/a)', '[text](/a)', ChangeType::Kept];
     }
 
     // Field status
@@ -780,6 +779,7 @@ final class MarkdownDifferTest extends TestCase
         // Given
         $environment = new Environment(['html_input' => 'escape']);
         $environment->addExtension(new CommonMarkCoreExtension);
+
         $differ = new MarkdownDiffer($environment);
 
         // When

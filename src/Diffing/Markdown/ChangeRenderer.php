@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Diffing\Markdown;
 
+use InvalidArgumentException;
 use League\CommonMark\Node\Node;
 use League\CommonMark\Renderer\ChildNodeRendererInterface;
 use League\CommonMark\Renderer\NodeRendererInterface;
@@ -15,7 +16,7 @@ final class ChangeRenderer implements NodeRendererInterface
     public function render(Node $node, ChildNodeRendererInterface $childRenderer): string
     {
         if (! $node instanceof ChangeNode) {
-            throw new \InvalidArgumentException(
+            throw new InvalidArgumentException(
                 ChangeRenderer::class . ' received an unexpected node: ' . $node::class
             );
         }

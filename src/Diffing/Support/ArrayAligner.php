@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Diffing\Support;
 
+use Closure;
 use Jfcherng\Diff\SequenceMatcher;
 
 /**
@@ -14,14 +15,14 @@ class ArrayAligner
     /**
      * @param list<mixed> $before
      * @param list<mixed> $after
-     * @param (\Closure(mixed): string)|null $key Derives the comparison key items are aligned
+     * @param Closure(mixed):string|null $key Derives the comparison key items are aligned
      *                                            by; defaults to the item cast to a string. Useful to align by plain text while
      *                                            keeping the original (e.g. AST node) values in the returned blocks.
      */
     public function __construct(
         protected array $before,
         protected array $after,
-        protected ?\Closure $key = null,
+        protected ?Closure $key = null,
     ) {
         $this->key ??= fn (mixed $item) => (string) $item;
     }

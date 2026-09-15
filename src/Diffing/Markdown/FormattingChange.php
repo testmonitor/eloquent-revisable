@@ -11,8 +11,4 @@ use League\CommonMark\Node\Inline\AbstractInline;
  */
 final class FormattingChange extends AbstractInline
 {
-    public function __construct()
-    {
-        parent::__construct();
-    }
 }

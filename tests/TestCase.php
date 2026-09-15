@@ -2,6 +2,8 @@
 
 namespace TestMonitor\Revisable\Tests;
 
+use DOMDocument;
+use LibXMLError;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -135,7 +137,7 @@ abstract class TestCase extends Orchestra
         $previous = libxml_use_internal_errors(true);
         libxml_clear_errors();
 
-        $document = new \DOMDocument;
+        $document = new DOMDocument;
         $document->loadXML('<root>' . $html . '</root>');
 
         $errors = libxml_get_errors();
@@ -145,7 +147,7 @@ abstract class TestCase extends Orchestra
 
         $this->assertSame(
             [],
-            array_map(fn (\LibXMLError $error) => trim($error->message), $errors),
+            array_map(fn (LibXMLError $error) => trim($error->message), $errors),
             "Rendered markup is not well-formed:\n{$html}",
         );
     }

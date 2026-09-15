@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Diffing;
 
+use League\CommonMark\Extension\Table\Table;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\CommonMark\Node\Block\BlockQuote;
@@ -50,7 +51,7 @@ final class MarkdownDiffer implements Differ
         IndentedCode::class,
         ThematicBreak::class,
         HtmlBlock::class,
-        'League\CommonMark\Extension\Table\Table',
+        Table::class,
     ];
 
     /**
@@ -154,11 +155,11 @@ final class MarkdownDiffer implements Differ
      */
     protected function diffNode(?Node $before, ?Node $after): array
     {
-        if ($before === null) {
+        if (!$before instanceof Node) {
             return [$this->markWholeBlock($after, ChangeType::Added)];
         }
 
-        if ($after === null) {
+        if (!$after instanceof Node) {
             return [$this->markWholeBlock($before, ChangeType::Removed)];
         }
 
@@ -697,13 +698,7 @@ final class MarkdownDiffer implements Differ
      */
     protected function isOneOf(Node $node, array $types): bool
     {
-        foreach ($types as $type) {
-            if ($node instanceof $type) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($types, fn($type) => $node instanceof $type);
     }
 
     protected function parse(?string $value): Document

@@ -2,6 +2,7 @@
 
 namespace TestMonitor\Revisable\Tests\Diffing\Markdown;
 
+use InvalidArgumentException;
 use League\CommonMark\Node\Inline\Text;
 use League\CommonMark\Renderer\ChildNodeRendererInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -13,10 +14,10 @@ use TestMonitor\Revisable\Tests\TestCase;
 
 final class ChangeNodeTest extends TestCase
 {
-    // InlineChange
+    // Inline markers
 
     #[Test]
-    public function inline_change_constructed_with_added_succeeds()
+    public function it_builds_an_inline_marker_for_added_content()
     {
         // Given
         $type = ChangeType::Added;
@@ -29,7 +30,7 @@ final class ChangeNodeTest extends TestCase
     }
 
     #[Test]
-    public function inline_change_constructed_with_removed_succeeds()
+    public function it_builds_an_inline_marker_for_removed_content()
     {
         // Given
         $type = ChangeType::Removed;
@@ -42,31 +43,31 @@ final class ChangeNodeTest extends TestCase
     }
 
     #[Test]
-    public function inline_change_constructed_with_kept_throws()
+    public function it_rejects_an_inline_marker_for_kept_content()
     {
         // Given
         $type = ChangeType::Kept;
 
-        // When/Then
-        $this->expectException(\InvalidArgumentException::class);
+        // When / Then
+        $this->expectException(InvalidArgumentException::class);
         new InlineChange($type);
     }
 
     #[Test]
-    public function inline_change_constructed_with_changed_throws()
+    public function it_rejects_an_inline_marker_for_changed_content()
     {
         // Given
         $type = ChangeType::Changed;
 
-        // When/Then
-        $this->expectException(\InvalidArgumentException::class);
+        // When / Then
+        $this->expectException(InvalidArgumentException::class);
         new InlineChange($type);
     }
 
-    // BlockChange
+    // Block markers
 
     #[Test]
-    public function block_change_constructed_with_added_succeeds()
+    public function it_builds_a_block_marker_for_added_content()
     {
         // Given
         $type = ChangeType::Added;
@@ -79,7 +80,7 @@ final class ChangeNodeTest extends TestCase
     }
 
     #[Test]
-    public function block_change_constructed_with_removed_succeeds()
+    public function it_builds_a_block_marker_for_removed_content()
     {
         // Given
         $type = ChangeType::Removed;
@@ -92,39 +93,39 @@ final class ChangeNodeTest extends TestCase
     }
 
     #[Test]
-    public function block_change_constructed_with_kept_throws()
+    public function it_rejects_a_block_marker_for_kept_content()
     {
         // Given
         $type = ChangeType::Kept;
 
-        // When/Then
-        $this->expectException(\InvalidArgumentException::class);
+        // When / Then
+        $this->expectException(InvalidArgumentException::class);
         new BlockChange($type);
     }
 
     #[Test]
-    public function block_change_constructed_with_changed_throws()
+    public function it_rejects_a_block_marker_for_changed_content()
     {
         // Given
         $type = ChangeType::Changed;
 
-        // When/Then
-        $this->expectException(\InvalidArgumentException::class);
+        // When / Then
+        $this->expectException(InvalidArgumentException::class);
         new BlockChange($type);
     }
 
-    // ChangeRenderer
+    // Rendering
 
     #[Test]
-    public function change_renderer_throws_on_non_change_node()
+    public function it_rejects_a_node_that_is_not_a_change_marker()
     {
         // Given
         $renderer = new ChangeRenderer;
         $node = new Text('hello');
         $childRenderer = $this->createStub(ChildNodeRendererInterface::class);
 
-        // When/Then
-        $this->expectException(\InvalidArgumentException::class);
+        // When / Then
+        $this->expectException(InvalidArgumentException::class);
         $renderer->render($node, $childRenderer);
     }
 }
