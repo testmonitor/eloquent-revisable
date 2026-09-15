@@ -445,7 +445,7 @@ The markdown driver requires `league/commonmark`:
 composer require league/commonmark
 ```
 
-To control parsing, pass your own environment. Any CommonMark extension works, including GitHub Flavored Markdown. The environment must not have been initialised yet, since the driver registers its own renderers on it:
+To control parsing, pass your own environment. Any CommonMark extension works, including GitHub Flavored Markdown. The environment must not have been initialised yet, since the driver registers its own renderers on it. With the table extension enabled, a table whose only change is its column alignment is not detected and reports as unchanged:
 
 ```php
 use League\CommonMark\Environment\Environment;
