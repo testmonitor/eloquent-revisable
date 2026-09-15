@@ -399,13 +399,6 @@ Use `all()` to include fields and relations that did not change:
 $all = $diff->all();
 ```
 
-Call `asHtml()` to render a field diff as HTML with inline change highlights:
-
-```php
-$result = $diff->asHtml()->field('title');
-// ['before' => 'The quick <del>brown</del> fox', 'after' => 'The quick <ins>red</ins> fox']
-```
-
 Use `before()` and `after()` to get back the two revisions the diff was built from (either may be `null` when diffed against nothing), and `beforeMetadata()` / `afterMetadata()` to read their raw captured metadata, optionally by dot-notation subkey:
 
 ```php
@@ -416,11 +409,84 @@ $diff->beforeMetadata();                // the full raw metadata array
 $diff->beforeMetadata('attributes.title'); // a specific subkey
 ```
 
-Fields that contain HTML are handled transparently — markup is rendered rather than escaped (only use this for trusted/sanitized HTML content), and changes are highlighted at the word level within the HTML structure:
+Call `field()` to diff a single field, and `list()` for a field holding a list of values. Both return `null` when the field isn't tracked:
+
 ```php
-$result = $diff->asHtml()->field('body');
+$result = $diff->field('title');
+
+$result->status;      // ChangeType::Changed
+$result->beforeHtml;  // 'The quick <del>brown</del> fox'
+$result->afterHtml;   // 'The quick <ins>red</ins> fox'
+$result->toHtml();    // ['before' => ..., 'after' => ...]
+```
+
+Every result also carries a `blocks` array describing what changed, so you can build your own markup instead of using the rendered HTML:
+
+```php
+foreach ($result->blocks as $block) {
+    $block->status;    // ChangeType::Kept, Added, Removed or Changed
+    $block->segments;  // the word-level runs within this block
+}
+```
+
+#### Diffing markdown
+
+Pass the `markdown` driver for fields holding markdown. It compares the parsed document rather than the rendered markup, so a reworded sentence highlights only the words that changed, while restructuring a paragraph into a list reads as a removal and an addition:
+
+```php
+$result = $diff->field('body', 'markdown');
 // before: '<p>Hello <del>world</del></p>'
 // after:  '<p>Hello <ins>universe</ins></p>'
+```
+
+The markdown driver requires `league/commonmark`:
+
+```bash
+composer require league/commonmark
+```
+
+To control parsing, pass your own environment. Any CommonMark extension works, including GitHub Flavored Markdown. The environment must not have been initialised yet, since the driver registers its own renderers on it:
+
+```php
+use League\CommonMark\Environment\Environment;
+use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
+use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
+use TestMonitor\Revisable\Diffing\MarkdownDriver;
+
+$environment = new Environment(['html_input' => 'escape']);
+$environment->addExtension(new CommonMarkCoreExtension);
+$environment->addExtension(new GithubFlavoredMarkdownExtension);
+
+$result = $diff->field('body', new MarkdownDriver($environment));
+```
+
+By default raw HTML inside markdown is escaped and unsafe links are stripped.
+
+#### Diffing lists
+
+`list()` aligns entries by content, so an edited entry pairs with its earlier self rather than reading as a removal plus an insertion:
+
+```php
+// before: ["Install deps", "Run **tests**", "Deploy"]
+// after:  ["Install deps", "Run tests", "Ship it"]
+
+$result = $diff->list('steps', 'markdown');
+
+foreach ($result->items as $item) {
+    $item->status; // ChangeType::Kept, Changed, Removed or Added
+}
+
+$result->toHtml(); // ['before' => [...], 'after' => [...]]
+```
+
+#### Plain text options
+
+The plain driver joins multi-line values with `<br/>`. Pass a different separator if you need one:
+
+```php
+use TestMonitor\Revisable\Diffing\PlainDriver;
+
+$diff->field('notes', new PlainDriver(separator: '</p><p>'));
 ```
 
 ---

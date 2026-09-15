@@ -9,6 +9,7 @@ use TestMonitor\Revisable\Contracts\DiffDriver;
 use TestMonitor\Revisable\Contracts\Revision as RevisionContract;
 use TestMonitor\Revisable\Diffing\FieldDiff;
 use TestMonitor\Revisable\Diffing\ListDiff;
+use TestMonitor\Revisable\Diffing\MarkdownDriver;
 use TestMonitor\Revisable\Diffing\PlainDriver;
 use TestMonitor\Revisable\Exceptions\InvalidConfiguration;
 
@@ -166,6 +167,7 @@ final class Diff
 
         return match ($driver) {
             'plain' => new PlainDriver,
+            'markdown' => new MarkdownDriver,
             default => throw InvalidConfiguration::unknownDiffDriver($driver),
         };
     }

@@ -185,4 +185,40 @@ final class DiffFieldTest extends TestCase
         $this->assertCount(1, $result->items);
         $this->assertSame(ChangeType::Kept, $result->items[0]->status);
     }
+
+    #[Test]
+    public function it_resolves_the_markdown_driver_by_name()
+    {
+        // Given
+        $diff = $this->diffFor('The brown fox.', 'The red fox.');
+
+        // When
+        $result = $diff->field('value', 'markdown');
+
+        // Then
+        $this->assertStringContainsString('<p>', $result->afterHtml);
+        $this->assertStringContainsString('<ins>red</ins>', $result->afterHtml);
+    }
+
+    #[Test]
+    public function it_diffs_a_markdown_list_field()
+    {
+        // Given
+        $diff = $this->diffFor(
+            json_encode(['Install deps', 'Run **tests**', 'Deploy']),
+            json_encode(['Install deps', 'Run tests', 'Ship it']),
+        );
+
+        // When
+        $result = $diff->list('value', 'markdown');
+
+        // Then
+        $this->assertSame(
+            [ChangeType::Kept, ChangeType::Changed, ChangeType::Changed],
+            array_map(fn ($item) => $item->status, $result->items),
+        );
+
+        $this->assertStringContainsString('Run tests', $result->items[1]->afterHtml);
+        $this->assertStringContainsString('Ship it', $result->items[2]->afterHtml);
+    }
 }
