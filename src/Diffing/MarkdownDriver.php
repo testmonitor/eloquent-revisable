@@ -25,6 +25,8 @@ use League\CommonMark\Renderer\HtmlRenderer;
 use TestMonitor\Revisable\Contracts\DiffDriver;
 use TestMonitor\Revisable\Diffing\Markdown\BlockChange;
 use TestMonitor\Revisable\Diffing\Markdown\ChangeRenderer;
+use TestMonitor\Revisable\Diffing\Markdown\FormattingChange;
+use TestMonitor\Revisable\Diffing\Markdown\FormattingRenderer;
 use TestMonitor\Revisable\Diffing\Markdown\InlineChange;
 use TestMonitor\Revisable\Diffing\Support\ArrayAligner;
 use TestMonitor\Revisable\Enums\ChangeType;
@@ -80,6 +82,7 @@ final class MarkdownDriver implements DiffDriver
 
         $this->environment->addRenderer(InlineChange::class, new ChangeRenderer);
         $this->environment->addRenderer(BlockChange::class, new ChangeRenderer);
+        $this->environment->addRenderer(FormattingChange::class, new FormattingRenderer);
     }
 
     public function diff(?string $before, ?string $after): FieldDiff
@@ -221,11 +224,16 @@ final class MarkdownDriver implements DiffDriver
         if ($beforeText === $afterText) {
             // Same words. The block still counts as changed when the inline structure
             // differs, which is how a formatting-only edit is detected.
-            return new BlockDiff(
-                $this->inlineShapeOf($before) === $this->inlineShapeOf($after)
-                    ? ChangeType::Kept
-                    : ChangeType::Changed,
-            );
+            if ($this->inlineShapeOf($before) === $this->inlineShapeOf($after)) {
+                return new BlockDiff(ChangeType::Kept);
+            }
+
+            // Nothing was inserted or removed, so there is no segment to mark. Mark the
+            // after side's text instead, or the change would render as two identical
+            // looking sides and read as no change at all.
+            $this->markFormatting($afterContainers);
+
+            return new BlockDiff(ChangeType::Changed);
         }
 
         $segments = $this->words->diff($beforeText, $afterText);
@@ -303,6 +311,26 @@ final class MarkdownDriver implements DiffDriver
 
         foreach ($children as $child) {
             $marker->appendChild($child);
+        }
+    }
+
+    /**
+     * Wrap each piece of text in a formatting marker, leaving the inline nodes around it
+     * (emphasis, links) in place so the new formatting still renders.
+     *
+     * @param list<AbstractStringContainer> $containers
+     */
+    protected function markFormatting(array $containers): void
+    {
+        foreach ($containers as $container) {
+            if ($container->getLiteral() === '') {
+                continue;
+            }
+
+            $marker = new FormattingChange;
+            $marker->appendChild(new Text($container->getLiteral()));
+
+            $container->replaceWith($marker);
         }
     }
 

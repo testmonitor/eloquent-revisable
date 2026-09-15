@@ -216,6 +216,82 @@ final class MarkdownDriverTest extends TestCase
         $this->assertWellFormedHtml($result->afterHtml);
     }
 
+    // Formatting-only changes
+
+    #[Test]
+    public function it_marks_a_formatting_only_change_so_it_does_not_read_as_no_change()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('Setup step.', '**Setup step.**');
+
+        // Then
+        $this->assertSame(ChangeType::Changed, $result->status);
+        $this->assertSame('<p><strong><ins class="mod">Setup step.</ins></strong></p>', trim($result->afterHtml));
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    #[Test]
+    public function it_leaves_the_before_view_unmarked_for_a_formatting_only_change()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('Setup step.', '**Setup step.**');
+
+        // Then
+        $this->assertSame('<p>Setup step.</p>', trim($result->beforeHtml));
+        $this->assertSidesAreClean($result->beforeHtml, $result->afterHtml);
+    }
+
+    #[Test]
+    public function it_marks_removed_formatting_as_well_as_added_formatting()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('**Setup step.**', 'Setup step.');
+
+        // Then
+        $this->assertSame(ChangeType::Changed, $result->status);
+        $this->assertSame('<p><ins class="mod">Setup step.</ins></p>', trim($result->afterHtml));
+    }
+
+    #[Test]
+    public function it_distinguishes_a_formatting_marker_from_a_real_insertion()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $formatting = $driver->diff('Setup step.', '**Setup step.**');
+        $insertion = $driver->diff('Setup', 'Setup step');
+
+        // Then
+        $this->assertStringContainsString('<ins class="mod">', $formatting->afterHtml);
+        $this->assertStringNotContainsString('<ins class="mod">', $insertion->afterHtml);
+        $this->assertStringContainsString('<ins>', $insertion->afterHtml);
+    }
+
+    #[Test]
+    public function it_does_not_mark_anything_when_neither_words_nor_formatting_changed()
+    {
+        // Given
+        $driver = new MarkdownDriver;
+
+        // When
+        $result = $driver->diff('**Setup step.**', '**Setup step.**');
+
+        // Then
+        $this->assertSame(ChangeType::Kept, $result->status);
+        $this->assertStringNotContainsString('<ins', $result->afterHtml);
+        $this->assertSame($result->beforeHtml, $result->afterHtml);
+    }
+
     // Whole block additions
 
     #[Test]
