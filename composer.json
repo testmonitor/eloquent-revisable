@@ -80,7 +80,7 @@
         "style": "vendor/bin/pint --test",
         "sniff": "vendor/bin/phpcs",
         "refactor": "vendor/bin/rector process --dry-run",
-        "test": "vendor/bin/phpunit",
+        "test": "vendor/bin/phpunit --no-coverage",
         "check": [
             "@style",
             "@sniff",
