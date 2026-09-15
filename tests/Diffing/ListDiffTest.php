@@ -269,4 +269,72 @@ final class ListDiffTest extends TestCase
         // When / Then
         $this->assertSame([], ListDiff::entries($value));
     }
+
+    #[Test]
+    public function it_json_encodes_a_non_scalar_entry_instead_of_casting_it_to_the_word_array()
+    {
+        // Given
+        // (string) $entry on an array produces the literal string 'Array' plus a PHP
+        // warning, which is not something a diff can meaningfully compare.
+        $value = json_encode([['name' => 'step one'], ['name' => 'step two']]);
+
+        // When
+        $warnings = $this->captureWarnings(fn () => ListDiff::entries($value));
+
+        // Then
+        $this->assertSame([], $warnings, 'Encoding a non-scalar entry must not raise a PHP warning.');
+        $this->assertSame(
+            [json_encode(['name' => 'step one']), json_encode(['name' => 'step two'])],
+            ListDiff::entries($value),
+        );
+    }
+
+    #[Test]
+    public function it_reports_a_changed_list_of_json_objects_instead_of_kept()
+    {
+        // Given
+        // Before the fix, both sides cast their single entry to the literal string
+        // 'Array', so the two sides read as identical and the field reported Kept even
+        // though the underlying objects differ.
+        $driver = new PlainDriver;
+        $before = json_encode([['name' => 'step one']]);
+        $after = json_encode([['name' => 'step two']]);
+
+        // When
+        $warnings = $this->captureWarnings(
+            fn () => ListDiff::for(ListDiff::entries($before), ListDiff::entries($after), $driver),
+        );
+        $result = ListDiff::for(ListDiff::entries($before), ListDiff::entries($after), $driver);
+
+        // Then
+        $this->assertSame([], $warnings, 'Diffing a list of JSON objects must not raise a PHP warning.');
+        $this->assertNotSame(ChangeType::Kept, $result->status);
+        $this->assertNotSame(['Array'], ListDiff::entries($before));
+    }
+
+    /**
+     * Run $callback with a temporary error handler that records every E_WARNING raised
+     * during the call, instead of relying on PHPUnit's own warning-to-failure conversion.
+     * That keeps this assertion meaningful even if the suite's warning handling changes.
+     *
+     * @return list<string>
+     */
+    protected function captureWarnings(callable $callback): array
+    {
+        $warnings = [];
+
+        set_error_handler(function (int $severity, string $message) use (&$warnings) {
+            $warnings[] = $message;
+
+            return true;
+        }, E_WARNING);
+
+        try {
+            $callback();
+        } finally {
+            restore_error_handler();
+        }
+
+        return $warnings;
+    }
 }

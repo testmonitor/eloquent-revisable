@@ -181,11 +181,17 @@ final class MarkdownDriver implements DiffDriver
     /**
      * An atomic block is kept when its text matches, and replaced whole when it doesn't.
      *
+     * Equality here deliberately does not go through textOf(): its trim() is right for an
+     * alignment key, where surrounding whitespace shouldn't stop two blocks from pairing
+     * up, but wrong for this comparison, where a fenced or indented code block renders its
+     * leading and trailing whitespace verbatim. Trimming it away would let a reindented
+     * code sample report as Kept while its rendered HTML actually changed.
+     *
      * @return list<BlockDiff>
      */
     protected function diffAtomic(Node $before, Node $after): array
     {
-        if ($this->textOf($before) === $this->textOf($after)) {
+        if (StringContainerHelper::getChildText($before) === StringContainerHelper::getChildText($after)) {
             return [new BlockDiff(ChangeType::Kept)];
         }
 

@@ -41,9 +41,12 @@ readonly class ListDiff
 
     /**
      * Normalise a stored value into a list of entries. A JSON array decodes; anything
-     * else becomes a single entry. Entries are cast to string first, then any entry that
-     * stringifies to empty (null, false, an empty string) is dropped, so a boolean can't
-     * survive as a silent blank.
+     * else becomes a single entry. A scalar entry (or null) is cast to string; anything
+     * else, e.g. a nested array or object, is JSON-encoded instead of cast, since casting
+     * an array produces the literal string 'Array' (plus a PHP warning) rather than
+     * anything a diff could meaningfully compare. Once stringified, any entry that reads
+     * as empty (null, false, an empty string) is dropped, so a boolean can't survive as a
+     * silent blank.
      *
      * @return list<string>
      */
@@ -58,7 +61,7 @@ readonly class ListDiff
         $entries = is_array($decoded) ? $decoded : [$value];
 
         return collect($entries)
-            ->map(fn (mixed $entry) => (string) $entry)
+            ->map(fn (mixed $entry) => is_scalar($entry) || $entry === null ? (string) $entry : (string) json_encode($entry))
             ->reject(fn (string $entry) => $entry === '')
             ->values()
             ->all();
