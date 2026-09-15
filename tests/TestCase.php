@@ -2,10 +2,10 @@
 
 namespace TestMonitor\Revisable\Tests;
 
-use DOMDocument;
-use LibXMLError;
 use Carbon\Carbon;
+use DOMDocument;
 use Illuminate\Database\Eloquent\Collection;
+use LibXMLError;
 use Orchestra\Testbench\TestCase as Orchestra;
 use TestMonitor\Revisable\Models\Revision;
 use TestMonitor\Revisable\PendingRevision;

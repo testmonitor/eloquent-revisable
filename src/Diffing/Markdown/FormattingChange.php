@@ -9,6 +9,4 @@ use League\CommonMark\Node\Inline\AbstractInline;
  *
  * Carries no ChangeType, unlike InlineChange: a reformatted run belongs to neither side.
  */
-final class FormattingChange extends AbstractInline
-{
-}
+final class FormattingChange extends AbstractInline {}

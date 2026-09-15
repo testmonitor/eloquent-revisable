@@ -2,7 +2,6 @@
 
 namespace TestMonitor\Revisable\Diffing;
 
-use League\CommonMark\Extension\Table\Table;
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\CommonMark\Node\Block\BlockQuote;
@@ -15,6 +14,7 @@ use League\CommonMark\Extension\CommonMark\Node\Block\ListItem;
 use League\CommonMark\Extension\CommonMark\Node\Block\ThematicBreak;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Image;
 use League\CommonMark\Extension\CommonMark\Node\Inline\Link;
+use League\CommonMark\Extension\Table\Table;
 use League\CommonMark\Node\Block\Document;
 use League\CommonMark\Node\Block\Paragraph;
 use League\CommonMark\Node\Inline\AbstractInline;
@@ -155,11 +155,11 @@ final class MarkdownDiffer implements Differ
      */
     protected function diffNode(?Node $before, ?Node $after): array
     {
-        if (!$before instanceof Node) {
+        if (! $before instanceof Node) {
             return [$this->markWholeBlock($after, ChangeType::Added)];
         }
 
-        if (!$after instanceof Node) {
+        if (! $after instanceof Node) {
             return [$this->markWholeBlock($before, ChangeType::Removed)];
         }
 
@@ -698,7 +698,7 @@ final class MarkdownDiffer implements Differ
      */
     protected function isOneOf(Node $node, array $types): bool
     {
-        return array_any($types, fn($type) => $node instanceof $type);
+        return array_any($types, fn ($type) => $node instanceof $type);
     }
 
     protected function parse(?string $value): Document

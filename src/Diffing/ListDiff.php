@@ -29,7 +29,9 @@ readonly class ListDiff
     {
         $items = [];
 
-        foreach (new ArrayAligner($before, $after, fn (mixed $entry) => $differ->key((string) $entry))->align() as $aligned) {
+        $key = fn (mixed $entry) => $differ->key((string) $entry);
+
+        foreach (new ArrayAligner($before, $after, $key)->align() as $aligned) {
             foreach (array_map(null, $aligned->before, $aligned->after) as [$beforeEntry, $afterEntry]) {
                 $items[] = $differ->diff($beforeEntry, $afterEntry);
             }
@@ -56,7 +58,9 @@ readonly class ListDiff
         return collect($entries)
             // Anything non-scalar is encoded rather than cast, since (string) on an array
             // yields the literal 'Array' and a PHP warning.
-            ->map(fn (mixed $entry) => is_scalar($entry) || $entry === null ? (string) $entry : (string) json_encode($entry))
+            ->map(fn (mixed $entry) => is_scalar($entry) || $entry === null
+                ? (string) $entry
+                : (string) json_encode($entry))
             // Rejected after stringifying, so false cannot survive as a silent blank.
             ->reject(fn (string $entry) => $entry === '')
             ->values()

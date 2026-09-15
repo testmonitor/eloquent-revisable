@@ -13,11 +13,12 @@ use Jfcherng\Diff\SequenceMatcher;
 class ArrayAligner
 {
     /**
+     * Items may be matched on a derived key rather than their own value, so they can align
+     * on something else, for example the plain text of an AST node.
+     *
      * @param list<mixed> $before
      * @param list<mixed> $after
-     * @param Closure(mixed):string|null $key Derives the comparison key items are aligned
-     *                                            by; defaults to the item cast to a string. Useful to align by plain text while
-     *                                            keeping the original (e.g. AST node) values in the returned blocks.
+     * @param Closure(mixed):string|null $key Defaults to the item cast to a string.
      */
     public function __construct(
         protected array $before,
