@@ -77,7 +77,17 @@
     },
     "scripts": {
         "analyse": "vendor/bin/phpstan analyse",
-        "test": "vendor/bin/phpunit"
+        "style": "vendor/bin/pint --test",
+        "sniff": "vendor/bin/phpcs",
+        "refactor": "vendor/bin/rector process --dry-run",
+        "test": "vendor/bin/phpunit",
+        "check": [
+            "@style",
+            "@sniff",
+            "@analyse",
+            "@refactor",
+            "@test"
+        ]
     },
     "prefer-stable": true,
     "license": "MIT"
