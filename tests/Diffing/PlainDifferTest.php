@@ -10,7 +10,7 @@ use TestMonitor\Revisable\Tests\TestCase;
 
 final class PlainDifferTest extends TestCase
 {
-    // Status
+    // Unchanged content
 
     #[Test]
     public function it_reports_a_field_as_kept_when_both_sides_match()
@@ -24,6 +24,105 @@ final class PlainDifferTest extends TestCase
         // Then
         $this->assertSame(ChangeType::Kept, $result->status);
     }
+
+    // Changed words
+
+    #[Test]
+    public function it_marks_deletions_in_the_before_view_and_insertions_in_the_after_view()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = $differ->diff('the brown fox', 'the red fox');
+
+        // Then
+        $this->assertSame('the <del>brown</del> fox', $result->beforeHtml);
+        $this->assertSame('the <ins>red</ins> fox', $result->afterHtml);
+        $this->assertSidesAreClean($result->beforeHtml, $result->afterHtml);
+        $this->assertWellFormedHtml($result->beforeHtml);
+        $this->assertWellFormedHtml($result->afterHtml);
+    }
+
+    // Multiple lines
+
+    #[Test]
+    public function it_produces_one_block_per_line()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = $differ->diff("first\nsecond\nthird", "first\nsecond\nthird");
+
+        // Then
+        $this->assertCount(3, $result->blocks);
+        $this->assertSame(
+            [ChangeType::Kept, ChangeType::Kept, ChangeType::Kept],
+            array_map(fn (BlockDiff $block) => $block->status, $result->blocks),
+        );
+    }
+
+    #[Test]
+    public function it_normalises_windows_line_endings()
+    {
+        // Given
+        $differ = new PlainDiffer(separator: '|');
+
+        // When
+        $result = $differ->diff("one\r\ntwo", "one\r\ntwo");
+
+        // Then
+        $this->assertSame('one|two', $result->beforeHtml);
+    }
+
+    #[Test]
+    public function it_marks_only_the_changed_line_when_a_middle_line_is_edited()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = $differ->diff("keep\nold\nkeep too", "keep\nnew\nkeep too");
+
+        // Then
+        $this->assertSame(
+            [ChangeType::Kept, ChangeType::Changed, ChangeType::Kept],
+            array_map(fn (BlockDiff $block) => $block->status, $result->blocks),
+        );
+    }
+
+    #[Test]
+    public function it_does_not_shift_later_lines_when_a_line_is_removed()
+    {
+        // Given
+        $differ = new PlainDiffer;
+
+        // When
+        $result = $differ->diff("a\nb\nc", "a\nc");
+
+        // Then
+        $this->assertSame(
+            [ChangeType::Kept, ChangeType::Removed, ChangeType::Kept],
+            array_map(fn (BlockDiff $block) => $block->status, $result->blocks),
+        );
+    }
+
+    #[Test]
+    public function it_omits_a_removed_line_from_the_after_view_entirely()
+    {
+        // Given
+        $differ = new PlainDiffer(separator: '|');
+
+        // When
+        $result = $differ->diff("a\nb", 'a');
+
+        // Then
+        $this->assertSame('a|<del>b</del>', $result->beforeHtml);
+        $this->assertSame('a', $result->afterHtml);
+    }
+
+    // Field status
 
     #[Test]
     public function it_reports_a_field_as_added_when_there_was_no_previous_value()
@@ -69,75 +168,7 @@ final class PlainDifferTest extends TestCase
         $this->assertSame([], $result->blocks);
     }
 
-    // Structure
-
-    #[Test]
-    public function it_produces_one_block_per_line()
-    {
-        // Given
-        $differ = new PlainDiffer;
-
-        // When
-        $result = $differ->diff("first\nsecond\nthird", "first\nsecond\nthird");
-
-        // Then
-        $this->assertCount(3, $result->blocks);
-        $this->assertSame(
-            [ChangeType::Kept, ChangeType::Kept, ChangeType::Kept],
-            array_map(fn (BlockDiff $block) => $block->status, $result->blocks),
-        );
-    }
-
-    #[Test]
-    public function it_marks_only_the_changed_line_when_a_middle_line_is_edited()
-    {
-        // Given
-        $differ = new PlainDiffer;
-
-        // When
-        $result = $differ->diff("keep\nold\nkeep too", "keep\nnew\nkeep too");
-
-        // Then
-        $this->assertSame(
-            [ChangeType::Kept, ChangeType::Changed, ChangeType::Kept],
-            array_map(fn (BlockDiff $block) => $block->status, $result->blocks),
-        );
-    }
-
-    #[Test]
-    public function it_does_not_shift_later_lines_when_a_line_is_removed()
-    {
-        // Given
-        $differ = new PlainDiffer;
-
-        // When
-        $result = $differ->diff("a\nb\nc", "a\nc");
-
-        // Then
-        $this->assertSame(
-            [ChangeType::Kept, ChangeType::Removed, ChangeType::Kept],
-            array_map(fn (BlockDiff $block) => $block->status, $result->blocks),
-        );
-    }
-
-    // Rendering
-
-    #[Test]
-    public function it_marks_deletions_in_the_before_view_and_insertions_in_the_after_view()
-    {
-        // Given
-        $differ = new PlainDiffer;
-
-        // When
-        $result = $differ->diff('the brown fox', 'the red fox');
-
-        // Then
-        $this->assertSame('the <del>brown</del> fox', $result->beforeHtml);
-        $this->assertSame('the <ins>red</ins> fox', $result->afterHtml);
-        $this->assertSidesAreClean($result->beforeHtml, $result->afterHtml);
-        $this->assertWellFormedHtml($result->beforeHtml);
-        $this->assertWellFormedHtml($result->afterHtml);
-    }
+    // Escaping
 
     #[Test]
     public function it_escapes_html_special_characters()
@@ -167,18 +198,7 @@ final class PlainDifferTest extends TestCase
         $this->assertWellFormedHtml($result->beforeHtml);
     }
 
-    #[Test]
-    public function it_joins_lines_with_the_configured_separator()
-    {
-        // Given
-        $differ = new PlainDiffer(separator: ' | ');
-
-        // When
-        $result = $differ->diff("one\ntwo", "one\ntwo");
-
-        // Then
-        $this->assertSame('one | two', $result->beforeHtml);
-    }
+    // Line separator
 
     #[Test]
     public function it_defaults_to_a_line_break_separator()
@@ -194,30 +214,16 @@ final class PlainDifferTest extends TestCase
     }
 
     #[Test]
-    public function it_normalises_windows_line_endings()
+    public function it_joins_lines_with_the_configured_separator()
     {
         // Given
-        $differ = new PlainDiffer(separator: '|');
+        $differ = new PlainDiffer(separator: ' | ');
 
         // When
-        $result = $differ->diff("one\r\ntwo", "one\r\ntwo");
+        $result = $differ->diff("one\ntwo", "one\ntwo");
 
         // Then
-        $this->assertSame('one|two', $result->beforeHtml);
-    }
-
-    #[Test]
-    public function it_omits_a_removed_line_from_the_after_view_entirely()
-    {
-        // Given
-        $differ = new PlainDiffer(separator: '|');
-
-        // When
-        $result = $differ->diff("a\nb", 'a');
-
-        // Then
-        $this->assertSame('a|<del>b</del>', $result->beforeHtml);
-        $this->assertSame('a', $result->afterHtml);
+        $this->assertSame('one | two', $result->beforeHtml);
     }
 
     // Alignment key
