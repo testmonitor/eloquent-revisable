@@ -212,22 +212,19 @@ final class MarkdownDiffer implements Differ
         $beforeText = $this->literalsOf($beforeContainers);
         $afterText = $this->literalsOf($afterContainers);
 
-        if ($beforeText === $afterText) {
-            // Same words, so only the inline structure can have changed.
-            if ($this->inlineShapeOf($before) === $this->inlineShapeOf($after)) {
-                return new BlockDiff(ChangeType::Kept);
-            }
-
-            // Nothing was inserted or removed, so there is no segment to carry a marker.
-            $this->markFormatting($beforeContainers, $afterContainers);
-
-            return new BlockDiff(ChangeType::Changed);
+        if ($beforeText === $afterText && $this->inlineShapeOf($before) === $this->inlineShapeOf($after)) {
+            return new BlockDiff(ChangeType::Kept);
         }
 
         $segments = $this->words->diff($beforeText, $afterText);
 
+        // Formatting goes first: it marks kept words only, so the markers below land beside it.
+        $this->markFormatting($beforeContainers, $afterContainers, $segments);
+
         $this->applySegments($beforeContainers, $segments, ChangeType::Removed);
-        $this->applySegments($afterContainers, $segments, ChangeType::Added);
+
+        // Read again, since marking the formatting rebuilt the after side's containers.
+        $this->applySegments($this->stringContainers($after), $segments, ChangeType::Added);
 
         return new BlockDiff(ChangeType::Changed, $segments);
     }
@@ -298,10 +295,11 @@ final class MarkdownDiffer implements Differ
      *
      * @param list<AbstractStringContainer> $beforeContainers
      * @param list<AbstractStringContainer> $afterContainers
+     * @param list<Segment> $segments
      */
-    protected function markFormatting(array $beforeContainers, array $afterContainers): void
+    protected function markFormatting(array $beforeContainers, array $afterContainers, array $segments): void
     {
-        $runs = $this->formattingRuns($beforeContainers);
+        $runs = $this->alignedFormattingRuns($beforeContainers, $segments);
 
         $offset = 0;
 
@@ -317,8 +315,8 @@ final class MarkdownDiffer implements Differ
                 [$before, $available] = $this->runAt($runs, $offset + $consumed);
                 $take = min($available, $length - $consumed);
 
-                // A differing path means this run sits inside different inline nodes now.
-                $pieces[] = [substr($literal, $consumed, $take), $before !== $path];
+                // A differing path sits inside different inline nodes now; a null one is new text.
+                $pieces[] = [substr($literal, $consumed, $take), $before !== null && $before !== $path];
 
                 $consumed += $take;
             }
@@ -347,10 +345,68 @@ final class MarkdownDiffer implements Differ
     }
 
     /**
-     * The formatting path covering $offset, and how many bytes of it remain from there.
+     * The before side's formatting paths, laid out along the after side's bytes.
+     *
+     * @param list<AbstractStringContainer> $containers
+     * @param list<Segment> $segments
+     * @return list<array{int, ?string}>
+     */
+    protected function alignedFormattingRuns(array $containers, array $segments): array
+    {
+        $runs = $this->formattingRuns($containers);
+
+        $aligned = [];
+        $offset = 0;
+
+        foreach ($segments as $segment) {
+            $length = strlen($segment->text);
+
+            if ($segment->type === ChangeType::Added) {
+                // An inserted word has no before side, so it brought no formatting with it.
+                $aligned[] = [$length, null];
+
+                continue;
+            }
+
+            if ($segment->type === ChangeType::Kept) {
+                $aligned = [...$aligned, ...$this->runsBetween($runs, $offset, $length)];
+            }
+
+            // A removed word leaves nothing on the after side, but still spends before bytes.
+            $offset += $length;
+        }
+
+        return $aligned;
+    }
+
+    /**
+     * The slice of a run list covering $length bytes from $offset.
      *
      * @param list<array{int, string}> $runs
-     * @return array{string, int}
+     * @return list<array{int, string}>
+     */
+    protected function runsBetween(array $runs, int $offset, int $length): array
+    {
+        $slice = [];
+        $consumed = 0;
+
+        while ($consumed < $length) {
+            [$path, $available] = $this->runAt($runs, $offset + $consumed);
+            $take = min($available, $length - $consumed);
+
+            $slice[] = [$take, $path];
+
+            $consumed += $take;
+        }
+
+        return $slice;
+    }
+
+    /**
+     * The formatting path covering $offset, and how many bytes of it remain from there.
+     *
+     * @param list<array{int, ?string}> $runs
+     * @return array{?string, int}
      */
     protected function runAt(array $runs, int $offset): array
     {
