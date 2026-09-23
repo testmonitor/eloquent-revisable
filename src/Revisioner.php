@@ -165,9 +165,9 @@ class Revisioner
         $revision->user_id = $this->userResolver->resolve();
         $revision->name = $this->name;
         $revision->metadata = $this->buildData();
-        $revision->changed = $this->buildChanges($revision);
         $revision->properties = $this->properties ?: null;
         $revision->type = $this->revisionType;
+        $revision->changed = $this->buildChanges($revision);
 
         return $revision;
     }
@@ -195,7 +195,7 @@ class Revisioner
     public function replace(Revision $existing): Revision
     {
         return DB::transaction(function () use ($existing) {
-            $snapshot = $this->build();
+            $snapshot = $this->type($existing->type)->build();
 
             $existing->update([
                 'user_id' => $snapshot->user_id,
@@ -309,7 +309,7 @@ class Revisioner
      */
     protected function buildChanges(RevisionContract $revision, ?RevisionContract $baseline = null): ?array
     {
-        if ($this->model->wasRecentlyCreated) {
+        if ($revision->isInitial()) {
             return null;
         }
 

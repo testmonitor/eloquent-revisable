@@ -188,6 +188,56 @@ final class CreatingRevisionsTest extends TestCase
     }
 
     #[Test]
+    public function it_leaves_the_initial_revision_without_changed_fields()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        // When
+        $post = $this->createPost($post);
+
+        // Then
+        $this->assertNull($post->revisions()->firstOrFail()->changed);
+    }
+
+    #[Test]
+    public function it_stores_the_changed_fields_for_the_revision_following_the_initial_one()
+    {
+        // Given
+        $post = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        // Kept as the instance that performed the insert, rather than a freshly retrieved one.
+        $post = $post->create([
+            'author_id' => $author->id,
+            'name' => 'Post name',
+            'slug' => 'post-slug',
+            'content' => 'Post content',
+            'votes' => 10,
+            'views' => 100,
+        ]);
+
+        // When
+        $post->update(['name' => 'Another post name']);
+
+        // Then
+        $this->assertSame(['name'], $post->latestRevision->changed);
+    }
+
+    #[Test]
     public function it_stores_the_user_id_using_a_custom_resolver()
     {
         // Given
