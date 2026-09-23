@@ -193,6 +193,44 @@ final class RevisionBatchesTest extends TestCase
     }
 
     #[Test]
+    public function it_keeps_the_created_revision_free_of_changes_when_a_later_row_merges_into_it()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        $post = $postClass::createWithBatchRevision('import-1', fn () => $postClass::create([
+            'author_id' => $author->id,
+            'name' => 'Post name',
+            'slug' => 'post-slug',
+            'content' => 'Post content',
+            'votes' => 10,
+            'views' => 100,
+        ]));
+
+        // A later row in the same import arrives through a freshly retrieved instance.
+        $post = $post->fresh();
+
+        // When
+        $post->withBatchRevision('import-1', function ($post) {
+            $post->update(['content' => 'Content merged in from a later row']);
+        });
+
+        // Then
+        $revision = $post->revisions()->firstOrFail();
+
+        $this->assertTrue($revision->isInitial());
+        $this->assertNull($revision->changed);
+    }
+
+    #[Test]
     public function it_returns_the_callbacks_result()
     {
         // Given
