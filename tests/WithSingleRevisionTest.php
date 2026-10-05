@@ -529,7 +529,7 @@ final class WithSingleRevisionTest extends TestCase
         $post->withSingleRevision(function ($post) use ($postClass, $author) {
             $post->update(['votes' => 42]);
 
-            $postClass::createWithSingleRevision(fn() => $postClass::create([
+            $postClass::createWithSingleRevision(fn () => $postClass::create([
                 'author_id' => $author->id,
                 'name' => 'Other post name',
                 'slug' => 'other-post-slug',
