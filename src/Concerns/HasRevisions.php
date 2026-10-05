@@ -333,16 +333,22 @@ trait HasRevisions
     {
         // When nested, the outermost call persists the revision (for the same model only).
         if (static::$revisioningSuspended) {
-            return static::validateCallbackResult($callback());
+            return $callback();
         }
 
         static::$revisioningSuspended = true;
 
         try {
-            $result = static::validateCallbackResult($callback());
+            $result = $callback();
 
             // Unsuspend first, so the revision is saved rather than queued.
             static::$revisioningSuspended = false;
+
+            if (! $result instanceof static) {
+                throw new InvalidArgumentException(
+                    'createWithSingleRevision() callback must return an instance of ' . static::class . '.'
+                );
+            }
 
             // Forced, as the saved model is no longer dirty.
             $result->forceCreateNewRevision($properties);
@@ -461,20 +467,6 @@ trait HasRevisions
     protected function isBatchingSuspended(): bool
     {
         return $this->revisioningEnabled && static::$revisioningSuspended;
-    }
-
-    /**
-     * Validate that a createWithSingleRevision() callback returned an instance of this model class.
-     */
-    protected static function validateCallbackResult(mixed $result): static
-    {
-        if (! $result instanceof static) {
-            throw new InvalidArgumentException(
-                'createWithSingleRevision() callback must return an instance of ' . static::class . '.'
-            );
-        }
-
-        return $result;
     }
 
     /**
