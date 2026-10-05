@@ -38,8 +38,7 @@ trait HasRevisions
     protected bool $revisioningEnabled = true;
 
     /**
-     * Model classes for which automatic revision creation is currently suspended, keyed by class
-     * so subclasses (which share this static property) are not suspended along with their parent.
+     * Model classes with automatic revisioning suspended, keyed per class so subclasses aren't affected.
      *
      * @var array<class-string, true>
      */
