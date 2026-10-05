@@ -215,6 +215,52 @@ final class WithSingleRevisionTest extends TestCase
     }
 
     #[Test]
+    public function it_creates_a_single_revision_when_nesting_create_with_single_revision_calls()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()
+                    ->enableRevisionOnCreate()
+                    ->withRelations('attachments');
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        // When
+        $post = $postClass::createWithSingleRevision(function () use ($postClass, $author) {
+            $post = $postClass::createWithSingleRevision(function () use ($postClass, $author) {
+                $post = $postClass::create([
+                    'author_id' => $author->id,
+                    'name' => 'Post name',
+                    'slug' => 'post-slug',
+                    'content' => 'Post content',
+                    'votes' => 10,
+                    'views' => 100,
+                ]);
+
+                $post->attachments()->create(['name' => 'document.pdf']);
+
+                return $post;
+            });
+
+            $post->attachments()->create(['name' => 'second.pdf']);
+
+            return $post;
+        });
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+
+        $revision = $post->revisions()->firstOrFail();
+        $this->assertTrue($revision->isInitial());
+        $this->assertCount(2, $revision->metadata['relations']['attachments']['records']['items']);
+    }
+
+    #[Test]
     public function it_creates_a_single_revision_when_updating_a_model_and_a_child_relation()
     {
         // Given
@@ -407,5 +453,183 @@ final class WithSingleRevisionTest extends TestCase
         $this->assertEquals($first->id, $revision->id);
         $this->assertContains('votes', $revision->changed);
         $this->assertCount(2, $revision->metadata['relations']['attachments']['records']['items']);
+    }
+
+    #[Test]
+    public function it_creates_a_single_revision_when_nesting_with_single_revision_calls()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->withRelations('attachments');
+            }
+        };
+
+        $post = $this->createPost($postClass);
+
+        // When
+        $post->withSingleRevision(function ($post) {
+            $post->withSingleRevision(function ($post) {
+                $post->update(['votes' => 42]);
+            });
+
+            $post->attachments()->create(['name' => 'document.pdf']);
+        });
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+
+        $revision = $post->revisions()->firstOrFail();
+        $this->assertTrue($revision->isDefault());
+        $this->assertContains('votes', $revision->changed);
+        $this->assertCount(1, $revision->metadata['relations']['attachments']['records']['items']);
+    }
+
+    #[Test]
+    public function it_resumes_normal_revisioning_after_a_nested_callback_completes()
+    {
+        // Given
+        $postClass = new class extends Post {};
+
+        $post = $this->createPost($postClass);
+
+        $post->withSingleRevision(function ($post) {
+            $post->withSingleRevision(function ($post) {
+                $post->update(['votes' => 42]);
+            });
+        });
+
+        // When
+        $post->update(['votes' => 99]);
+
+        // Then
+        $this->assertEquals(2, Revision::count());
+    }
+
+    #[Test]
+    public function it_discards_the_revision_of_a_nested_call_for_another_model()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $post = $this->createPost($postClass);
+        $post->revisions()->delete(); // drop the Initial revision created by createPost()
+
+        $author = $this->createAuthor();
+
+        // When
+        $post->withSingleRevision(function ($post) use ($postClass, $author) {
+            $post->update(['votes' => 42]);
+
+            $postClass::createWithSingleRevision(fn () => $postClass::create([
+                'author_id' => $author->id,
+                'name' => 'Other post name',
+                'slug' => 'other-post-slug',
+                'content' => 'Other post content',
+                'votes' => 5,
+                'views' => 50,
+            ]));
+        });
+
+        // Then
+        $otherPost = $postClass::where('slug', 'other-post-slug')->firstOrFail();
+
+        $this->assertEquals(1, $post->revisions()->count());
+        $this->assertEquals(0, $otherPost->revisions()->count());
+    }
+
+    #[Test]
+    public function it_discards_the_revision_of_a_nested_call_for_a_subclass_model()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $childClass = new class extends Post {};
+        $child = $childClass::create([
+            'author_id' => $post->author_id,
+            'name' => 'Child post name',
+            'slug' => 'child-post-slug',
+            'content' => 'Child post content',
+            'votes' => 5,
+            'views' => 50,
+        ])->fresh();
+
+        // When
+        $post->withSingleRevision(function ($post) use ($child) {
+            $post->update(['votes' => 42]);
+
+            $child->withSingleRevision(fn ($child) => $child->update(['votes' => 7]));
+        });
+
+        // Then
+        $this->assertEquals(1, $post->revisions()->count());
+        $this->assertEquals(0, $child->revisions()->count());
+    }
+
+    #[Test]
+    public function it_does_not_leak_a_subclass_revision_into_a_later_batch_when_updated_inside_a_parent_callback()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $childClass = new class extends Post {};
+        $child = $childClass::create([
+            'author_id' => $post->author_id,
+            'name' => 'Child post name',
+            'slug' => 'child-post-slug',
+            'content' => 'Child post content',
+            'votes' => 5,
+            'views' => 50,
+        ])->fresh();
+
+        $post->withSingleRevision(fn () => $child->update(['votes' => 7]));
+
+        // When
+        $child->withSingleRevision(function () {
+            // No changes and no explicit save; a leaked entry from the parent's batch above
+            // would incorrectly force a revision here.
+        });
+
+        // Then
+        $this->assertEquals(0, $child->revisions()->count());
+    }
+
+    #[Test]
+    public function it_creates_a_single_revision_when_nesting_create_calls_for_a_subclass_model()
+    {
+        // Given
+        $childClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        // When
+        $child = Post::createWithSingleRevision(
+            fn () => $childClass::createWithSingleRevision(fn () => $childClass::create([
+                'author_id' => $author->id,
+                'name' => 'Child post name',
+                'slug' => 'child-post-slug',
+                'content' => 'Child post content',
+                'votes' => 5,
+                'views' => 50,
+            ]))
+        );
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+        $this->assertTrue($child->revisions()->firstOrFail()->isInitial());
     }
 }

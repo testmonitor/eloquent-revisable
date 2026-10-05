@@ -304,4 +304,26 @@ final class RevisionBatchesTest extends TestCase
         $this->assertContains('content', $revision->changed);
         $this->assertEquals('First row + second row', $revision->metadata['attributes']['content']);
     }
+
+    #[Test]
+    public function it_tags_a_single_revision_with_the_outermost_batch_when_nesting_calls()
+    {
+        // Given
+        $post = $this->createPost();
+
+        // When
+        $result = $post->withBatchRevision('import-1', fn ($post) => $post->withBatchRevision('import-2', function ($post) {
+            $post->update(['content' => 'Nested row']);
+
+            return 'nested result';
+        }));
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+        $this->assertEquals('nested result', $result);
+
+        $revision = $post->revisions()->firstOrFail();
+        $this->assertTrue($revision->belongsToBatch('import-1'));
+        $this->assertFalse($revision->belongsToBatch('import-2'));
+    }
 }
