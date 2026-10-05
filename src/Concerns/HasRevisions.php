@@ -38,9 +38,12 @@ trait HasRevisions
     protected bool $revisioningEnabled = true;
 
     /**
-     * Whether automatic revision creation is currently suspended for this model class.
+     * Model classes for which automatic revision creation is currently suspended, keyed by class
+     * so subclasses (which share this static property) are not suspended along with their parent.
+     *
+     * @var array<class-string, true>
      */
-    protected static bool $revisioningSuspended = false;
+    protected static array $revisioningSuspended = [];
 
     /**
      * Model attributes captured before the most recent update, used as the diff baseline.
@@ -77,7 +80,7 @@ trait HasRevisions
         });
 
         static::updating(function (Model $model) {
-            if (static::$revisioningSuspended && ! empty($model->revisionOriginal)) {
+            if (static::isRevisioningSuspended() && ! empty($model->revisionOriginal)) {
                 return;
             }
 
@@ -87,7 +90,7 @@ trait HasRevisions
         static::updated(function (Model $model) {
             $model->createNewRevision();
 
-            if (! static::$revisioningSuspended) {
+            if (! static::isRevisioningSuspended()) {
                 $model->revisionOriginal = [];
             }
         });
@@ -332,17 +335,17 @@ trait HasRevisions
     public static function createWithSingleRevision(Closure $callback, array $properties = []): mixed
     {
         // When nested, the outermost call persists the revision (for the same model only).
-        if (static::$revisioningSuspended) {
+        if (static::isRevisioningSuspended()) {
             return $callback();
         }
 
-        static::$revisioningSuspended = true;
+        static::suspendRevisioning();
 
         try {
             $result = $callback();
 
             // Unsuspend first, so the revision is saved rather than queued.
-            static::$revisioningSuspended = false;
+            static::resumeRevisioning();
 
             if (! $result instanceof static) {
                 throw new InvalidArgumentException(
@@ -358,7 +361,7 @@ trait HasRevisions
             return $result;
         } finally {
             // Runs on every exit path, so queued entries can never leak into a later batch.
-            static::$revisioningSuspended = false;
+            static::resumeRevisioning();
 
             static::clearPendingRevisions();
         }
@@ -380,19 +383,19 @@ trait HasRevisions
     public function withSingleRevision(Closure $callback): static
     {
         // When nested, the outermost call persists the revision (for the same model only).
-        if (static::$revisioningSuspended) {
+        if (static::isRevisioningSuspended()) {
             $callback($this);
 
             return $this;
         }
 
-        static::$revisioningSuspended = true;
+        static::suspendRevisioning();
 
         try {
             $callback($this);
 
             // Unsuspend first, so the revision is saved rather than queued.
-            static::$revisioningSuspended = false;
+            static::resumeRevisioning();
 
             // Queued entries only signal a tracked change.
             if (! empty($this->pullPendingRevisions())) {
@@ -404,7 +407,7 @@ trait HasRevisions
             return $this;
         } finally {
             // Runs on every exit path, so queued entries can never leak into a later batch.
-            static::$revisioningSuspended = false;
+            static::resumeRevisioning();
 
             static::clearPendingRevisions();
         }
@@ -417,17 +420,17 @@ trait HasRevisions
     public function withBatchRevision(int|string $batch, Closure $callback): mixed
     {
         // When nested, the outermost call persists the revision (for the same model only).
-        if (static::$revisioningSuspended) {
+        if (static::isRevisioningSuspended()) {
             return $callback($this);
         }
 
-        static::$revisioningSuspended = true;
+        static::suspendRevisioning();
 
         try {
             $result = $callback($this);
 
             // Unsuspend first, so the revision is saved rather than queued.
-            static::$revisioningSuspended = false;
+            static::resumeRevisioning();
 
             // Merges into the latest revision of the same batch.
             if (! empty($this->pullPendingRevisions())) {
@@ -439,7 +442,7 @@ trait HasRevisions
             return $result;
         } finally {
             // Runs on every exit path, so queued entries can never leak into a later batch.
-            static::$revisioningSuspended = false;
+            static::resumeRevisioning();
 
             static::clearPendingRevisions();
         }
@@ -466,7 +469,31 @@ trait HasRevisions
      */
     protected function isBatchingSuspended(): bool
     {
-        return $this->revisioningEnabled && static::$revisioningSuspended;
+        return $this->revisioningEnabled && static::isRevisioningSuspended();
+    }
+
+    /**
+     * Determine whether automatic revision creation is suspended for this model class.
+     */
+    protected static function isRevisioningSuspended(): bool
+    {
+        return static::$revisioningSuspended[static::class] ?? false;
+    }
+
+    /**
+     * Suspend automatic revision creation for this model class.
+     */
+    protected static function suspendRevisioning(): void
+    {
+        static::$revisioningSuspended[static::class] = true;
+    }
+
+    /**
+     * Resume automatic revision creation for this model class.
+     */
+    protected static function resumeRevisioning(): void
+    {
+        unset(static::$revisioningSuspended[static::class]);
     }
 
     /**

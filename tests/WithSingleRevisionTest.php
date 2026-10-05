@@ -545,4 +545,63 @@ final class WithSingleRevisionTest extends TestCase
         $this->assertEquals(1, $post->revisions()->count());
         $this->assertEquals(0, $otherPost->revisions()->count());
     }
+
+    #[Test]
+    public function it_persists_the_revision_of_a_nested_call_for_a_subclass_model()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $childClass = new class extends Post {};
+        $child = $childClass::create([
+            'author_id' => $post->author_id,
+            'name' => 'Child post name',
+            'slug' => 'child-post-slug',
+            'content' => 'Child post content',
+            'votes' => 5,
+            'views' => 50,
+        ])->fresh();
+
+        // When
+        $post->withSingleRevision(function ($post) use ($child) {
+            $post->update(['votes' => 42]);
+
+            $child->withSingleRevision(fn ($child) => $child->update(['votes' => 7]));
+        });
+
+        // Then
+        $this->assertEquals(1, $post->revisions()->count());
+        $this->assertEquals(1, $child->revisions()->count());
+    }
+
+    #[Test]
+    public function it_does_not_leak_a_subclass_revision_into_a_later_batch_when_updated_inside_a_parent_callback()
+    {
+        // Given
+        $post = $this->createPost();
+
+        $childClass = new class extends Post {};
+        $child = $childClass::create([
+            'author_id' => $post->author_id,
+            'name' => 'Child post name',
+            'slug' => 'child-post-slug',
+            'content' => 'Child post content',
+            'votes' => 5,
+            'views' => 50,
+        ])->fresh();
+
+        $post->withSingleRevision(fn () => $child->update(['votes' => 7]));
+
+        $revisionId = $child->revisions()->value('id');
+
+        // When
+        $child->withSingleRevision(function () {
+            // No changes and no explicit save; a leaked entry from the parent's batch above
+            // would incorrectly force a revision here.
+        });
+
+        // Then
+        $this->assertEquals(1, $child->revisions()->count());
+        $this->assertEquals($revisionId, $child->revisions()->value('id'));
+    }
 }
