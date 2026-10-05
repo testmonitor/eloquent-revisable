@@ -582,7 +582,7 @@ final class WithSingleRevisionTest extends TestCase
     }
 
     #[Test]
-    public function it_persists_the_revision_of_a_nested_call_for_a_subclass_model()
+    public function it_discards_the_revision_of_a_nested_call_for_a_subclass_model()
     {
         // Given
         $post = $this->createPost();
@@ -606,7 +606,7 @@ final class WithSingleRevisionTest extends TestCase
 
         // Then
         $this->assertEquals(1, $post->revisions()->count());
-        $this->assertEquals(1, $child->revisions()->count());
+        $this->assertEquals(0, $child->revisions()->count());
     }
 
     #[Test]
@@ -627,8 +627,6 @@ final class WithSingleRevisionTest extends TestCase
 
         $post->withSingleRevision(fn () => $child->update(['votes' => 7]));
 
-        $revisionId = $child->revisions()->value('id');
-
         // When
         $child->withSingleRevision(function () {
             // No changes and no explicit save; a leaked entry from the parent's batch above
@@ -636,7 +634,37 @@ final class WithSingleRevisionTest extends TestCase
         });
 
         // Then
-        $this->assertEquals(1, $child->revisions()->count());
-        $this->assertEquals($revisionId, $child->revisions()->value('id'));
+        $this->assertEquals(0, $child->revisions()->count());
+    }
+
+    #[Test]
+    public function it_creates_a_single_revision_when_nesting_create_calls_for_a_subclass_model()
+    {
+        // Given
+        $childClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        // When
+        $child = Post::createWithSingleRevision(
+            fn () => $childClass::createWithSingleRevision(fn () => $childClass::create([
+                'author_id' => $author->id,
+                'name' => 'Child post name',
+                'slug' => 'child-post-slug',
+                'content' => 'Child post content',
+                'votes' => 5,
+                'views' => 50,
+            ]))
+        );
+
+        // Then
+        $this->assertEquals(1, Revision::count());
+        $this->assertTrue($child->revisions()->firstOrFail()->isInitial());
     }
 }
