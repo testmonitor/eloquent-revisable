@@ -331,11 +331,17 @@ trait HasRevisions
      */
     public static function createWithSingleRevision(Closure $callback, array $properties = []): mixed
     {
+        // When nested, the outermost call persists the revision (for the same model only).
+        if (static::$revisioningSuspended) {
+            return $callback();
+        }
+
         static::$revisioningSuspended = true;
 
         try {
             $result = $callback();
 
+            // Unsuspend first, so the revision is saved rather than queued.
             static::$revisioningSuspended = false;
 
             if (! $result instanceof static) {
@@ -344,6 +350,7 @@ trait HasRevisions
                 );
             }
 
+            // Forced, as the saved model is no longer dirty.
             $result->forceCreateNewRevision($properties);
 
             $result->revisionOriginal = [];
@@ -372,13 +379,22 @@ trait HasRevisions
      */
     public function withSingleRevision(Closure $callback): static
     {
+        // When nested, the outermost call persists the revision (for the same model only).
+        if (static::$revisioningSuspended) {
+            $callback($this);
+
+            return $this;
+        }
+
         static::$revisioningSuspended = true;
 
         try {
             $callback($this);
 
+            // Unsuspend first, so the revision is saved rather than queued.
             static::$revisioningSuspended = false;
 
+            // Queued entries only signal a tracked change.
             if (! empty($this->pullPendingRevisions())) {
                 $this->forceCreateNewRevision();
             }
@@ -400,13 +416,20 @@ trait HasRevisions
      */
     public function withBatchRevision(int|string $batch, Closure $callback): mixed
     {
+        // When nested, the outermost call persists the revision (for the same model only).
+        if (static::$revisioningSuspended) {
+            return $callback($this);
+        }
+
         static::$revisioningSuspended = true;
 
         try {
             $result = $callback($this);
 
+            // Unsuspend first, so the revision is saved rather than queued.
             static::$revisioningSuspended = false;
 
+            // Merges into the latest revision of the same batch.
             if (! empty($this->pullPendingRevisions())) {
                 $this->saveAsBatchRevision($batch);
             }
