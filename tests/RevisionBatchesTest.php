@@ -312,13 +312,11 @@ final class RevisionBatchesTest extends TestCase
         $post = $this->createPost();
 
         // When
-        $result = $post->withBatchRevision('import-1', function ($post) {
-            return $post->withBatchRevision('import-2', function ($post) {
-                $post->update(['content' => 'Nested row']);
+        $result = $post->withBatchRevision('import-1', fn($post) => $post->withBatchRevision('import-2', function ($post) {
+            $post->update(['content' => 'Nested row']);
 
-                return 'nested result';
-            });
-        });
+            return 'nested result';
+        }));
 
         // Then
         $this->assertEquals(1, Revision::count());
