@@ -261,6 +261,41 @@ final class WithSingleRevisionTest extends TestCase
     }
 
     #[Test]
+    public function it_throws_when_a_nested_callback_does_not_return_the_model()
+    {
+        // Given
+        $postClass = new class extends Post
+        {
+            public function getRevisionOptions(): RevisableOptions
+            {
+                return parent::getRevisionOptions()->enableRevisionOnCreate();
+            }
+        };
+
+        $author = $this->createAuthor();
+
+        // When
+        $this->expectException(InvalidArgumentException::class);
+
+        $postClass::createWithSingleRevision(function () use ($postClass, $author) {
+            $post = $postClass::create([
+                'author_id' => $author->id,
+                'name' => 'Post name',
+                'slug' => 'post-slug',
+                'content' => 'Post content',
+                'votes' => 10,
+                'views' => 100,
+            ]);
+
+            $postClass::createWithSingleRevision(function () {
+                // Forgot to return the model
+            });
+
+            return $post;
+        });
+    }
+
+    #[Test]
     public function it_creates_a_single_revision_when_updating_a_model_and_a_child_relation()
     {
         // Given
