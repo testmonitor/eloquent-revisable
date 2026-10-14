@@ -74,6 +74,8 @@ class Revision extends Model implements RevisionContract
 
     /**
      * Scope revisions to those created by the given user.
+     *
+     * @param Builder<self> $query
      */
     #[Scope]
     protected function forUser(Builder $query, Model $user): void
@@ -83,6 +85,8 @@ class Revision extends Model implements RevisionContract
 
     /**
      * Scope revisions to those belonging to a specific model instance.
+     *
+     * @param Builder<self> $query
      */
     #[Scope]
     protected function forModel(Builder $query, Model $model): void
@@ -95,6 +99,8 @@ class Revision extends Model implements RevisionContract
 
     /**
      * Scope revisions to those that are not rollback revisions.
+     *
+     * @param Builder<self> $query
      */
     #[Scope]
     protected function notRollback(Builder $query): void
@@ -104,6 +110,8 @@ class Revision extends Model implements RevisionContract
 
     /**
      * Scope revisions to those that are rollback revisions.
+     *
+     * @param Builder<self> $query
      */
     #[Scope]
     protected function onlyRollbacks(Builder $query): void
@@ -113,6 +121,8 @@ class Revision extends Model implements RevisionContract
 
     /**
      * Scope revisions to those that are initial revisions.
+     *
+     * @param Builder<self> $query
      */
     #[Scope]
     protected function onlyInitial(Builder $query): void

@@ -14,21 +14,33 @@ class PendingRevision implements RevisionContract
         protected RevisionContract $revision,
     ) {}
 
+    /**
+     * @return MorphTo<Model, covariant Model>
+     */
     public function revisionable(): MorphTo
     {
         return $this->revision->revisionable();
     }
 
+    /**
+     * @return BelongsTo<Model, covariant Model>
+     */
     public function user(): BelongsTo
     {
         return $this->revision->user();
     }
 
+    /**
+     * @return string|null
+     */
     public function getCreatedAtColumn()
     {
         return $this->revision->getCreatedAtColumn();
     }
 
+    /**
+     * @return string|null
+     */
     public function getUpdatedAtColumn()
     {
         return $this->revision->getUpdatedAtColumn();
@@ -84,6 +96,9 @@ class PendingRevision implements RevisionContract
         $this->unavailableWhilePending();
     }
 
+    /**
+     * @return array{attributes?: array<string, mixed>, relations?: array<string, mixed>}
+     */
     public function metadata(): array
     {
         return $this->revision->metadata();

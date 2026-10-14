@@ -9,18 +9,33 @@ use TestMonitor\Revisable\Diff;
 
 interface Revision
 {
+    /**
+     * @return MorphTo<Model, covariant Model>
+     */
     public function revisionable(): MorphTo;
 
+    /**
+     * @return BelongsTo<Model, covariant Model>
+     */
     public function user(): BelongsTo;
 
+    /**
+     * @return string|null
+     */
     public function getCreatedAtColumn();
 
+    /**
+     * @return string|null
+     */
     public function getUpdatedAtColumn();
 
     public function previous(): ?static;
 
     public function next(): ?static;
 
+    /**
+     * @return bool
+     */
     public function is(self $model);
 
     public function isDefault(): bool;
@@ -37,6 +52,9 @@ interface Revision
 
     public function isOlderThan(?self $revision): bool;
 
+    /**
+     * @return array{attributes?: array<string, mixed>, relations?: array<string, mixed>}
+     */
     public function metadata(): array;
 
     public function version(): int;
