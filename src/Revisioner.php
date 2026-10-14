@@ -686,7 +686,7 @@ class Revisioner
      * Drop records that fail the relation's configured filter, if any.
      *
      * @param array<string, mixed> $records
-     * @return array{list<array<string, mixed>>, list<mixed>}
+     * @return array{array<int, array<string, mixed>>, list<mixed>}
      */
     protected function filterRelationRecords(string $relation, array $records): array
     {
