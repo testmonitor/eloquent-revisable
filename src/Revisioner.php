@@ -282,6 +282,8 @@ class Revisioner
 
     /**
      * Build the full revision data array, including relations.
+     *
+     * @return array<string, mixed>
      */
     protected function buildData(): array
     {
@@ -438,6 +440,9 @@ class Revisioner
 
     /**
      * Extract revision data for a direct (non-pivot) relation.
+     *
+     * @param array<string, mixed> $attributes
+     * @return array<string, mixed>
      */
     protected function buildDirectRelationData(string $relation, array $attributes = []): array
     {
@@ -473,6 +478,9 @@ class Revisioner
 
     /**
      * Extract revision data for a pivoted relation.
+     *
+     * @param array<string, mixed> $attributes
+     * @return array<string, mixed>
      */
     protected function buildPivotedRelationData(string $relation, array $attributes = []): array
     {
@@ -520,6 +528,10 @@ class Revisioner
         return $data;
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
     protected function withAttributeValue(
         array $data,
         Model $model,
@@ -534,6 +546,10 @@ class Revisioner
         return $data;
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
     protected function withPivotAttributeValue(
         array $data,
         Model $pivot,
@@ -567,6 +583,8 @@ class Revisioner
 
     /**
      * Restore a direct (non-pivot) relation to the state captured in the revision.
+     *
+     * @param array<string, mixed> $attributes
      */
     protected function restoreDirectRelation(string $relation, array $attributes): void
     {
@@ -608,6 +626,8 @@ class Revisioner
 
     /**
      * Restore a pivoted relation to the state captured in the revision.
+     *
+     * @param array<string, mixed> $attributes
      */
     protected function restorePivotedRelation(string $relation, array $attributes): void
     {
@@ -664,6 +684,9 @@ class Revisioner
 
     /**
      * Drop records that fail the relation's configured filter, if any.
+     *
+     * @param array<string, mixed> $records
+     * @return array{array<int, array<string, mixed>>, list<mixed>}
      */
     protected function filterRelationRecords(string $relation, array $records): array
     {
