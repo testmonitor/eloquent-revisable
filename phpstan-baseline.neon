@@ -4,7 +4,7 @@ parameters:
 			message: '#^Class App\\Models\\User not found\.$#'
 			identifier: class.notFound
 			count: 1
-			path: config/revisionable.php
+			path: config/revisable.php
 
 		-
 			message: '#^Trait TestMonitor\\Revisable\\Concerns\\BelongsToRevisable is used zero times and is not analysed\.$#'

@@ -11,6 +11,19 @@ use TestMonitor\Revisable\Tests\Models\Author;
 
 final class ConfigurationTest extends TestCase
 {
+    // Package config
+
+    #[Test]
+    public function it_merges_the_package_config_defaults()
+    {
+        // When
+        $config = config('revisable');
+
+        // Then
+        $this->assertSame(Revision::class, $config['revision_model']);
+        $this->assertSame('App\\Models\\User', $config['user_model']);
+    }
+
     // Revision model
 
     #[Test]

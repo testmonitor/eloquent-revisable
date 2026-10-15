@@ -25,13 +25,15 @@ class RevisableServiceProvider extends BaseServiceProvider
      */
     public function register(): void
     {
+        $this->mergeConfigFrom(__DIR__ . '/../config/revisable.php', 'revisable');
+
         $this->registerBindings();
     }
 
     protected function publishConfigs(): void
     {
         $this->publishes([
-            __DIR__ . '/../config/revisionable.php' => config_path('revisable.php'),
+            __DIR__ . '/../config/revisable.php' => config_path('revisable.php'),
         ], 'config');
     }
 

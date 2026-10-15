@@ -25,7 +25,7 @@ abstract class TestCase extends Orchestra
 
     protected function getEnvironmentSetUp($app): void
     {
-        $app['config']->set('revisable.auth_driver', null);
+        $app['config']->set('revisable.default_auth_driver', null);
     }
 
     protected function defineDatabaseMigrations(): void
