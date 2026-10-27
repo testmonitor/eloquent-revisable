@@ -59,7 +59,7 @@
     },
     "autoload": {
         "psr-4": {
-            "TestMonitor\\Revisable\\": "src/"
+            "TestMonitor\\Revisable\\": "src"
         }
     },
     "autoload-dev": {
@@ -82,7 +82,7 @@
         "style": "vendor/bin/pint --test",
         "sniff": "vendor/bin/phpcs",
         "refactor": "vendor/bin/rector process --dry-run",
-        "test": "vendor/bin/phpunit --no-coverage",
+        "test": "vendor/bin/phpunit",
         "check": [
             "@style",
             "@sniff",
