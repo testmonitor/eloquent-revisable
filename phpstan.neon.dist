@@ -9,4 +9,7 @@ parameters:
         - config
         - src
 
+    configDirectories:
+        - config
+
     tmpDir: build/phpstan
