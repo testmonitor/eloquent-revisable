@@ -87,16 +87,21 @@ jobs:
           name: Run Unit Tests
           command: |
             mkdir -p ./logs/phpunit
-            vendor/bin/phpunit -d memory_limit=1G --coverage-clover coverage.xml --log-junit logs/phpunit/junit.xml --testdox-html logs/phpunit/testdox.html
+            vendor/bin/phpunit -d memory_limit=1G --coverage-clover logs/phpunit/coverage.xml --log-junit logs/phpunit/junit.xml --testdox-html logs/phpunit/testdox.html
       - store_artifacts:
           path: ./logs/phpunit
           destination: phpunit
       - store_test_results:
-          path: ./logs
+          path: ./logs/phpunit/junit.xml
       - codecov/upload:
           report_type: coverage
+          disable_search: true
+          git_service: github
+          files: logs/phpunit/coverage.xml
       - codecov/upload:
           report_type: test_results
+          disable_search: true
+          git_service: github
           files: logs/phpunit/junit.xml
 
 workflows:
