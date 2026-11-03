@@ -92,7 +92,7 @@ jobs:
           path: ./logs/phpunit
           destination: phpunit
       - store_test_results:
-          path: ./logs
+          path: ./logs/phpunit/junit.xml
       - codecov/upload:
           report_type: coverage
           disable_search: true
